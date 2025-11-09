@@ -1,5 +1,6 @@
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import { vercelPostgresAdapter } from '@payloadcms/db-vercel-postgres'
+import { makeS3StoragePlugin } from './plugins/s3Storage'
 
 import sharp from 'sharp' // sharp-import
 import path from 'path'
@@ -68,6 +69,7 @@ export default buildConfig({
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [
+    makeS3StoragePlugin(),
     ...plugins,
     vercelBlobStorage({
       collections: {

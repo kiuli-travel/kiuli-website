@@ -1,0 +1,24 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "A Luxury Kenyan Honeymoon - Bush & Beach ",
+  "description": "**Transit Point via Jomo Kenyatta Airport in Nairobi**\n\nAs your private jet descends, Nairobi shimmers below, a tapestry of green and ochre hues kissed by the equatorial sun. You’ll touch down at Jomo Kenyatta International Airport, a bustling hub that serves as your gateway to the unparalleled adventures that await you in East Africa. While merely a transit point on this exclusive journey, allow yourself a moment to absorb the vibrant energy of Kenya’s capital.\n\nEven within the airport's...",
+  "image": [
+    "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/aa4cd3ac-54f1-4662-b9d4-d5053195ebc6_LogoBlack-12.png",
+    "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/54623887-7f5c-41c5-98c4-96d593279acf_LogoWhite-12.png",
+    "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/aa4cd3ac-54f1-4662-b9d4-d5053195ebc6_LogoBlack-13.png",
+    "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/54623887-7f5c-41c5-98c4-96d593279acf_LogoWhite-13.png"
+  ],
+  "brand": {
+    "@type": "Brand",
+    "name": "Kiuli"
+  },
+  "sku": "680df70720a6c6005b2bfc34",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "0.00",
+    "availability": "https://schema.org/InStock",
+    "url": "https://kiuli.com/travel-packages/680df70720a6c6005b2bfc34"
+  }
+}

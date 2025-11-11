@@ -1,0 +1,222 @@
+#!/usr/bin/env node
+
+/**
+ * Payload CMS Ingester - Phase 7
+ *
+ * This script programmatically connects to the Payload CMS REST API and creates
+ * a new draft entry in the 'itineraries' collection, populating it with all
+ * processed data from Phases 2-6.
+ *
+ * Usage: node loaders/payload_ingester.cjs
+ */
+
+// Load environment variables
+require('dotenv').config({ path: '.env.local' });
+
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
+// ANSI color codes for terminal output
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  cyan: '\x1b[36m',
+  magenta: '\x1b[35m',
+};
+
+// Helper function to log with color
+function log(message, color = colors.reset) {
+  console.log(`${color}${message}${colors.reset}`);
+}
+
+// Validate environment variables
+function validateEnv() {
+  const apiUrl = process.env.PAYLOAD_API_URL;
+  const apiKey = process.env.PAYLOAD_API_KEY;
+
+  if (!apiUrl) {
+    throw new Error('PAYLOAD_API_URL environment variable not set');
+  }
+
+  if (!apiKey) {
+    throw new Error('PAYLOAD_API_KEY environment variable not set');
+  }
+
+  return { apiUrl, apiKey };
+}
+
+// Load JSON file
+function loadJsonFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  return JSON.parse(fileContent);
+}
+
+// Load text file
+function loadTextFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+// Main ingestion function
+async function ingestToPayload() {
+  log('\n' + '='.repeat(60), colors.bright);
+  log('  Payload CMS Ingester - Phase 7', colors.bright);
+  log('='.repeat(60), colors.bright);
+
+  // Step 1: Validate environment
+  log('\n[1/7] Validating environment...', colors.blue);
+  let apiUrl, apiKey;
+  try {
+    ({ apiUrl, apiKey } = validateEnv());
+    log(`  ✓ PAYLOAD_API_URL: ${apiUrl}`, colors.green);
+    log(`  ✓ PAYLOAD_API_KEY: ${apiKey.substring(0, 8)}...`, colors.green);
+  } catch (error) {
+    log(`  ✗ ${error.message}`, colors.red);
+    process.exit(1);
+  }
+
+  // Step 2: Load all output files
+  log('\n[2/7] Loading output files...', colors.blue);
+  const outputDir = path.join(process.cwd(), 'output');
+
+  let rawItinerary, enhancedItinerary, schema, faqHtml, mediaMapping;
+
+  try {
+    rawItinerary = loadJsonFile(path.join(outputDir, 'raw-itinerary.json'));
+    log('  ✓ Loaded: raw-itinerary.json', colors.green);
+
+    enhancedItinerary = loadJsonFile(path.join(outputDir, 'enhanced-itinerary.json'));
+    log('  ✓ Loaded: enhanced-itinerary.json', colors.green);
+
+    schema = loadJsonFile(path.join(outputDir, 'schema.jsonld'));
+    log('  ✓ Loaded: schema.jsonld', colors.green);
+
+    faqHtml = loadTextFile(path.join(outputDir, 'faq.html'));
+    log('  ✓ Loaded: faq.html', colors.green);
+
+    mediaMapping = loadJsonFile(path.join(outputDir, 'media-mapping.json'));
+    log('  ✓ Loaded: media-mapping.json', colors.green);
+  } catch (error) {
+    log(`  ✗ Failed to load files: ${error.message}`, colors.red);
+    process.exit(1);
+  }
+
+  // Step 3: Extract itinerary metadata
+  log('\n[3/7] Extracting itinerary metadata...', colors.blue);
+
+  const itinerary = enhancedItinerary.itinerary?.itineraries?.[0];
+  if (!itinerary) {
+    log('  ✗ No itinerary data found', colors.red);
+    process.exit(1);
+  }
+
+  const title = itinerary.itineraryName || itinerary.name || 'Untitled Itinerary';
+  log(`  → Title: ${title}`, colors.cyan);
+
+  // Step 4: Extract media IDs from mapping
+  log('\n[4/7] Extracting media IDs...', colors.blue);
+
+  const mediaIds = mediaMapping
+    .filter(entry => entry.status === 'success' && entry.payloadMediaID)
+    .map(entry => entry.payloadMediaID);
+
+  log(`  → Found ${mediaIds.length} media items`, colors.cyan);
+
+  // Step 5: Prepare payload data
+  log('\n[5/7] Preparing payload data...', colors.blue);
+
+  const buildTimestamp = new Date().toISOString();
+
+  const payloadData = {
+    title: title,
+    images: mediaIds,
+    rawItinerary: rawItinerary,
+    enhancedItinerary: enhancedItinerary,
+    schema: schema,
+    faq: faqHtml,
+    schemaStatus: 'pass',
+    googleInspectionStatus: 'pending',
+    buildTimestamp: buildTimestamp,
+    _status: 'draft', // Explicitly set status to draft
+  };
+
+  log('  ✓ Payload data prepared', colors.green);
+  log(`  → Status: draft`, colors.cyan);
+  log(`  → Schema Status: pass`, colors.cyan);
+  log(`  → Google Inspection Status: pending`, colors.cyan);
+  log(`  → Build Timestamp: ${buildTimestamp}`, colors.cyan);
+
+  // Step 6: Create entry via Payload API
+  log('\n[6/7] Creating draft entry in Payload CMS...', colors.blue);
+
+  try {
+    const response = await axios.post(
+      `${apiUrl}/api/itineraries`,
+      payloadData,
+      {
+        headers: {
+          'Authorization': `users API-Key ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000, // 30 second timeout
+      }
+    );
+
+    if (!response.data || !response.data.doc || !response.data.doc.id) {
+      throw new Error('Invalid response from Payload API - no ID returned');
+    }
+
+    const createdId = response.data.doc.id;
+    log(`  ✓ Draft entry created successfully`, colors.green);
+    log(`  → Entry ID: ${createdId}`, colors.cyan);
+    log(`  → Status: ${response.data.doc._status}`, colors.cyan);
+
+    // Step 7: Write ID to file
+    log('\n[7/7] Writing entry ID to file...', colors.blue);
+
+    const idFilePath = path.join(outputDir, 'payload_id.txt');
+    fs.writeFileSync(idFilePath, createdId.toString());
+
+    log(`  ✓ Entry ID written: ${idFilePath}`, colors.green);
+  } catch (error) {
+    log(`  ✗ Failed to create entry: ${error.message}`, colors.red);
+
+    if (error.response) {
+      log(`  → Status code: ${error.response.status}`, colors.red);
+      log(`  → Response: ${JSON.stringify(error.response.data, null, 2)}`, colors.red);
+    }
+
+    process.exit(1);
+  }
+
+  log('\n' + '='.repeat(60), colors.bright);
+  log('  ✓ Payload ingestion completed successfully', colors.green);
+  log('='.repeat(60) + '\n', colors.bright);
+
+  process.exit(0);
+}
+
+// Main execution
+if (require.main === module) {
+  ingestToPayload().catch((error) => {
+    log(`\n✗ Fatal error: ${error.message}`, colors.red);
+    if (error.stack) {
+      log(`\nStack trace:\n${error.stack}`, colors.red);
+    }
+    process.exit(1);
+  });
+}
+
+module.exports = { ingestToPayload };

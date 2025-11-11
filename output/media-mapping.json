@@ -1,0 +1,38 @@
+[
+  {
+    "s3Key": "aa4cd3ac-54f1-4662-b9d4-d5053195ebc6_LogoBlack.png",
+    "payloadMediaID": 38,
+    "newS3Url": "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/aa4cd3ac-54f1-4662-b9d4-d5053195ebc6_LogoBlack-12.png",
+    "status": "success"
+  },
+  {
+    "s3Key": "54623887-7f5c-41c5-98c4-96d593279acf_LogoWhite.png",
+    "payloadMediaID": 39,
+    "newS3Url": "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/54623887-7f5c-41c5-98c4-96d593279acf_LogoWhite-12.png",
+    "status": "success"
+  },
+  {
+    "s3Key": "a5de694e-a668-48d3-9bf1-0d2d4dfea5d8_itrvl traveler T&Cs PP added.pdf",
+    "payloadMediaID": 40,
+    "newS3Url": "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/a5de694e-a668-48d3-9bf1-0d2d4dfea5d8_itrvl traveler T&Cs PP added-12.pdf",
+    "status": "success"
+  },
+  {
+    "s3Key": "aa4cd3ac-54f1-4662-b9d4-d5053195ebc6_LogoBlack.png",
+    "payloadMediaID": 41,
+    "newS3Url": "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/aa4cd3ac-54f1-4662-b9d4-d5053195ebc6_LogoBlack-13.png",
+    "status": "success"
+  },
+  {
+    "s3Key": "54623887-7f5c-41c5-98c4-96d593279acf_LogoWhite.png",
+    "payloadMediaID": 42,
+    "newS3Url": "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/54623887-7f5c-41c5-98c4-96d593279acf_LogoWhite-13.png",
+    "status": "success"
+  },
+  {
+    "s3Key": "a5de694e-a668-48d3-9bf1-0d2d4dfea5d8_itrvl traveler T&Cs PP added.pdf",
+    "payloadMediaID": 43,
+    "newS3Url": "https://kiuli-bucket.s3.eu-north-1.amazonaws.com/a5de694e-a668-48d3-9bf1-0d2d4dfea5d8_itrvl traveler T&Cs PP added-13.pdf",
+    "status": "success"
+  }
+]

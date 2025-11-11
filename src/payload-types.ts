@@ -72,6 +72,7 @@ export interface Config {
     media: Media;
     categories: Category;
     users: User;
+    itineraries: Itinerary;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -94,6 +95,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    itineraries: ItinerariesSelect<false> | ItinerariesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -420,6 +422,9 @@ export interface User {
   name?: string | null;
   updatedAt: string;
   createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
   email: string;
   resetPasswordToken?: string | null;
   resetPasswordExpiration?: string | null;
@@ -780,6 +785,77 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itineraries".
+ */
+export interface Itinerary {
+  id: number;
+  title: string;
+  /**
+   * Rehosted images from the itinerary
+   */
+  images?: (number | Media)[] | null;
+  /**
+   * Raw itinerary JSON from Phase 2
+   */
+  rawItinerary?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * AI-enhanced itinerary JSON from Phase 4
+   */
+  enhancedItinerary?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Product schema from Phase 5
+   */
+  schema?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Formatted FAQ HTML from Phase 6
+   */
+  faq?: string | null;
+  /**
+   * Internal schema validation status from Phase 5
+   */
+  schemaStatus: 'pending' | 'pass' | 'fail';
+  /**
+   * External Google Rich Results Test validation status
+   */
+  googleInspectionStatus: 'pending' | 'pass' | 'fail';
+  /**
+   * Timestamp when this itinerary was processed
+   */
+  buildTimestamp: string;
+  /**
+   * Error details if pipeline or validation failed
+   */
+  googleFailureLog?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -987,6 +1063,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'itineraries';
+        value: number | Itinerary;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1338,6 +1418,9 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   updatedAt?: T;
   createdAt?: T;
+  enableAPIKey?: T;
+  apiKey?: T;
+  apiKeyIndex?: T;
   email?: T;
   resetPasswordToken?: T;
   resetPasswordExpiration?: T;
@@ -1352,6 +1435,25 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itineraries_select".
+ */
+export interface ItinerariesSelect<T extends boolean = true> {
+  title?: T;
+  images?: T;
+  rawItinerary?: T;
+  enhancedItinerary?: T;
+  schema?: T;
+  faq?: T;
+  schemaStatus?: T;
+  googleInspectionStatus?: T;
+  buildTimestamp?: T;
+  googleFailureLog?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

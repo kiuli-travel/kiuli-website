@@ -12,7 +12,18 @@
  * https://portal.itrvl.com/share?accessKey=ABC123&itineraryId=12345
  */
 
-const puppeteer = require('puppeteer');
+// Use serverless Chromium for Vercel, regular Puppeteer for local
+const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+let puppeteer;
+let chromium;
+
+if (isVercel) {
+  puppeteer = require('puppeteer-core');
+  chromium = require('@sparticuz/chromium');
+} else {
+  puppeteer = require('puppeteer');
+}
+
 const fs = require('fs');
 const path = require('path');
 
@@ -103,16 +114,27 @@ async function scrapeItrvl(url) {
   log('\n[2/5] Launching headless browser...', colors.blue);
   let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-      ],
-    });
+    if (isVercel) {
+      // Use serverless Chromium for Vercel/Lambda
+      browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
+    } else {
+      // Use regular Puppeteer for local development
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--disable-gpu',
+        ],
+      });
+    }
     log('  ✓ Browser launched successfully', colors.green);
   } catch (error) {
     log(`  ✗ Failed to launch browser: ${error.message}`, colors.red);

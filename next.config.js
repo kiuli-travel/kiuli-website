@@ -31,6 +31,18 @@ const nextConfig = {
   },
   reactStrictMode: true,
   redirects,
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/scrape-itinerary': [
+        './scrapers/**/*',
+        './processors/**/*',
+        './pipelines/**/*',
+        './loaders/**/*',
+        './schemas/**/*',
+        './validation_scripts/**/*',
+      ],
+    },
+  },
 }
 
 export default withPayload(nextConfig, { devBundleServerPackages: false })

@@ -12,19 +12,6 @@ const redirects = async () => {
     source: '/:path((?!ie-incompatible.html$).*)', // all pages except the incompatibility page
   }
 
-  // Redirect www to apex domain
-  const wwwToApexRedirect = {
-    source: '/:path*',
-    has: [
-      {
-        type: 'host',
-        value: 'www.kiuli.com',
-      },
-    ],
-    destination: 'https://kiuli.com/:path*',
-    permanent: true,
-  }
-
   // Redirect admin.kiuli.com root to /admin
   const adminRootRedirect = {
     source: '/',
@@ -38,7 +25,7 @@ const redirects = async () => {
     permanent: true,
   }
 
-  const redirects = [internetExplorerRedirect, wwwToApexRedirect, adminRootRedirect]
+  const redirects = [internetExplorerRedirect, adminRootRedirect]
 
   return redirects
 }

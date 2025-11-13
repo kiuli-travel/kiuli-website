@@ -4,5 +4,18 @@
       "path": "/api/payload-jobs/run",
       "schedule": "0 0 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.kiuli.com"
+        }
+      ],
+      "destination": "https://kiuli.com/:path*",
+      "permanent": true
+    }
   ]
 }

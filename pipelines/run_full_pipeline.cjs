@@ -227,10 +227,13 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     // Phase 2: Scraping
     log('\n[PHASE 2] Scraping itinerary data...', colors.blue, silent);
     const phase2Start = Date.now();
-    await executeScript(
-      path.join(process.cwd(), 'scrapers', 'itrvl_scraper.cjs'),
-      [itrvlUrl]
-    );
+
+    // Use bundled scraper if available (production), otherwise use source file (development)
+    const scraperPath = fs.existsSync(path.join(process.cwd(), 'scrapers', 'dist', 'index.cjs'))
+      ? path.join(process.cwd(), 'scrapers', 'dist', 'index.cjs')
+      : path.join(process.cwd(), 'scrapers', 'itrvl_scraper.cjs');
+
+    await executeScript(scraperPath, [itrvlUrl]);
     timings.phase2 = ((Date.now() - phase2Start) / 1000).toFixed(2);
     log(`  ✓ Phase 2 (Scrape) completed in: ${timings.phase2}s`, colors.green, silent);
 

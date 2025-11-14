@@ -34,13 +34,13 @@ const nextConfig = {
   experimental: {
     outputFileTracingIncludes: {
       '/api/scrape-itinerary': [
-        './scrapers/**/*',
+        './scrapers/dist/**/*',
+        './scrapers/itrvl_scraper.cjs',
         './processors/**/*',
         './pipelines/**/*',
         './loaders/**/*',
         './schemas/**/*',
         './validation_scripts/**/*',
-        './node_modules/**/*',
       ],
     },
   },

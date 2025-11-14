@@ -5,6 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "bundle:scraper": "npx ncc build scrapers/itrvl_scraper.cjs -o scrapers/dist --minify",
+    "prebuild": "npm run bundle:scraper",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
@@ -78,6 +80,7 @@
     "@types/node": "22.5.4",
     "@types/react": "19.1.8",
     "@types/react-dom": "19.1.6",
+    "@vercel/ncc": "^0.38.4",
     "@vitejs/plugin-react": "4.5.2",
     "autoprefixer": "^10.4.19",
     "copyfiles": "^2.4.1",

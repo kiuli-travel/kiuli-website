@@ -110,6 +110,13 @@ const nextConfig = {
         './node_modules/pend/**',
         // Include once dependencies
         './node_modules/wrappy/**',
+        // Include dotenv for processors
+        './node_modules/dotenv/**',
+        // Include processor dependencies
+        './node_modules/axios/**',
+        './node_modules/form-data/**',
+        './node_modules/ajv/**',
+        './node_modules/ajv-formats/**',
       ],
     },
   },

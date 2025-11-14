@@ -81,6 +81,7 @@ const nextConfig = {
         './node_modules/escodegen/**',
         './node_modules/estraverse/**',
         './node_modules/ast-types/**',
+        './node_modules/progress/**',
       ],
     },
   },

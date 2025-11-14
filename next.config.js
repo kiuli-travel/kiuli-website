@@ -103,6 +103,13 @@ const nextConfig = {
         // Include yauzl dependencies
         './node_modules/fd-slicer/**',
         './node_modules/buffer-crc32/**',
+        // Include pump dependencies
+        './node_modules/once/**',
+        './node_modules/end-of-stream/**',
+        // Include fd-slicer dependencies
+        './node_modules/pend/**',
+        // Include once dependencies
+        './node_modules/wrappy/**',
       ],
     },
   },

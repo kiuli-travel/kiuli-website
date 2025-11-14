@@ -66,7 +66,9 @@ function executeScript(scriptPath, args = []) {
       if (code === 0) {
         resolve({ stdout, stderr, code });
       } else {
-        reject(new Error(`Script exited with code ${code}\n${stderr}`));
+        const errorMsg = `Script exited with code ${code}\nScript: ${scriptPath}\nStderr: ${stderr || '(no stderr output)'}\nStdout: ${stdout || '(no stdout output)'}`;
+        console.error('[executeScript ERROR]', errorMsg);
+        reject(new Error(errorMsg));
       }
     });
 
@@ -229,9 +231,14 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     const phase2Start = Date.now();
 
     // Use bundled scraper if available (production), otherwise use source file (development)
-    const scraperPath = fs.existsSync(path.join(process.cwd(), 'scrapers', 'dist', 'index.cjs'))
-      ? path.join(process.cwd(), 'scrapers', 'dist', 'index.cjs')
-      : path.join(process.cwd(), 'scrapers', 'itrvl_scraper.cjs');
+    const scraperPathDist = path.join(process.cwd(), 'scrapers', 'dist', 'index.cjs');
+    const scraperPathSrc = path.join(process.cwd(), 'scrapers', 'itrvl_scraper.cjs');
+    const scraperPath = fs.existsSync(scraperPathDist) ? scraperPathDist : scraperPathSrc;
+
+    console.log(`[DEBUG] Using scraper: ${scraperPath}`);
+    console.log(`[DEBUG] Scraper exists: ${fs.existsSync(scraperPath)}`);
+    console.log(`[DEBUG] CWD: ${process.cwd()}`);
+    console.log(`[DEBUG] Files in scrapers/dist:`, fs.existsSync(path.join(process.cwd(), 'scrapers', 'dist')) ? fs.readdirSync(path.join(process.cwd(), 'scrapers', 'dist')) : 'dist directory does not exist');
 
     await executeScript(scraperPath, [itrvlUrl]);
     timings.phase2 = ((Date.now() - phase2Start) / 1000).toFixed(2);

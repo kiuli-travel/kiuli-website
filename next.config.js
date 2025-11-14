@@ -117,6 +117,13 @@ const nextConfig = {
         './node_modules/form-data/**',
         './node_modules/ajv/**',
         './node_modules/ajv-formats/**',
+        // Include form-data dependencies
+        './node_modules/asynckit/**',
+        './node_modules/combined-stream/**',
+        './node_modules/es-set-tostringtag/**',
+        './node_modules/hasown/**',
+        './node_modules/mime-types/**',
+        './node_modules/delayed-stream/**',
       ],
     },
   },

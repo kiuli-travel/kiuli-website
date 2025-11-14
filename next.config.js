@@ -123,6 +123,7 @@ const nextConfig = {
         './node_modules/es-set-tostringtag/**',
         './node_modules/hasown/**',
         './node_modules/mime-types/**',
+        './node_modules/mime-db/**',
         './node_modules/delayed-stream/**',
       ],
     },

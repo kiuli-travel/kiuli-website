@@ -116,6 +116,9 @@ async function scrapeItrvl(url) {
   try {
     if (isVercel) {
       // Use serverless Chromium for Vercel/Lambda
+      // Set graphics mode to false to avoid brotli decompression issues
+      chromium.setGraphicsMode = false;
+
       browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,

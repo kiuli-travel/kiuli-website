@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "bundle:scraper": "npx ncc build scrapers/itrvl_scraper.cjs -o scrapers/dist --minify",
+    "bundle:scraper": "npx ncc build scrapers/itrvl_scraper.cjs -o scrapers/dist --minify --external @sparticuz/chromium --external puppeteer-core --external puppeteer",
     "prebuild": "npm run bundle:scraper",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",

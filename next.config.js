@@ -97,6 +97,12 @@ const nextConfig = {
         // Include extract-zip dependencies
         './node_modules/get-stream/**',
         './node_modules/yauzl/**',
+        // Include streamx dependencies
+        './node_modules/events-universal/**',
+        './node_modules/text-decoder/**',
+        // Include yauzl dependencies
+        './node_modules/fd-slicer/**',
+        './node_modules/buffer-crc32/**',
       ],
     },
   },

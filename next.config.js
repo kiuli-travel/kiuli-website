@@ -31,6 +31,14 @@ const nextConfig = {
   },
   reactStrictMode: true,
   redirects,
+  serverComponentsExternalPackages: [
+    'puppeteer',
+    'puppeteer-core',
+    '@sparticuz/chromium',
+    '@puppeteer/browsers',
+    'proxy-agent',
+    'agent-base',
+  ],
   experimental: {
     outputFileTracingIncludes: {
       '/api/scrape-itinerary': [
@@ -40,13 +48,6 @@ const nextConfig = {
         './loaders/**/*',
         './schemas/**/*',
         './validation_scripts/**/*',
-        './node_modules/puppeteer-core/**/*',
-        './node_modules/@sparticuz/chromium/**/*',
-        './node_modules/@puppeteer/**/*',
-        './node_modules/proxy-agent/**/*',
-        './node_modules/axios/**/*',
-        './node_modules/form-data/**/*',
-        './node_modules/@google/**/*',
       ],
     },
   },

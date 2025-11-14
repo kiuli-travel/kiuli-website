@@ -125,12 +125,13 @@ const nextConfig = {
         './node_modules/mime-types/**',
         './node_modules/mime-db/**',
         './node_modules/delayed-stream/**',
-        // Include es-set-tostringtag deep dependencies (es-*, call-*, get-*, has-*, function-*, gopd, math-*)
+        // Include es-set-tostringtag deep dependencies (es-*, call-*, get-*, has-*, function-*, dunder-*, gopd, math-*)
         './node_modules/es-*/**',
         './node_modules/call-*/**',
         './node_modules/get-*/**',
         './node_modules/has-*/**',
         './node_modules/function-*/**',
+        './node_modules/dunder-*/**',
         './node_modules/gopd/**',
         './node_modules/math-*/**',
       ],

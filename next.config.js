@@ -85,6 +85,11 @@ const nextConfig = {
         './node_modules/follow-redirects/**',
         './node_modules/yargs/**',
         './node_modules/semver/**',
+        // Include tar-fs dependencies
+        './node_modules/tar-stream/**',
+        './node_modules/pump/**',
+        './node_modules/bare-fs/**',
+        './node_modules/bare-path/**',
       ],
     },
   },

@@ -42,6 +42,7 @@ const nextConfig = {
         './validation_scripts/**/*',
         './node_modules/puppeteer-core/**/*',
         './node_modules/@sparticuz/chromium/**/*',
+        './node_modules/@puppeteer/**/*',
       ],
     },
   },

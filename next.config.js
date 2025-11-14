@@ -90,6 +90,13 @@ const nextConfig = {
         './node_modules/pump/**',
         './node_modules/bare-fs/**',
         './node_modules/bare-path/**',
+        // Include tar-stream dependencies
+        './node_modules/b4a/**',
+        './node_modules/fast-fifo/**',
+        './node_modules/streamx/**',
+        // Include extract-zip dependencies
+        './node_modules/get-stream/**',
+        './node_modules/yauzl/**',
       ],
     },
   },

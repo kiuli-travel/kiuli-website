@@ -22,6 +22,15 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 
+// Check if running in serverless environment
+const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+// Helper function to get output directory (serverless uses /tmp, local uses current dir)
+function getOutputDir() {
+  const baseDir = isVercel ? '/tmp' : process.cwd();
+  return path.join(baseDir, 'output');
+}
+
 // ANSI color codes for terminal output
 const colors = {
   reset: '\x1b[0m',
@@ -84,7 +93,8 @@ async function validateSchema(silent = false) {
   const addFormats = require('ajv-formats');
 
   const schemaPath = path.join(process.cwd(), 'schemas', 'kiuli-product.schema.json');
-  const schemaJsonldPath = path.join(process.cwd(), 'output', 'schema.jsonld');
+  const outputDir = getOutputDir();
+  const schemaJsonldPath = path.join(outputDir, 'schema.jsonld');
 
   if (!fs.existsSync(schemaPath)) {
     throw new Error(`Schema definition not found: ${schemaPath}`);
@@ -127,7 +137,7 @@ async function createFailedPayloadEntry(errorMessage, silent = false) {
     throw new Error('Payload API credentials not configured');
   }
 
-  const outputDir = path.join(process.cwd(), 'output');
+  const outputDir = getOutputDir();
 
   // Load whatever data is available
   let title = 'Failed Itinerary Processing';
@@ -327,7 +337,8 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     log(`\n  ✓ Phase 5-7 (Processing/Ingest) completed in: ${timings.phase567}s`, colors.green, silent);
 
     // Read the created Payload ID
-    const idFilePath = path.join(process.cwd(), 'output', 'payload_id.txt');
+    const outputDir = getOutputDir();
+    const idFilePath = path.join(outputDir, 'payload_id.txt');
     const payloadId = fs.readFileSync(idFilePath, 'utf8').trim();
 
     const totalDuration = ((Date.now() - pipelineStartTime) / 1000).toFixed(2);

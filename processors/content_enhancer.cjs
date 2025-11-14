@@ -16,6 +16,15 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
 
+// Check if running in serverless environment
+const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+// Helper function to get output directory (serverless uses /tmp, local uses current dir)
+function getOutputDir() {
+  const baseDir = isVercel ? '/tmp' : process.cwd();
+  return path.join(baseDir, 'output');
+}
+
 // ANSI color codes for terminal output
 const colors = {
   reset: '\x1b[0m',

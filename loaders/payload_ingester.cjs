@@ -17,6 +17,15 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
+// Check if running in serverless environment
+const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+// Helper function to get output directory (serverless uses /tmp, local uses current dir)
+function getOutputDir() {
+  const baseDir = isVercel ? '/tmp' : process.cwd();
+  return path.join(baseDir, 'output');
+}
+
 // ANSI color codes for terminal output
 const colors = {
   reset: '\x1b[0m',
@@ -89,7 +98,7 @@ async function ingestToPayload() {
 
   // Step 2: Load all output files
   log('\n[2/7] Loading output files...', colors.blue);
-  const outputDir = path.join(process.cwd(), 'output');
+  const outputDir = getOutputDir();
 
   let rawItinerary, enhancedItinerary, schema, faqHtml, mediaMapping;
 

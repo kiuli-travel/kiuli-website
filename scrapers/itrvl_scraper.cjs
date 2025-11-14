@@ -221,11 +221,13 @@ async function scrapeItrvl(url) {
     log(`  → Images found: ${mergedData.images?.length || 0}`, colors.cyan);
     log(`  → Price: $${(mergedData.price / 100).toFixed(2)}`, colors.cyan);
 
-    // Create output directory if it doesn't exist
-    const outputDir = path.join(process.cwd(), 'output');
+    // Use /tmp in serverless environments, regular output directory locally
+    const baseDir = isVercel ? '/tmp' : process.cwd();
+    const outputDir = path.join(baseDir, 'output');
+
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
-      log('  ✓ Created /output directory', colors.green);
+      log(`  ✓ Created output directory: ${outputDir}`, colors.green);
     }
 
     // Write to output file

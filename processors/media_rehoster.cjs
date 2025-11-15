@@ -45,8 +45,8 @@ function log(message, color = colors.reset) {
 
 // Validate environment variables
 function validateEnv() {
-  const apiUrl = process.env.PAYLOAD_API_URL;
-  const apiKey = process.env.PAYLOAD_API_KEY;
+  const apiUrl = process.env.PAYLOAD_API_URL?.trim();
+  const apiKey = process.env.PAYLOAD_API_KEY?.trim();
 
   if (!apiUrl) {
     throw new Error('PAYLOAD_API_URL environment variable not set');

@@ -76,7 +76,8 @@ async function generateSchema() {
 
   // Step 1: Load raw itinerary (for price, sku)
   log('\n[1/5] Loading raw itinerary data...', colors.blue);
-  const rawPath = path.join(process.cwd(), 'output', 'raw-itinerary.json');
+  const outputDir = getOutputDir();
+  const rawPath = path.join(outputDir, 'raw-itinerary.json');
 
   if (!fs.existsSync(rawPath)) {
     log(`  ✗ Raw itinerary not found: ${rawPath}`, colors.red);
@@ -103,7 +104,7 @@ async function generateSchema() {
 
   // Step 2: Load media mapping (for images)
   log('\n[2/5] Loading media mapping...', colors.blue);
-  const mappingPath = path.join(process.cwd(), 'output', 'media-mapping.json');
+  const mappingPath = path.join(outputDir, 'media-mapping.json');
 
   if (!fs.existsSync(mappingPath)) {
     log(`  ✗ Media mapping not found: ${mappingPath}`, colors.red);
@@ -139,7 +140,7 @@ async function generateSchema() {
 
   // Step 3: Load enhanced itinerary (for name, description)
   log('\n[3/5] Loading enhanced itinerary data...', colors.blue);
-  const enhancedPath = path.join(process.cwd(), 'output', 'enhanced-itinerary.json');
+  const enhancedPath = path.join(outputDir, 'enhanced-itinerary.json');
 
   if (!fs.existsSync(enhancedPath)) {
     log(`  ✗ Enhanced itinerary not found: ${enhancedPath}`, colors.red);
@@ -207,7 +208,7 @@ async function generateSchema() {
 
   // Step 5: Write schema to file
   log('\n[5/5] Writing schema to file...', colors.blue);
-  const outputPath = path.join(process.cwd(), 'output', 'schema.jsonld');
+  const outputPath = path.join(outputDir, 'schema.jsonld');
 
   try {
     fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2));

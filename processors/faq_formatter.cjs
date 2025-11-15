@@ -85,7 +85,8 @@ async function formatFAQ() {
 
   // Step 1: Load enhanced itinerary data
   log('\n[1/3] Loading enhanced itinerary data...', colors.blue);
-  const inputPath = path.join(process.cwd(), 'output', 'enhanced-itinerary.json');
+  const outputDir = getOutputDir();
+  const inputPath = path.join(outputDir, 'enhanced-itinerary.json');
 
   if (!fs.existsSync(inputPath)) {
     log(`  ✗ Enhanced itinerary not found: ${inputPath}`, colors.red);
@@ -127,7 +128,7 @@ async function formatFAQ() {
   if (segmentsWithEnhancedDesc.length === 0) {
     log('  ⚠ No segments with enhanced descriptions to format', colors.yellow);
     // Create empty FAQ file
-    const outputPath = path.join(process.cwd(), 'output', 'faq.html');
+    const outputPath = path.join(outputDir, 'faq.html');
     fs.writeFileSync(outputPath, '<div class="faq-container">\n  <!-- No FAQ items available -->\n</div>');
     log(`  ✓ Created empty FAQ file: ${outputPath}`, colors.green);
     process.exit(0);
@@ -151,7 +152,7 @@ async function formatFAQ() {
 ${faqItems.join('\n\n')}
 </div>`;
 
-  const outputPath = path.join(process.cwd(), 'output', 'faq.html');
+  const outputPath = path.join(outputDir, 'faq.html');
 
   try {
     fs.writeFileSync(outputPath, htmlContent);

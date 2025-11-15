@@ -173,7 +173,8 @@ async function enhanceContent() {
 
   // Load raw itinerary data
   log('\n[3/5] Loading raw itinerary data...', colors.blue);
-  const inputPath = path.join(process.cwd(), 'output', 'raw-itinerary.json');
+  const outputDir = getOutputDir();
+  const inputPath = path.join(outputDir, 'raw-itinerary.json');
 
   if (!fs.existsSync(inputPath)) {
     log(`  ✗ Input file not found: ${inputPath}`, colors.red);
@@ -211,7 +212,7 @@ async function enhanceContent() {
   if (segmentsWithDesc.length === 0) {
     log('  ⚠ No segments to enhance', colors.yellow);
     // Still create output with original data
-    const outputPath = path.join(process.cwd(), 'output', 'enhanced-itinerary.json');
+    const outputPath = path.join(outputDir, 'enhanced-itinerary.json');
     fs.writeFileSync(outputPath, JSON.stringify(rawData, null, 2));
     log(`  ✓ Created output file: ${outputPath}`, colors.green);
     process.exit(0);
@@ -239,7 +240,7 @@ async function enhanceContent() {
 
   // Write enhanced data
   log('\n[5/5] Writing enhanced itinerary file...', colors.blue);
-  const outputPath = path.join(process.cwd(), 'output', 'enhanced-itinerary.json');
+  const outputPath = path.join(outputDir, 'enhanced-itinerary.json');
 
   try {
     fs.writeFileSync(outputPath, JSON.stringify(enhancedData, null, 2));

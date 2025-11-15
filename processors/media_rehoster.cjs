@@ -218,7 +218,8 @@ async function rehostMedia() {
 
   // Load raw itinerary data
   log('\n[2/5] Loading raw itinerary data...', colors.blue);
-  const inputPath = path.join(process.cwd(), 'output', 'raw-itinerary.json');
+  const outputDir = getOutputDir();
+  const inputPath = path.join(outputDir, 'raw-itinerary.json');
 
   if (!fs.existsSync(inputPath)) {
     log(`  ✗ Input file not found: ${inputPath}`, colors.red);
@@ -247,7 +248,7 @@ async function rehostMedia() {
   if (images.length === 0) {
     log('  ⚠ No images to process', colors.yellow);
     // Still create an empty mapping file
-    const outputPath = path.join(process.cwd(), 'output', 'media-mapping.json');
+    const outputPath = path.join(outputDir, 'media-mapping.json');
     fs.writeFileSync(outputPath, JSON.stringify([], null, 2));
     log(`  ✓ Created empty mapping file: ${outputPath}`, colors.green);
     process.exit(0);
@@ -287,7 +288,7 @@ async function rehostMedia() {
 
   // Write mapping file
   log('\n[5/5] Writing media mapping file...', colors.blue);
-  const outputPath = path.join(process.cwd(), 'output', 'media-mapping.json');
+  const outputPath = path.join(outputDir, 'media-mapping.json');
 
   try {
     fs.writeFileSync(outputPath, JSON.stringify(mediaMapping, null, 2));

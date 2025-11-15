@@ -165,37 +165,59 @@ async function uploadToPayload(buffer, contentType, s3Key, apiUrl, apiKey) {
   }
 }
 
-// Process a single image
-async function processImage(s3Key, apiUrl, apiKey) {
-  try {
-    // Download from iTrvl
-    const { buffer, contentType } = await downloadImage(s3Key);
+// Process a single image with retry logic
+async function processImageWithRetry(s3Key, apiUrl, apiKey, maxRetries = 3) {
+  let lastError = null;
 
-    // Upload to Payload
-    const { payloadMediaID, newS3Url } = await uploadToPayload(
-      buffer,
-      contentType,
-      s3Key,
-      apiUrl,
-      apiKey
-    );
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 1) {
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        log(`    → Retry attempt ${attempt}/${maxRetries} (waiting ${backoffMs}ms)`, colors.yellow);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
 
-    return {
-      s3Key,
-      payloadMediaID,
-      newS3Url,
-      status: 'success',
-    };
-  } catch (error) {
-    log(`    ✗ Error: ${error.message}`, colors.red);
-    return {
-      s3Key,
-      payloadMediaID: null,
-      newS3Url: null,
-      status: 'failed',
-      error: error.message,
-    };
+      // Download from iTrvl
+      const { buffer, contentType } = await downloadImage(s3Key);
+
+      // Upload to Payload
+      const { payloadMediaID, newS3Url } = await uploadToPayload(
+        buffer,
+        contentType,
+        s3Key,
+        apiUrl,
+        apiKey
+      );
+
+      if (attempt > 1) {
+        log(`    ✓ Succeeded on retry attempt ${attempt}`, colors.green);
+      }
+
+      return {
+        s3Key,
+        payloadMediaID,
+        newS3Url,
+        status: 'success',
+        attempts: attempt,
+      };
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        log(`    ✗ Attempt ${attempt} failed: ${error.message}`, colors.yellow);
+      } else {
+        log(`    ✗ All ${maxRetries} attempts failed: ${error.message}`, colors.red);
+      }
+    }
   }
+
+  return {
+    s3Key,
+    payloadMediaID: null,
+    newS3Url: null,
+    status: 'failed',
+    error: lastError.message,
+    attempts: maxRetries,
+  };
 }
 
 // Main rehosting function
@@ -259,16 +281,20 @@ async function rehostMedia() {
   const mediaMapping = [];
   let successCount = 0;
   let failCount = 0;
+  let retryCount = 0;
 
   for (let i = 0; i < images.length; i++) {
     const s3Key = images[i];
     log(`\n  [${i + 1}/${images.length}] Processing: ${s3Key}`, colors.magenta);
 
-    const result = await processImage(s3Key, apiUrl, apiKey);
+    const result = await processImageWithRetry(s3Key, apiUrl, apiKey, 3);
     mediaMapping.push(result);
 
     if (result.status === 'success') {
       successCount++;
+      if (result.attempts > 1) {
+        retryCount++;
+      }
     } else {
       failCount++;
     }
@@ -282,6 +308,9 @@ async function rehostMedia() {
   // Summary
   log('\n[4/5] Processing summary...', colors.blue);
   log(`  ✓ Successful uploads: ${successCount}`, colors.green);
+  if (retryCount > 0) {
+    log(`  → Succeeded after retry: ${retryCount}`, colors.cyan);
+  }
   if (failCount > 0) {
     log(`  ✗ Failed uploads: ${failCount}`, colors.red);
   }

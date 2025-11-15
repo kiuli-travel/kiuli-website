@@ -242,30 +242,78 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     log('\n[PHASE 5-7] Processing and ingestion...', colors.blue, silent);
     const phase567Start = Date.now();
 
-    // Phase 5: Schema Generation - Call function directly
-    log('\n  [PHASE 5] Generating JSON-LD schema...', colors.blue, silent);
+    // Phase 5: Schema Generation with Validation Retry Loop
+    log('\n  [PHASE 5] Generating and validating JSON-LD schema...', colors.blue, silent);
 
     const { generateSchema } = require('../processors/schema_generator.cjs');
-    await generateSchema();
+    const MAX_VALIDATION_ATTEMPTS = 3;
+    let validationPassed = false;
+    let validationErrors = [];
 
-    log('    ✓ Schema generation complete', colors.green, silent);
+    for (let attempt = 1; attempt <= MAX_VALIDATION_ATTEMPTS; attempt++) {
+      try {
+        if (attempt > 1) {
+          log(`\n  → Validation retry attempt ${attempt}/${MAX_VALIDATION_ATTEMPTS}...`, colors.yellow, silent);
+        }
 
-    // Phase 5: Internal Schema Validation
-    log('\n  [PHASE 5] Validating schema internally...', colors.blue, silent);
-    try {
-      await validateSchema(silent);
-      log('    ✓ Phase 5 validation complete', colors.green, silent);
-    } catch (validationError) {
+        // Generate schema
+        await generateSchema();
+        log(`    ✓ Schema generation complete (attempt ${attempt})`, colors.green, silent);
+
+        // Validate schema
+        await validateSchema(silent);
+        log(`    ✓ Schema validation passed (attempt ${attempt})`, colors.green, silent);
+
+        validationPassed = true;
+        if (attempt > 1) {
+          log(`    ✓ Validation succeeded after ${attempt} attempts`, colors.green, silent);
+        }
+        break;
+      } catch (validationError) {
+        validationErrors.push({
+          attempt: attempt,
+          error: validationError.message,
+          timestamp: new Date().toISOString(),
+        });
+
+        log(`    ✗ Attempt ${attempt} validation failed: ${validationError.message}`, colors.red, silent);
+
+        if (attempt < MAX_VALIDATION_ATTEMPTS) {
+          log(`    → Retrying schema generation...`, colors.yellow, silent);
+        }
+      }
+    }
+
+    // If validation failed after all attempts, create failed entry
+    if (!validationPassed) {
       timings.phase567 = ((Date.now() - phase567Start) / 1000).toFixed(2);
-      log(`  ✗ Schema validation failed: ${validationError.message}`, colors.red, silent);
 
-      // Create partial Payload entry with failure status
-      const failedId = await createFailedPayloadEntry(validationError.message, silent);
+      // Build detailed failure report
+      const failureReport = {
+        totalAttempts: MAX_VALIDATION_ATTEMPTS,
+        errors: validationErrors,
+        summary: `Schema validation failed after ${MAX_VALIDATION_ATTEMPTS} attempts`,
+      };
+
+      const failureReportText = [
+        `Schema Validation Failed After ${MAX_VALIDATION_ATTEMPTS} Attempts`,
+        '',
+        'Attempts:',
+        ...validationErrors.map(e =>
+          `  Attempt ${e.attempt} (${e.timestamp}):\n    ${e.error}`
+        ),
+      ].join('\n');
+
+      log(`\n  ✗ Schema validation failed after ${MAX_VALIDATION_ATTEMPTS} attempts`, colors.red, silent);
+      log(`\n${failureReportText}`, colors.red, silent);
+
+      // Create failed Payload entry with detailed report
+      const failedId = await createFailedPayloadEntry(failureReportText, silent);
 
       const totalDuration = ((Date.now() - pipelineStartTime) / 1000).toFixed(2);
 
       log('\n' + '='.repeat(60), colors.bright, silent);
-      log('  Pipeline Result: PARTIAL (Schema Validation Failed)', colors.yellow, silent);
+      log('  Pipeline Result: FAILED (Schema Validation)', colors.red, silent);
       log('='.repeat(60), colors.bright, silent);
       log(`\n  Performance Breakdown:`, colors.cyan, silent);
       log(`  • Phase 2 (Scrape): ${timings.phase2}s`, colors.cyan, silent);
@@ -273,14 +321,16 @@ async function runFullPipeline(itrvlUrl, options = {}) {
       log(`  • Phase 4 (AI Enhance): ${timings.phase4}s`, colors.cyan, silent);
       log(`  • Phase 5-7 (Processing/Ingest): ${timings.phase567}s`, colors.cyan, silent);
       log(`  • Total Pipeline: ${totalDuration}s`, colors.cyan, silent);
-      log(`\n  → Partial entry created with ID: ${failedId}`, colors.yellow, silent);
+      log(`\n  → Failed entry created with ID: ${failedId}`, colors.yellow, silent);
       log('', colors.reset, silent);
 
       return {
         success: false,
         payloadId: failedId,
         phase: 'validation',
-        error: validationError.message,
+        error: failureReportText,
+        validationAttempts: MAX_VALIDATION_ATTEMPTS,
+        validationErrors: validationErrors,
         duration: parseFloat(totalDuration),
         timings: timings,
       };

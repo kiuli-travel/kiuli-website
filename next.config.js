@@ -134,6 +134,8 @@ const nextConfig = {
         './node_modules/dunder-*/**',
         './node_modules/gopd/**',
         './node_modules/math-*/**',
+        // Include Google Generative AI (Gemini) for content enhancement
+        './node_modules/@google/generative-ai/**',
       ],
     },
   },

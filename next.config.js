@@ -34,7 +34,6 @@ const nextConfig = {
   experimental: {
     outputFileTracingIncludes: {
       '/api/scrape-itinerary': [
-        './scrapers/dist/**/*',
         './scrapers/itrvl_scraper.cjs',
         './processors/**/*',
         './pipelines/**/*',

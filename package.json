@@ -5,8 +5,6 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "bundle:scraper": "npx ncc build scrapers/itrvl_scraper.cjs -o scrapers/dist --minify --external @sparticuz/chromium --external puppeteer-core --external puppeteer",
-    "prebuild": "npm run bundle:scraper",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
@@ -37,7 +35,6 @@
     "@payloadcms/plugin-seo": "3.63.0",
     "@payloadcms/richtext-lexical": "3.63.0",
     "@payloadcms/storage-s3": "^3.63.0",
-    "@payloadcms/storage-vercel-blob": "3.63.0",
     "@payloadcms/ui": "3.63.0",
     "@puppeteer/browsers": "^2.10.13",
     "@radix-ui/react-checkbox": "^1.0.4",

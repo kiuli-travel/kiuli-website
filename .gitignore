@@ -1,5 +1,5 @@
 build
-dist / media
+dist
 node_modules
 .DS_Store
 .env
@@ -12,6 +12,8 @@ public/media/
 public/robots.txt
 public/sitemap*.xml
 
+# Local pipeline output (test data)
+output/
 
 # Playwright
 node_modules/

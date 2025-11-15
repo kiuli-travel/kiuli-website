@@ -3,7 +3,9 @@
 /**
  * Full Pipeline Orchestrator - Phases 2-7
  *
- * This script orchestrates the complete itinerary processing pipeline:
+ * This script orchestrates the complete itinerary processing pipeline by
+ * calling processor functions directly (NOT via child_process.spawn).
+ *
  * Phase 2: Scraping
  * Phase 3: Media Rehosting
  * Phase 4: Content Enhancement
@@ -17,15 +19,13 @@
 // Load environment variables
 require('dotenv').config({ path: '.env.local' });
 
-const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
 
 // Check if running in serverless environment
 const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
-// Helper function to get output directory (serverless uses /tmp, local uses current dir)
+// Helper function to get output directory
 function getOutputDir() {
   const baseDir = isVercel ? '/tmp' : process.cwd();
   return path.join(baseDir, 'output');
@@ -50,44 +50,7 @@ function log(message, color = colors.reset, silent = false) {
   }
 }
 
-// Execute a Node.js script and return result
-function executeScript(scriptPath, args = []) {
-  return new Promise((resolve, reject) => {
-    const child = spawn('node', [scriptPath, ...args], {
-      cwd: process.cwd(),
-      env: process.env,
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (data) => {
-      stdout += data.toString();
-      process.stdout.write(data);
-    });
-
-    child.stderr.on('data', (data) => {
-      stderr += data.toString();
-      process.stderr.write(data);
-    });
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr, code });
-      } else {
-        const errorMsg = `Script exited with code ${code}\nScript: ${scriptPath}\nStderr: ${stderr || '(no stderr output)'}\nStdout: ${stdout || '(no stdout output)'}`;
-        console.error('[executeScript ERROR]', errorMsg);
-        reject(new Error(errorMsg));
-      }
-    });
-
-    child.on('error', (error) => {
-      reject(error);
-    });
-  });
-}
-
-// Validate Phase 5 schema
+// Validate Phase 5 schema using Ajv
 async function validateSchema(silent = false) {
   const Ajv = require('ajv');
   const addFormats = require('ajv-formats');
@@ -130,8 +93,11 @@ async function validateSchema(silent = false) {
 async function createFailedPayloadEntry(errorMessage, silent = false) {
   log('\n[!] Creating partial Payload entry with failure status...', colors.yellow, silent);
 
-  const apiUrl = process.env.PAYLOAD_API_URL;
-  const apiKey = process.env.PAYLOAD_API_KEY;
+  const { ingestToPayload: ingestToPayloadFn } = require('../loaders/payload_ingester.cjs');
+  const axios = require('axios');
+
+  const apiUrl = process.env.PAYLOAD_API_URL?.trim();
+  const apiKey = process.env.PAYLOAD_API_KEY?.trim();
 
   if (!apiUrl || !apiKey) {
     throw new Error('Payload API credentials not configured');
@@ -235,40 +201,40 @@ async function runFullPipeline(itrvlUrl, options = {}) {
   const pipelineStartTime = Date.now();
   const timings = {};
 
+  // Ensure output directory exists
+  const outputDir = getOutputDir();
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
   try {
-    // Phase 2: Scraping
+    // Phase 2: Scraping - Call function directly
     log('\n[PHASE 2] Scraping itinerary data...', colors.blue, silent);
     const phase2Start = Date.now();
 
-    // Use bundled scraper if available (production), otherwise use source file (development)
-    const scraperPathDist = path.join(process.cwd(), 'scrapers', 'dist', 'index.cjs');
-    const scraperPathSrc = path.join(process.cwd(), 'scrapers', 'itrvl_scraper.cjs');
-    const scraperPath = fs.existsSync(scraperPathDist) ? scraperPathDist : scraperPathSrc;
+    const { scrapeItrvl } = require('../scrapers/itrvl_scraper.cjs');
+    await scrapeItrvl(itrvlUrl);
 
-    console.log(`[DEBUG] Using scraper: ${scraperPath}`);
-    console.log(`[DEBUG] Scraper exists: ${fs.existsSync(scraperPath)}`);
-    console.log(`[DEBUG] CWD: ${process.cwd()}`);
-    console.log(`[DEBUG] Files in scrapers/dist:`, fs.existsSync(path.join(process.cwd(), 'scrapers', 'dist')) ? fs.readdirSync(path.join(process.cwd(), 'scrapers', 'dist')) : 'dist directory does not exist');
-
-    await executeScript(scraperPath, [itrvlUrl]);
     timings.phase2 = ((Date.now() - phase2Start) / 1000).toFixed(2);
     log(`  ✓ Phase 2 (Scrape) completed in: ${timings.phase2}s`, colors.green, silent);
 
-    // Phase 3: Media Rehosting
+    // Phase 3: Media Rehosting - Call function directly
     log('\n[PHASE 3] Rehosting media files...', colors.blue, silent);
     const phase3Start = Date.now();
-    await executeScript(
-      path.join(process.cwd(), 'processors', 'media_rehoster.cjs')
-    );
+
+    const { rehostMedia } = require('../processors/media_rehoster.cjs');
+    await rehostMedia();
+
     timings.phase3 = ((Date.now() - phase3Start) / 1000).toFixed(2);
     log(`  ✓ Phase 3 (Media Rehost) completed in: ${timings.phase3}s`, colors.green, silent);
 
-    // Phase 4: Content Enhancement
+    // Phase 4: Content Enhancement - Call function directly
     log('\n[PHASE 4] Enhancing content with AI...', colors.blue, silent);
     const phase4Start = Date.now();
-    await executeScript(
-      path.join(process.cwd(), 'processors', 'content_enhancer.cjs')
-    );
+
+    const { enhanceContent } = require('../processors/content_enhancer.cjs');
+    await enhanceContent();
+
     timings.phase4 = ((Date.now() - phase4Start) / 1000).toFixed(2);
     log(`  ✓ Phase 4 (AI Enhance) completed in: ${timings.phase4}s`, colors.green, silent);
 
@@ -276,11 +242,12 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     log('\n[PHASE 5-7] Processing and ingestion...', colors.blue, silent);
     const phase567Start = Date.now();
 
-    // Phase 5: Schema Generation
+    // Phase 5: Schema Generation - Call function directly
     log('\n  [PHASE 5] Generating JSON-LD schema...', colors.blue, silent);
-    await executeScript(
-      path.join(process.cwd(), 'processors', 'schema_generator.cjs')
-    );
+
+    const { generateSchema } = require('../processors/schema_generator.cjs');
+    await generateSchema();
+
     log('    ✓ Schema generation complete', colors.green, silent);
 
     // Phase 5: Internal Schema Validation
@@ -319,39 +286,40 @@ async function runFullPipeline(itrvlUrl, options = {}) {
       };
     }
 
-    // Phase 6: FAQ Formatting
+    // Phase 6: FAQ Formatting - Call function directly
     log('\n  [PHASE 6] Formatting FAQ content...', colors.blue, silent);
-    await executeScript(
-      path.join(process.cwd(), 'processors', 'faq_formatter.cjs')
-    );
+
+    const { formatFAQ } = require('../processors/faq_formatter.cjs');
+    await formatFAQ();
+
     log('    ✓ Phase 6 complete', colors.green, silent);
 
-    // Phase 7: Payload Ingestion
+    // Phase 7: Payload Ingestion - Call function directly
     log('\n  [PHASE 7] Ingesting to Payload CMS...', colors.blue, silent);
-    await executeScript(
-      path.join(process.cwd(), 'loaders', 'payload_ingester.cjs')
-    );
+
+    const { ingestToPayload } = require('../loaders/payload_ingester.cjs');
+    await ingestToPayload();
+
     log('    ✓ Phase 7 complete', colors.green, silent);
 
     timings.phase567 = ((Date.now() - phase567Start) / 1000).toFixed(2);
     log(`\n  ✓ Phase 5-7 (Processing/Ingest) completed in: ${timings.phase567}s`, colors.green, silent);
 
     // Read the created Payload ID
-    const outputDir = getOutputDir();
     const idFilePath = path.join(outputDir, 'payload_id.txt');
     const payloadId = fs.readFileSync(idFilePath, 'utf8').trim();
 
     const totalDuration = ((Date.now() - pipelineStartTime) / 1000).toFixed(2);
 
     log('\n' + '='.repeat(60), colors.bright, silent);
-    log('  ✓ Pipeline completed successfully', colors.green, silent);
+    log('  ✓ Pipeline completed', colors.green, silent);
     log('='.repeat(60), colors.bright, silent);
     log(`\n  Performance Breakdown:`, colors.cyan, silent);
-    log(`  • Phase 2 (Scrape) completed in: ${timings.phase2}s`, colors.cyan, silent);
-    log(`  • Phase 3 (Media Rehost) completed in: ${timings.phase3}s`, colors.cyan, silent);
-    log(`  • Phase 4 (AI Enhance) completed in: ${timings.phase4}s`, colors.cyan, silent);
-    log(`  • Phase 5-7 (Processing/Ingest) completed in: ${timings.phase567}s`, colors.cyan, silent);
-    log(`  • Total Pipeline completed in: ${totalDuration}s`, colors.cyan, silent);
+    log(`  • Phase 2 (Scrape): ${timings.phase2}s`, colors.cyan, silent);
+    log(`  • Phase 3 (Media Rehost): ${timings.phase3}s`, colors.cyan, silent);
+    log(`  • Phase 4 (AI Enhance): ${timings.phase4}s`, colors.cyan, silent);
+    log(`  • Phase 5-7 (Processing/Ingest): ${timings.phase567}s`, colors.cyan, silent);
+    log(`  • Total Pipeline: ${totalDuration}s`, colors.cyan, silent);
     log(`\n  → Payload Entry ID: ${payloadId}`, colors.cyan, silent);
     log('', colors.reset, silent);
 

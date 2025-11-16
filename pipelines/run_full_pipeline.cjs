@@ -21,15 +21,8 @@ require('dotenv').config({ path: '.env.local' });
 
 const path = require('path');
 const fs = require('fs');
-
-// Check if running in serverless environment
-const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
-
-// Helper function to get output directory
-function getOutputDir() {
-  const baseDir = isVercel ? '/tmp' : process.cwd();
-  return path.join(baseDir, 'output');
-}
+const { getOutputDir, getOutputFilePath } = require('../utils/outputDir.cjs');
+const { parseItrvlUrl } = require('../scrapers/itrvl_scraper.cjs');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -51,13 +44,12 @@ function log(message, color = colors.reset, silent = false) {
 }
 
 // Validate Phase 5 schema using Ajv
-async function validateSchema(silent = false) {
+async function validateSchema(itineraryId, silent = false) {
   const Ajv = require('ajv');
   const addFormats = require('ajv-formats');
 
   const schemaPath = path.join(process.cwd(), 'schemas', 'kiuli-product.schema.json');
-  const outputDir = getOutputDir();
-  const schemaJsonldPath = path.join(outputDir, 'schema.jsonld');
+  const schemaJsonldPath = getOutputFilePath(itineraryId, 'schema.jsonld');
 
   if (!fs.existsSync(schemaPath)) {
     throw new Error(`Schema definition not found: ${schemaPath}`);
@@ -90,7 +82,7 @@ async function validateSchema(silent = false) {
 }
 
 // Create a partial Payload entry with failure status
-async function createFailedPayloadEntry(errorMessage, silent = false) {
+async function createFailedPayloadEntry(itineraryId, errorMessage, silent = false) {
   log('\n[!] Creating partial Payload entry with failure status...', colors.yellow, silent);
 
   const { ingestToPayload: ingestToPayloadFn } = require('../loaders/payload_ingester.cjs');
@@ -103,15 +95,13 @@ async function createFailedPayloadEntry(errorMessage, silent = false) {
     throw new Error('Payload API credentials not configured');
   }
 
-  const outputDir = getOutputDir();
-
   // Load whatever data is available
   let title = 'Failed Itinerary Processing';
   let rawItinerary = null;
   let enhancedItinerary = null;
 
   try {
-    const rawPath = path.join(outputDir, 'raw-itinerary.json');
+    const rawPath = getOutputFilePath(itineraryId, 'raw-itinerary.json');
     if (fs.existsSync(rawPath)) {
       rawItinerary = JSON.parse(fs.readFileSync(rawPath, 'utf8'));
       const itinerary = rawItinerary.itinerary?.itineraries?.[0];
@@ -124,7 +114,7 @@ async function createFailedPayloadEntry(errorMessage, silent = false) {
   }
 
   try {
-    const enhancedPath = path.join(outputDir, 'enhanced-itinerary.json');
+    const enhancedPath = getOutputFilePath(itineraryId, 'enhanced-itinerary.json');
     if (fs.existsSync(enhancedPath)) {
       enhancedItinerary = JSON.parse(fs.readFileSync(enhancedPath, 'utf8'));
     }
@@ -135,7 +125,7 @@ async function createFailedPayloadEntry(errorMessage, silent = false) {
   // Load media mapping if available
   let mediaIds = [];
   try {
-    const mappingPath = path.join(outputDir, 'media-mapping.json');
+    const mappingPath = getOutputFilePath(itineraryId, 'media-mapping.json');
     if (fs.existsSync(mappingPath)) {
       const mediaMapping = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
       mediaIds = mediaMapping
@@ -182,7 +172,7 @@ async function createFailedPayloadEntry(errorMessage, silent = false) {
   log(`  ✓ Failed entry created with ID: ${createdId}`, colors.green, silent);
 
   // Write ID to file
-  const idFilePath = path.join(outputDir, 'payload_id.txt');
+  const idFilePath = getOutputFilePath(itineraryId, 'payload_id.txt');
   fs.writeFileSync(idFilePath, createdId.toString());
 
   return createdId;
@@ -198,14 +188,12 @@ async function runFullPipeline(itrvlUrl, options = {}) {
 
   log(`\n→ Input URL: ${itrvlUrl}`, colors.cyan, silent);
 
+  // Extract itinerary ID from URL
+  const { itineraryId } = parseItrvlUrl(itrvlUrl);
+  log(`→ Itinerary ID: ${itineraryId}`, colors.cyan, silent);
+
   const pipelineStartTime = Date.now();
   const timings = {};
-
-  // Ensure output directory exists
-  const outputDir = getOutputDir();
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
 
   try {
     // Phase 2: Scraping - Call function directly
@@ -223,7 +211,7 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     const phase3Start = Date.now();
 
     const { rehostMedia } = require('../processors/media_rehoster.cjs');
-    await rehostMedia();
+    await rehostMedia(itineraryId);
 
     timings.phase3 = ((Date.now() - phase3Start) / 1000).toFixed(2);
     log(`  ✓ Phase 3 (Media Rehost) completed in: ${timings.phase3}s`, colors.green, silent);
@@ -233,7 +221,7 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     const phase4Start = Date.now();
 
     const { enhanceContent } = require('../processors/content_enhancer.cjs');
-    await enhanceContent();
+    await enhanceContent(itineraryId);
 
     timings.phase4 = ((Date.now() - phase4Start) / 1000).toFixed(2);
     log(`  ✓ Phase 4 (AI Enhance) completed in: ${timings.phase4}s`, colors.green, silent);
@@ -257,11 +245,11 @@ async function runFullPipeline(itrvlUrl, options = {}) {
         }
 
         // Generate schema
-        await generateSchema();
+        await generateSchema(itineraryId);
         log(`    ✓ Schema generation complete (attempt ${attempt})`, colors.green, silent);
 
         // Validate schema
-        await validateSchema(silent);
+        await validateSchema(itineraryId, silent);
         log(`    ✓ Schema validation passed (attempt ${attempt})`, colors.green, silent);
 
         validationPassed = true;
@@ -308,7 +296,7 @@ async function runFullPipeline(itrvlUrl, options = {}) {
       log(`\n${failureReportText}`, colors.red, silent);
 
       // Create failed Payload entry with detailed report
-      const failedId = await createFailedPayloadEntry(failureReportText, silent);
+      const failedId = await createFailedPayloadEntry(itineraryId, failureReportText, silent);
 
       const totalDuration = ((Date.now() - pipelineStartTime) / 1000).toFixed(2);
 
@@ -340,7 +328,7 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     log('\n  [PHASE 6] Formatting FAQ content...', colors.blue, silent);
 
     const { formatFAQ } = require('../processors/faq_formatter.cjs');
-    await formatFAQ();
+    await formatFAQ(itineraryId);
 
     log('    ✓ Phase 6 complete', colors.green, silent);
 
@@ -348,7 +336,7 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     log('\n  [PHASE 7] Ingesting to Payload CMS...', colors.blue, silent);
 
     const { ingestToPayload } = require('../loaders/payload_ingester.cjs');
-    await ingestToPayload();
+    await ingestToPayload(itineraryId);
 
     log('    ✓ Phase 7 complete', colors.green, silent);
 
@@ -356,7 +344,7 @@ async function runFullPipeline(itrvlUrl, options = {}) {
     log(`\n  ✓ Phase 5-7 (Processing/Ingest) completed in: ${timings.phase567}s`, colors.green, silent);
 
     // Read the created Payload ID
-    const idFilePath = path.join(outputDir, 'payload_id.txt');
+    const idFilePath = getOutputFilePath(itineraryId, 'payload_id.txt');
     const payloadId = fs.readFileSync(idFilePath, 'utf8').trim();
 
     const totalDuration = ((Date.now() - pipelineStartTime) / 1000).toFixed(2);

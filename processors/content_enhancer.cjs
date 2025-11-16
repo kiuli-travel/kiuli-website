@@ -15,15 +15,7 @@ require('dotenv').config({ path: '.env.local' });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
-
-// Check if running in serverless environment
-const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
-
-// Helper function to get output directory (serverless uses /tmp, local uses current dir)
-function getOutputDir() {
-  const baseDir = isVercel ? '/tmp' : process.cwd();
-  return path.join(baseDir, 'output');
-}
+const { getOutputDir, getOutputFilePath } = require('../utils/outputDir.cjs');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -150,10 +142,15 @@ async function enhanceSegments(segments, genAI) {
 }
 
 // Main enhancement function
-async function enhanceContent() {
+async function enhanceContent(itineraryId) {
+  if (!itineraryId) {
+    throw new Error('itineraryId is required');
+  }
+
   log('\n' + '='.repeat(60), colors.bright);
   log('  Content Enhancer - Phase 4', colors.bright);
   log('='.repeat(60), colors.bright);
+  log(`  → Itinerary ID: ${itineraryId}`, colors.cyan);
 
   // Validate environment
   log('\n[1/5] Validating environment...', colors.blue);
@@ -173,8 +170,7 @@ async function enhanceContent() {
 
   // Load raw itinerary data
   log('\n[3/5] Loading raw itinerary data...', colors.blue);
-  const outputDir = getOutputDir();
-  const inputPath = path.join(outputDir, 'raw-itinerary.json');
+  const inputPath = getOutputFilePath(itineraryId, 'raw-itinerary.json');
 
   if (!fs.existsSync(inputPath)) {
     log(`  ✗ Input file not found: ${inputPath}`, colors.red);
@@ -212,7 +208,7 @@ async function enhanceContent() {
   if (segmentsWithDesc.length === 0) {
     log('  ⚠ No segments to enhance', colors.yellow);
     // Still create output with original data
-    const outputPath = path.join(outputDir, 'enhanced-itinerary.json');
+    const outputPath = getOutputFilePath(itineraryId, 'enhanced-itinerary.json');
     fs.writeFileSync(outputPath, JSON.stringify(rawData, null, 2));
     log(`  ✓ Created output file: ${outputPath}`, colors.green);
     process.exit(0);
@@ -240,7 +236,7 @@ async function enhanceContent() {
 
   // Write enhanced data
   log('\n[5/5] Writing enhanced itinerary file...', colors.blue);
-  const outputPath = path.join(outputDir, 'enhanced-itinerary.json');
+  const outputPath = getOutputFilePath(itineraryId, 'enhanced-itinerary.json');
 
   try {
     fs.writeFileSync(outputPath, JSON.stringify(enhancedData, null, 2));

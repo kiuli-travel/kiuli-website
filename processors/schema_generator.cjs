@@ -12,15 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
-
-// Check if running in serverless environment
-const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
-
-// Helper function to get output directory (serverless uses /tmp, local uses current dir)
-function getOutputDir() {
-  const baseDir = isVercel ? '/tmp' : process.cwd();
-  return path.join(baseDir, 'output');
-}
+const { getOutputDir, getOutputFilePath } = require('../utils/outputDir.cjs');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -69,15 +61,19 @@ function generateProductUrl(sku) {
 }
 
 // Main schema generation function
-async function generateSchema() {
+async function generateSchema(itineraryId) {
+  if (!itineraryId) {
+    throw new Error('itineraryId is required');
+  }
+
   log('\n' + '='.repeat(60), colors.bright);
   log('  Schema Generator - Phase 5', colors.bright);
   log('='.repeat(60), colors.bright);
+  log(`  → Itinerary ID: ${itineraryId}`, colors.cyan);
 
   // Step 1: Load raw itinerary (for price, sku)
   log('\n[1/5] Loading raw itinerary data...', colors.blue);
-  const outputDir = getOutputDir();
-  const rawPath = path.join(outputDir, 'raw-itinerary.json');
+  const rawPath = getOutputFilePath(itineraryId, 'raw-itinerary.json');
 
   if (!fs.existsSync(rawPath)) {
     log(`  ✗ Raw itinerary not found: ${rawPath}`, colors.red);
@@ -104,7 +100,7 @@ async function generateSchema() {
 
   // Step 2: Load media mapping (for images)
   log('\n[2/5] Loading media mapping...', colors.blue);
-  const mappingPath = path.join(outputDir, 'media-mapping.json');
+  const mappingPath = getOutputFilePath(itineraryId, 'media-mapping.json');
 
   if (!fs.existsSync(mappingPath)) {
     log(`  ✗ Media mapping not found: ${mappingPath}`, colors.red);
@@ -140,7 +136,7 @@ async function generateSchema() {
 
   // Step 3: Load enhanced itinerary (for name, description)
   log('\n[3/5] Loading enhanced itinerary data...', colors.blue);
-  const enhancedPath = path.join(outputDir, 'enhanced-itinerary.json');
+  const enhancedPath = getOutputFilePath(itineraryId, 'enhanced-itinerary.json');
 
   if (!fs.existsSync(enhancedPath)) {
     log(`  ✗ Enhanced itinerary not found: ${enhancedPath}`, colors.red);
@@ -208,7 +204,7 @@ async function generateSchema() {
 
   // Step 5: Write schema to file
   log('\n[5/5] Writing schema to file...', colors.blue);
-  const outputPath = path.join(outputDir, 'schema.jsonld');
+  const outputPath = getOutputFilePath(itineraryId, 'schema.jsonld');
 
   try {
     fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2));

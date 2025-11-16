@@ -12,15 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
-
-// Check if running in serverless environment
-const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
-
-// Helper function to get output directory (serverless uses /tmp, local uses current dir)
-function getOutputDir() {
-  const baseDir = isVercel ? '/tmp' : process.cwd();
-  return path.join(baseDir, 'output');
-}
+const { getOutputDir, getOutputFilePath } = require('../utils/outputDir.cjs');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -78,15 +70,19 @@ function formatSegmentAsQA(segment, index) {
 }
 
 // Main FAQ formatting function
-async function formatFAQ() {
+async function formatFAQ(itineraryId) {
+  if (!itineraryId) {
+    throw new Error('itineraryId is required');
+  }
+
   log('\n' + '='.repeat(60), colors.bright);
   log('  FAQ Formatter - Phase 6', colors.bright);
   log('='.repeat(60), colors.bright);
+  log(`  → Itinerary ID: ${itineraryId}`, colors.cyan);
 
   // Step 1: Load enhanced itinerary data
   log('\n[1/3] Loading enhanced itinerary data...', colors.blue);
-  const outputDir = getOutputDir();
-  const inputPath = path.join(outputDir, 'enhanced-itinerary.json');
+  const inputPath = getOutputFilePath(itineraryId, 'enhanced-itinerary.json');
 
   if (!fs.existsSync(inputPath)) {
     log(`  ✗ Enhanced itinerary not found: ${inputPath}`, colors.red);
@@ -128,7 +124,7 @@ async function formatFAQ() {
   if (segmentsWithEnhancedDesc.length === 0) {
     log('  ⚠ No segments with enhanced descriptions to format', colors.yellow);
     // Create empty FAQ file
-    const outputPath = path.join(outputDir, 'faq.html');
+    const outputPath = getOutputFilePath(itineraryId, 'faq.html');
     fs.writeFileSync(outputPath, '<div class="faq-container">\n  <!-- No FAQ items available -->\n</div>');
     log(`  ✓ Created empty FAQ file: ${outputPath}`, colors.green);
     process.exit(0);
@@ -152,7 +148,7 @@ async function formatFAQ() {
 ${faqItems.join('\n\n')}
 </div>`;
 
-  const outputPath = path.join(outputDir, 'faq.html');
+  const outputPath = getOutputFilePath(itineraryId, 'faq.html');
 
   try {
     fs.writeFileSync(outputPath, htmlContent);

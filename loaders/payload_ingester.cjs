@@ -16,15 +16,7 @@ require('dotenv').config({ path: '.env.local' });
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-
-// Check if running in serverless environment
-const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
-
-// Helper function to get output directory (serverless uses /tmp, local uses current dir)
-function getOutputDir() {
-  const baseDir = isVercel ? '/tmp' : process.cwd();
-  return path.join(baseDir, 'output');
-}
+const { getOutputDir, getOutputFilePath } = require('../utils/outputDir.cjs');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -79,10 +71,15 @@ function loadTextFile(filePath) {
 }
 
 // Main ingestion function
-async function ingestToPayload() {
+async function ingestToPayload(itineraryId) {
+  if (!itineraryId) {
+    throw new Error('itineraryId is required');
+  }
+
   log('\n' + '='.repeat(60), colors.bright);
   log('  Payload CMS Ingester - Phase 7', colors.bright);
   log('='.repeat(60), colors.bright);
+  log(`  → Itinerary ID: ${itineraryId}`, colors.cyan);
 
   // Step 1: Validate environment
   log('\n[1/7] Validating environment...', colors.blue);
@@ -98,24 +95,23 @@ async function ingestToPayload() {
 
   // Step 2: Load all output files
   log('\n[2/7] Loading output files...', colors.blue);
-  const outputDir = getOutputDir();
 
   let rawItinerary, enhancedItinerary, schema, faqHtml, mediaMapping;
 
   try {
-    rawItinerary = loadJsonFile(path.join(outputDir, 'raw-itinerary.json'));
+    rawItinerary = loadJsonFile(getOutputFilePath(itineraryId, 'raw-itinerary.json'));
     log('  ✓ Loaded: raw-itinerary.json', colors.green);
 
-    enhancedItinerary = loadJsonFile(path.join(outputDir, 'enhanced-itinerary.json'));
+    enhancedItinerary = loadJsonFile(getOutputFilePath(itineraryId, 'enhanced-itinerary.json'));
     log('  ✓ Loaded: enhanced-itinerary.json', colors.green);
 
-    schema = loadJsonFile(path.join(outputDir, 'schema.jsonld'));
+    schema = loadJsonFile(getOutputFilePath(itineraryId, 'schema.jsonld'));
     log('  ✓ Loaded: schema.jsonld', colors.green);
 
-    faqHtml = loadTextFile(path.join(outputDir, 'faq.html'));
+    faqHtml = loadTextFile(getOutputFilePath(itineraryId, 'faq.html'));
     log('  ✓ Loaded: faq.html', colors.green);
 
-    mediaMapping = loadJsonFile(path.join(outputDir, 'media-mapping.json'));
+    mediaMapping = loadJsonFile(getOutputFilePath(itineraryId, 'media-mapping.json'));
     log('  ✓ Loaded: media-mapping.json', colors.green);
   } catch (error) {
     log(`  ✗ Failed to load files: ${error.message}`, colors.red);
@@ -195,7 +191,7 @@ async function ingestToPayload() {
     // Step 7: Write ID to file
     log('\n[7/7] Writing entry ID to file...', colors.blue);
 
-    const idFilePath = path.join(outputDir, 'payload_id.txt');
+    const idFilePath = getOutputFilePath(itineraryId, 'payload_id.txt');
     fs.writeFileSync(idFilePath, createdId.toString());
 
     log(`  ✓ Entry ID written: ${idFilePath}`, colors.green);

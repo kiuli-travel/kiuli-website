@@ -16,15 +16,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
-
-// Check if running in serverless environment
-const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
-
-// Helper function to get output directory (serverless uses /tmp, local uses current dir)
-function getOutputDir() {
-  const baseDir = isVercel ? '/tmp' : process.cwd();
-  return path.join(baseDir, 'output');
-}
+const { getOutputDir, getOutputFilePath } = require('../utils/outputDir.cjs');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -221,10 +213,15 @@ async function processImageWithRetry(s3Key, apiUrl, apiKey, maxRetries = 3) {
 }
 
 // Main rehosting function
-async function rehostMedia() {
+async function rehostMedia(itineraryId) {
+  if (!itineraryId) {
+    throw new Error('itineraryId is required');
+  }
+
   log('\n' + '='.repeat(60), colors.bright);
   log('  Media Rehoster - Phase 3', colors.bright);
   log('='.repeat(60), colors.bright);
+  log(`  → Itinerary ID: ${itineraryId}`, colors.cyan);
 
   // Validate environment
   log('\n[1/5] Validating environment...', colors.blue);
@@ -240,8 +237,7 @@ async function rehostMedia() {
 
   // Load raw itinerary data
   log('\n[2/5] Loading raw itinerary data...', colors.blue);
-  const outputDir = getOutputDir();
-  const inputPath = path.join(outputDir, 'raw-itinerary.json');
+  const inputPath = getOutputFilePath(itineraryId, 'raw-itinerary.json');
 
   if (!fs.existsSync(inputPath)) {
     log(`  ✗ Input file not found: ${inputPath}`, colors.red);
@@ -270,7 +266,7 @@ async function rehostMedia() {
   if (images.length === 0) {
     log('  ⚠ No images to process', colors.yellow);
     // Still create an empty mapping file
-    const outputPath = path.join(outputDir, 'media-mapping.json');
+    const outputPath = getOutputFilePath(itineraryId, 'media-mapping.json');
     fs.writeFileSync(outputPath, JSON.stringify([], null, 2));
     log(`  ✓ Created empty mapping file: ${outputPath}`, colors.green);
     process.exit(0);
@@ -317,7 +313,7 @@ async function rehostMedia() {
 
   // Write mapping file
   log('\n[5/5] Writing media mapping file...', colors.blue);
-  const outputPath = path.join(outputDir, 'media-mapping.json');
+  const outputPath = getOutputFilePath(itineraryId, 'media-mapping.json');
 
   try {
     fs.writeFileSync(outputPath, JSON.stringify(mediaMapping, null, 2));

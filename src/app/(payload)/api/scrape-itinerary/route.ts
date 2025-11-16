@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPayload } from 'payload'
+import config from '@payload-config'
 
 /**
  * POST /api/scrape-itinerary
@@ -7,11 +9,16 @@ import { NextRequest, NextResponse } from 'next/server'
  * Scrape → Rehost → Enhance → SchemaGen → Validate → FAQ → PayloadIngest
  *
  * Input: { itrvlUrl: string }
- * Output: { success: boolean, payloadId: string, duration: number }
+ * Output: { success: boolean, payloadId: string, jobId: string, duration: number }
+ *
+ * This endpoint also creates and updates a job tracking record in the
+ * 'itinerary-jobs' collection to enable monitoring and admin UI management.
  *
  * This endpoint does NOT call the Google Search Console API (Phase 9).
  */
 export async function POST(request: NextRequest) {
+  let jobId: string | null = null
+
   try {
     // Parse request body
     const body = await request.json()
@@ -41,8 +48,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Extract itineraryId from URL for job tracking
+    const { parseItrvlUrl } = await import(
+      '../../../../../scrapers/itrvl_scraper.cjs'
+    )
+    const { itineraryId } = parseItrvlUrl(itrvlUrl)
+
     // Log request
     console.log(`[scrape-itinerary] Starting pipeline for URL: ${itrvlUrl}`)
+    console.log(`[scrape-itinerary] Itinerary ID: ${itineraryId}`)
+
+    // Get Payload instance
+    const payload = await getPayload({ config })
+
+    // Create job record in Payload CMS
+    console.log('[scrape-itinerary] Creating job record...')
+    const job = await payload.create({
+      collection: 'itinerary-jobs',
+      data: {
+        itineraryId: itineraryId,
+        itrvlUrl: itrvlUrl,
+        status: 'processing',
+        startedAt: new Date().toISOString(),
+      },
+    })
+
+    jobId = job.id
+    console.log(`[scrape-itinerary] Job created with ID: ${jobId}`)
 
     // Import and execute the pipeline
     // Using dynamic import to load CommonJS module
@@ -55,12 +87,28 @@ export async function POST(request: NextRequest) {
 
     console.log(`[scrape-itinerary] Pipeline completed: ${JSON.stringify(result)}`)
 
-    // Return success response
+    // Update job record with results
     if (result.success) {
+      await payload.update({
+        collection: 'itinerary-jobs',
+        id: jobId,
+        data: {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          payloadId: result.payloadId,
+          duration: result.duration,
+          timings: result.timings,
+        },
+      })
+
+      console.log(`[scrape-itinerary] Job ${jobId} marked as completed`)
+
+      // Return success response
       return NextResponse.json(
         {
           success: true,
           payloadId: result.payloadId,
+          jobId: jobId,
           duration: result.duration,
           timings: result.timings,
           message: 'Itinerary processed successfully',
@@ -69,10 +117,26 @@ export async function POST(request: NextRequest) {
       )
     } else {
       // Partial success (validation failed but entry created)
+      await payload.update({
+        collection: 'itinerary-jobs',
+        id: jobId,
+        data: {
+          status: 'failed',
+          completedAt: new Date().toISOString(),
+          payloadId: result.payloadId,
+          errorMessage: result.error,
+          duration: result.duration,
+          timings: result.timings,
+        },
+      })
+
+      console.log(`[scrape-itinerary] Job ${jobId} marked as failed (validation)`)
+
       return NextResponse.json(
         {
           success: false,
           payloadId: result.payloadId,
+          jobId: jobId,
           phase: result.phase,
           error: result.error,
           duration: result.duration,
@@ -86,10 +150,30 @@ export async function POST(request: NextRequest) {
     // Log error
     console.error('[scrape-itinerary] Pipeline error:', error)
 
+    // Update job record if it was created
+    if (jobId) {
+      try {
+        const payload = await getPayload({ config })
+        await payload.update({
+          collection: 'itinerary-jobs',
+          id: jobId,
+          data: {
+            status: 'failed',
+            completedAt: new Date().toISOString(),
+            errorMessage: error.message || 'Internal server error',
+          },
+        })
+        console.log(`[scrape-itinerary] Job ${jobId} marked as failed (exception)`)
+      } catch (updateError) {
+        console.error('[scrape-itinerary] Failed to update job record:', updateError)
+      }
+    }
+
     // Return error response
     return NextResponse.json(
       {
         success: false,
+        jobId: jobId,
         error: error.message || 'Internal server error',
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },

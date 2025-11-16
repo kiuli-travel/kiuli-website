@@ -26,6 +26,7 @@ if (isVercel) {
 
 const fs = require('fs');
 const path = require('path');
+const { getOutputFilePath } = require('../utils/outputDir.cjs');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -221,17 +222,8 @@ async function scrapeItrvl(url) {
     log(`  → Images found: ${mergedData.images?.length || 0}`, colors.cyan);
     log(`  → Price: $${(mergedData.price / 100).toFixed(2)}`, colors.cyan);
 
-    // Use /tmp in serverless environments, regular output directory locally
-    const baseDir = isVercel ? '/tmp' : process.cwd();
-    const outputDir = path.join(baseDir, 'output');
-
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-      log(`  ✓ Created output directory: ${outputDir}`, colors.green);
-    }
-
-    // Write to output file
-    const outputPath = path.join(outputDir, 'raw-itinerary.json');
+    // Use unique output directory based on itineraryId
+    const outputPath = getOutputFilePath(parsedUrl.itineraryId, 'raw-itinerary.json');
     fs.writeFileSync(outputPath, JSON.stringify(mergedData, null, 2));
 
     log(`  ✓ Output written to: ${outputPath}`, colors.green);

@@ -1,0 +1,13 @@
+{
+  "name": "kiuli-scraper-lambda",
+  "version": "1.0.0",
+  "description": "Puppeteer scraper for iTrvl itineraries",
+  "main": "handler.js",
+  "scripts": {
+    "package": "zip -r function.zip ."
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^119.0.0",
+    "puppeteer-core": "^21.0.0"
+  }
+}

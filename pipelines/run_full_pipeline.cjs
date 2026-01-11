@@ -196,12 +196,44 @@ async function runFullPipeline(itrvlUrl, options = {}) {
   const timings = {};
 
   try {
-    // Phase 2: Scraping - Call function directly
+    // Phase 2: Scraping - Call Lambda function or local scraper
     log('\n[PHASE 2] Scraping itinerary data...', colors.blue, silent);
     const phase2Start = Date.now();
 
-    const { scrapeItrvl } = require('../scrapers/itrvl_scraper.cjs');
-    await scrapeItrvl(itrvlUrl);
+    const lambdaUrl = process.env.LAMBDA_SCRAPER_URL;
+    const lambdaSecret = process.env.LAMBDA_SCRAPER_SECRET;
+
+    if (lambdaUrl && lambdaSecret) {
+      // Use Lambda for scraping (production/Vercel)
+      log('  → Using Lambda scraper...', colors.cyan, silent);
+      const axios = require('axios');
+
+      const lambdaResponse = await axios.post(
+        lambdaUrl,
+        {
+          itrvlUrl: itrvlUrl,
+          secret: lambdaSecret,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 600000, // 10 minute timeout for Lambda
+        }
+      );
+
+      if (!lambdaResponse.data.success) {
+        throw new Error(`Lambda scraping failed: ${lambdaResponse.data.error}`);
+      }
+
+      // Write Lambda response to raw-itinerary.json
+      const rawItineraryPath = getOutputFilePath(itineraryId, 'raw-itinerary.json');
+      fs.writeFileSync(rawItineraryPath, JSON.stringify(lambdaResponse.data.data, null, 2));
+      log(`  → Saved raw itinerary to: ${rawItineraryPath}`, colors.cyan, silent);
+    } else {
+      // Use local scraper (development)
+      log('  → Using local scraper (Lambda not configured)...', colors.cyan, silent);
+      const { scrapeItrvl } = require('../scrapers/itrvl_scraper.cjs');
+      await scrapeItrvl(itrvlUrl);
+    }
 
     timings.phase2 = ((Date.now() - phase2Start) / 1000).toFixed(2);
     log(`  ✓ Phase 2 (Scrape) completed in: ${timings.phase2}s`, colors.green, silent);

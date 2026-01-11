@@ -22,3 +22,8 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 .env*.local
+
+# Lambda build artifacts
+lambda/function.zip
+lambda/node_modules
+lambda/package-lock.json

@@ -71,24 +71,6 @@ export async function POST(request: NextRequest) {
 
   const payload = await getPayload({ config })
 
-  // Check idempotency - does this itinerary already exist?
-  if (mode === 'create') {
-    const existing = await payload.find({
-      collection: 'itineraries',
-      where: { itineraryId: { equals: parsed.itineraryId } },
-      limit: 1,
-    })
-
-    if (existing.docs.length > 0) {
-      return NextResponse.json({
-        success: true,
-        exists: true,
-        payloadId: existing.docs[0].id,
-        message: 'Itinerary already processed. Use mode="update" to reprocess.',
-      })
-    }
-  }
-
   // Create job record
   const job = await payload.create({
     collection: 'itinerary-jobs',

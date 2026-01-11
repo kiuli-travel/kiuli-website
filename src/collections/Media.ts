@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, AccessArgs } from 'payload'
 
 import {
   FixedToolbarFeature,
@@ -14,14 +14,25 @@ import { authenticated } from '../access/authenticated'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+// Allow authenticated users OR API key access for Lambda pipeline
+const authenticatedOrApiKey = ({ req }: AccessArgs) => {
+  if (req.user) return true
+  const headers = req.headers as Headers | Record<string, string>
+  const authHeader = typeof headers?.get === 'function'
+    ? headers.get('authorization')
+    : (headers as Record<string, string>)?.authorization
+  if (authHeader?.startsWith('Bearer ')) return true
+  return false
+}
+
 export const Media: CollectionConfig = {
   slug: 'media',
   folders: true,
   access: {
-    create: authenticated,
+    create: authenticatedOrApiKey,
     delete: authenticated,
     read: anyone,
-    update: authenticated,
+    update: authenticatedOrApiKey,
   },
   fields: [
     {

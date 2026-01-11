@@ -3,6 +3,26 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 /**
+ * Validate API key from Authorization header
+ */
+function validateApiKey(request: NextRequest): boolean {
+  const authHeader = request.headers.get('authorization')
+  const expectedKey = process.env.SCRAPER_API_KEY
+
+  if (!expectedKey) {
+    console.error('[scrape-itinerary] SCRAPER_API_KEY not configured')
+    return false
+  }
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false
+  }
+
+  const providedKey = authHeader.substring(7) // Remove "Bearer " prefix
+  return providedKey === expectedKey
+}
+
+/**
  * POST /api/scrape-itinerary
  *
  * Executes the full itinerary processing pipeline (Phases 2-7):
@@ -17,6 +37,17 @@ import config from '@payload-config'
  * This endpoint does NOT call the Google Search Console API (Phase 9).
  */
 export async function POST(request: NextRequest) {
+  // Check authentication
+  if (!validateApiKey(request)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Unauthorized: Invalid or missing API key',
+      },
+      { status: 401 }
+    )
+  }
+
   let jobId: string | null = null
 
   try {

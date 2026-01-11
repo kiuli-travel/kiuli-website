@@ -22,6 +22,36 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       label: 'Itinerary Title',
     },
     {
+      name: 'itineraryId',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      label: 'iTrvl Itinerary ID',
+      admin: {
+        description: 'Unique identifier from iTrvl',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'price',
+      type: 'number',
+      label: 'Price (cents)',
+      admin: {
+        description: 'Price in cents (e.g., 1000000 = $10,000)',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'priceFormatted',
+      type: 'text',
+      label: 'Price (formatted)',
+      admin: {
+        description: 'Human-readable price string',
+        readOnly: true,
+      },
+    },
+    {
       name: 'images',
       type: 'relationship',
       relationTo: 'media',

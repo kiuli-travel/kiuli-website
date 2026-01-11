@@ -38,6 +38,111 @@ export const Media: CollectionConfig = {
         },
       }),
     },
+    {
+      name: 'location',
+      type: 'text',
+      admin: {
+        position: 'sidebar',
+        description: 'AI-detected location',
+      },
+    },
+    {
+      name: 'country',
+      type: 'select',
+      options: [
+        { label: 'Tanzania', value: 'Tanzania' },
+        { label: 'Kenya', value: 'Kenya' },
+        { label: 'Botswana', value: 'Botswana' },
+        { label: 'Rwanda', value: 'Rwanda' },
+        { label: 'South Africa', value: 'South Africa' },
+        { label: 'Zimbabwe', value: 'Zimbabwe' },
+        { label: 'Zambia', value: 'Zambia' },
+        { label: 'Namibia', value: 'Namibia' },
+        { label: 'Uganda', value: 'Uganda' },
+        { label: 'Mozambique', value: 'Mozambique' },
+        { label: 'Unknown', value: 'Unknown' },
+      ],
+      admin: { position: 'sidebar' },
+    },
+    {
+      name: 'imageType',
+      type: 'select',
+      options: [
+        { label: 'Wildlife', value: 'wildlife' },
+        { label: 'Landscape', value: 'landscape' },
+        { label: 'Accommodation', value: 'accommodation' },
+        { label: 'Activity', value: 'activity' },
+        { label: 'People', value: 'people' },
+        { label: 'Food', value: 'food' },
+        { label: 'Aerial', value: 'aerial' },
+        { label: 'Detail', value: 'detail' },
+      ],
+      admin: { position: 'sidebar' },
+    },
+    {
+      name: 'animals',
+      type: 'json',
+      admin: {
+        description: 'Array of detected animals',
+      },
+    },
+    {
+      name: 'tags',
+      type: 'json',
+      admin: {
+        description: 'Array of searchable tags',
+      },
+    },
+    {
+      name: 'altText',
+      type: 'text',
+      admin: {
+        description: 'AI-generated alt text for accessibility',
+      },
+    },
+    {
+      name: 'isHero',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Suitable for hero/banner usage',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'quality',
+      type: 'select',
+      options: [
+        { label: 'High', value: 'high' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'Low', value: 'low' },
+      ],
+      admin: { position: 'sidebar' },
+    },
+    {
+      name: 'sourceItinerary',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'Itinerary ID this image came from',
+      },
+    },
+    {
+      name: 's3Key',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'Original iTrvl S3 key',
+      },
+    },
+    {
+      name: 'sourceUrl',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'Original iTrvl CDN URL',
+      },
+    },
   ],
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload

@@ -1,0 +1,15 @@
+{
+  "name": "kiuli-pipeline-worker",
+  "version": "1.0.0",
+  "description": "Async pipeline worker for Kiuli scraper",
+  "main": "handler.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.400.0",
+    "@google/generative-ai": "^0.2.0",
+    "@sparticuz/chromium": "^131.0.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}

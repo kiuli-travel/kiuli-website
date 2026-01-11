@@ -294,6 +294,73 @@ export interface Media {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * AI-detected location
+   */
+  location?: string | null;
+  country?:
+    | (
+        | 'Tanzania'
+        | 'Kenya'
+        | 'Botswana'
+        | 'Rwanda'
+        | 'South Africa'
+        | 'Zimbabwe'
+        | 'Zambia'
+        | 'Namibia'
+        | 'Uganda'
+        | 'Mozambique'
+        | 'Unknown'
+      )
+    | null;
+  imageType?:
+    | ('wildlife' | 'landscape' | 'accommodation' | 'activity' | 'people' | 'food' | 'aerial' | 'detail')
+    | null;
+  /**
+   * Array of detected animals
+   */
+  animals?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Array of searchable tags
+   */
+  tags?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * AI-generated alt text for accessibility
+   */
+  altText?: string | null;
+  /**
+   * Suitable for hero/banner usage
+   */
+  isHero?: boolean | null;
+  quality?: ('high' | 'medium' | 'low') | null;
+  /**
+   * Itinerary ID this image came from
+   */
+  sourceItinerary?: string | null;
+  /**
+   * Original iTrvl S3 key
+   */
+  s3Key?: string | null;
+  /**
+   * Original iTrvl CDN URL
+   */
+  sourceUrl?: string | null;
   folder?: (number | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
@@ -793,6 +860,18 @@ export interface Itinerary {
   id: number;
   title: string;
   /**
+   * Unique identifier from iTrvl
+   */
+  itineraryId: string;
+  /**
+   * Price in cents (e.g., 1000000 = $10,000)
+   */
+  price?: number | null;
+  /**
+   * Human-readable price string
+   */
+  priceFormatted?: string | null;
+  /**
    * Rehosted images from the itinerary
    */
   images?: (number | Media)[] | null;
@@ -885,6 +964,26 @@ export interface ItineraryJob {
    */
   currentPhase?: string | null;
   /**
+   * Processing progress percentage
+   */
+  progress?: number | null;
+  /**
+   * Total images to process
+   */
+  totalImages?: number | null;
+  /**
+   * Successfully processed images
+   */
+  processedImages?: number | null;
+  /**
+   * Images skipped (already existed)
+   */
+  skippedImages?: number | null;
+  /**
+   * Images that failed to process
+   */
+  failedImages?: number | null;
+  /**
    * Real-time processing logs and progress updates
    */
   progressLog?: string | null;
@@ -892,6 +991,14 @@ export interface ItineraryJob {
    * Error details if processing failed
    */
   errorMessage?: string | null;
+  /**
+   * Pipeline phase where error occurred
+   */
+  errorPhase?: string | null;
+  /**
+   * Timestamp when processing failed
+   */
+  failedAt?: string | null;
   /**
    * The final Payload itinerary created from this job
    */
@@ -1384,6 +1491,17 @@ export interface PostsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  location?: T;
+  country?: T;
+  imageType?: T;
+  animals?: T;
+  tags?: T;
+  altText?: T;
+  isHero?: T;
+  quality?: T;
+  sourceItinerary?: T;
+  s3Key?: T;
+  sourceUrl?: T;
   folder?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1523,6 +1641,9 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface ItinerariesSelect<T extends boolean = true> {
   title?: T;
+  itineraryId?: T;
+  price?: T;
+  priceFormatted?: T;
   images?: T;
   rawItinerary?: T;
   enhancedItinerary?: T;
@@ -1546,8 +1667,15 @@ export interface ItineraryJobsSelect<T extends boolean = true> {
   accessKey?: T;
   status?: T;
   currentPhase?: T;
+  progress?: T;
+  totalImages?: T;
+  processedImages?: T;
+  skippedImages?: T;
+  failedImages?: T;
   progressLog?: T;
   errorMessage?: T;
+  errorPhase?: T;
+  failedAt?: T;
   processedItinerary?: T;
   relatedArticles?: T;
   payloadId?: T;

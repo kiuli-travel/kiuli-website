@@ -1,0 +1,113 @@
+const { scrape } = require('./phases/scrape');
+const { deduplicate } = require('./phases/deduplicate');
+const { processImages } = require('./phases/processImages');
+const { enhance } = require('./phases/enhance');
+const { generateSchema } = require('./phases/schema');
+const { formatFaq } = require('./phases/faq');
+const { ingest } = require('./phases/ingest');
+const { JobTracker } = require('./services/jobTracker');
+const { labelImage } = require('./utils/imageLabeler');
+
+exports.handler = async (event) => {
+  console.log('[Handler] Lambda invoked');
+
+  // Parse event
+  let body;
+  try {
+    body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body || {};
+  } catch (e) {
+    console.error('[Handler] Failed to parse event body');
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
+  }
+
+  // Validate invocation secret
+  const invokeSecret = event.headers?.['x-invoke-secret'] || body.invokeSecret;
+  if (process.env.INVOKE_SECRET && invokeSecret !== process.env.INVOKE_SECRET) {
+    console.error('[Handler] Unauthorized invocation');
+    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+
+  const { jobId, itrvlUrl, itineraryId } = body;
+
+  if (!jobId || !itrvlUrl) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Missing jobId or itrvlUrl' }) };
+  }
+
+  const tracker = new JobTracker(jobId);
+
+  try {
+    // Phase 1: Scrape
+    await tracker.startPhase('scraping');
+    const rawData = await scrape(itrvlUrl);
+    await tracker.completePhase('scraping');
+
+    // Phase 2: Deduplicate
+    await tracker.startPhase('deduplicating');
+    const { uniqueImages, existingMedia, uniqueCount } = await deduplicate(rawData, itineraryId);
+    await tracker.completePhase('deduplicating', {
+      totalImages: uniqueCount,
+      skippedImages: Object.keys(existingMedia).length
+    });
+
+    // Phase 3: Process Images
+    await tracker.startPhase('images');
+    const { mediaMapping, processed, failed } = await processImages(
+      uniqueImages,
+      itineraryId,
+      existingMedia,
+      tracker,
+      labelImage
+    );
+    await tracker.completePhase('images', {
+      processedImages: processed,
+      failedImages: failed
+    });
+
+    // Phase 4: Enhance Content
+    await tracker.startPhase('enhancing');
+    const enhancedData = await enhance(rawData);
+    await tracker.completePhase('enhancing');
+
+    // Phase 5: Generate Schema
+    await tracker.startPhase('schema');
+    const mediaUrls = Object.values(mediaMapping).map(id =>
+      `${process.env.PAYLOAD_PUBLIC_MEDIA_URL || process.env.PAYLOAD_API_URL}/media/${id}`
+    );
+    const schema = generateSchema(enhancedData, rawData.price, itineraryId, mediaUrls);
+    await tracker.completePhase('schema');
+
+    // Phase 6: Format FAQ
+    await tracker.startPhase('faq');
+    const faqHtml = formatFaq(enhancedData);
+    await tracker.completePhase('faq');
+
+    // Phase 7: Ingest to Payload
+    await tracker.startPhase('ingesting');
+    const payloadId = await ingest({
+      rawData,
+      enhancedData,
+      schema,
+      faqHtml,
+      mediaMapping,
+      itineraryId
+    });
+    await tracker.completePhase('ingesting');
+
+    // Complete
+    await tracker.complete(payloadId);
+
+    console.log('[Handler] Pipeline complete');
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, payloadId })
+    };
+
+  } catch (error) {
+    console.error('[Handler] Pipeline failed:', error);
+    await tracker.fail(error.message, tracker.currentPhase);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ success: false, error: error.message })
+    };
+  }
+};

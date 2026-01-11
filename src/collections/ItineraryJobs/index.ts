@@ -99,6 +99,54 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
               },
             },
             {
+              name: 'progress',
+              type: 'number',
+              min: 0,
+              max: 100,
+              defaultValue: 0,
+              label: 'Progress %',
+              admin: {
+                description: 'Processing progress percentage',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'totalImages',
+              type: 'number',
+              label: 'Total Images',
+              admin: {
+                description: 'Total images to process',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'processedImages',
+              type: 'number',
+              label: 'Processed Images',
+              admin: {
+                description: 'Successfully processed images',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'skippedImages',
+              type: 'number',
+              label: 'Skipped Images',
+              admin: {
+                description: 'Images skipped (already existed)',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'failedImages',
+              type: 'number',
+              label: 'Failed Images',
+              admin: {
+                description: 'Images that failed to process',
+                readOnly: true,
+              },
+            },
+            {
               name: 'progressLog',
               type: 'textarea',
               label: 'Progress Log',
@@ -113,6 +161,27 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
               label: 'Error Message',
               admin: {
                 description: 'Error details if processing failed',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'errorPhase',
+              type: 'text',
+              label: 'Error Phase',
+              admin: {
+                description: 'Pipeline phase where error occurred',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'failedAt',
+              type: 'date',
+              label: 'Failed At',
+              admin: {
+                date: {
+                  pickerAppearance: 'dayAndTime',
+                },
+                description: 'Timestamp when processing failed',
                 readOnly: true,
               },
             },

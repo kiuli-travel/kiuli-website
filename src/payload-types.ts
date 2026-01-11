@@ -73,6 +73,7 @@ export interface Config {
     categories: Category;
     users: User;
     itineraries: Itinerary;
+    'itinerary-jobs': ItineraryJob;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -96,6 +97,7 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     itineraries: ItinerariesSelect<false> | ItinerariesSelect<true>;
+    'itinerary-jobs': ItineraryJobsSelect<false> | ItineraryJobsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -855,6 +857,81 @@ export interface Itinerary {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * Manage iTrvl itinerary processing jobs. Paste an iTrvl URL to create a job, then use the "Trigger Processing" button to start the pipeline.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itinerary-jobs".
+ */
+export interface ItineraryJob {
+  id: number;
+  /**
+   * Paste the full iTrvl client portal URL (e.g., https://itrvl.com/client/portal/{accessKey}/{itineraryId})
+   */
+  itrvlUrl: string;
+  /**
+   * Unique iTrvl itinerary identifier (auto-extracted from URL)
+   */
+  itineraryId?: string | null;
+  /**
+   * iTrvl access key (auto-extracted from URL)
+   */
+  accessKey?: string | null;
+  /**
+   * Current status of the itinerary processing job
+   */
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  /**
+   * Current pipeline phase (e.g., "Phase 2: Scraping", "Phase 3: Media Rehosting")
+   */
+  currentPhase?: string | null;
+  /**
+   * Real-time processing logs and progress updates
+   */
+  progressLog?: string | null;
+  /**
+   * Error details if processing failed
+   */
+  errorMessage?: string | null;
+  /**
+   * The final Payload itinerary created from this job
+   */
+  processedItinerary?: (number | null) | Itinerary;
+  /**
+   * AI-generated articles and content related to this itinerary
+   */
+  relatedArticles?: (number | Post)[] | null;
+  /**
+   * The Payload CMS entry ID created during ingestion (Phase 7)
+   */
+  payloadId?: string | null;
+  /**
+   * Timestamp when processing started
+   */
+  startedAt?: string | null;
+  /**
+   * Timestamp when processing completed or failed
+   */
+  completedAt?: string | null;
+  /**
+   * Total processing time in seconds
+   */
+  duration?: number | null;
+  /**
+   * Breakdown of time spent in each pipeline phase
+   */
+  timings?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -1067,6 +1144,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'itineraries';
         value: number | Itinerary;
+      } | null)
+    | ({
+        relationTo: 'itinerary-jobs';
+        value: number | ItineraryJob;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1454,6 +1535,28 @@ export interface ItinerariesSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itinerary-jobs_select".
+ */
+export interface ItineraryJobsSelect<T extends boolean = true> {
+  itrvlUrl?: T;
+  itineraryId?: T;
+  accessKey?: T;
+  status?: T;
+  currentPhase?: T;
+  progressLog?: T;
+  errorMessage?: T;
+  processedItinerary?: T;
+  relatedArticles?: T;
+  payloadId?: T;
+  startedAt?: T;
+  completedAt?: T;
+  duration?: T;
+  timings?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

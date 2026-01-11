@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  let jobId: string | null = null
+  let jobId: number | string | null = null
 
   try {
     // Parse request body
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
           completedAt: new Date().toISOString(),
           payloadId: result.payloadId,
           duration: result.duration,
-          timings: result.timings,
+          timings: result.timings as unknown as Record<string, unknown>,
         },
       })
 
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
           payloadId: result.payloadId,
           errorMessage: result.error,
           duration: result.duration,
-          timings: result.timings,
+          timings: result.timings as unknown as Record<string, unknown>,
         },
       })
 

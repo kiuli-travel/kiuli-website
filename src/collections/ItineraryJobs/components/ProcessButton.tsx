@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Button, useDocumentInfo, useForm } from '@payloadcms/ui'
+import { Button, useForm } from '@payloadcms/ui'
 
 export const ProcessButton: React.FC = () => {
-  const { docID } = useDocumentInfo()
+  // useDocumentInfo available if needed for document context
   const { getData, getDataByPath } = useForm()
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState('')
@@ -54,14 +54,15 @@ export const ProcessButton: React.FC = () => {
 
   return (
     <div style={{ marginTop: '1rem' }}>
-      <Button
-        buttonStyle="primary"
-        onClick={handleProcess}
-        disabled={isProcessing}
-        style={{ marginBottom: '0.5rem' }}
-      >
-        {isProcessing ? 'Processing...' : 'Trigger Processing Pipeline'}
-      </Button>
+      <div style={{ marginBottom: '0.5rem' }}>
+        <Button
+          buttonStyle="primary"
+          onClick={handleProcess}
+          disabled={isProcessing}
+        >
+          {isProcessing ? 'Processing...' : 'Trigger Processing Pipeline'}
+        </Button>
+      </div>
 
       {message && (
         <div

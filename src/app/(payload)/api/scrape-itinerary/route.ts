@@ -97,7 +97,6 @@ export async function POST(request: NextRequest) {
       itineraryId: parsed.itineraryId,
       accessKey: parsed.accessKey,
       status: 'pending',
-      progress: 0,
       currentPhase: 'queued',
     },
   })

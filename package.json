@@ -23,6 +23,7 @@
     "ci": "pnpm build"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.932.0",
     "@google/generative-ai": "^0.24.1",
     "@payloadcms/admin-bar": "3.63.0",
     "@payloadcms/db-vercel-postgres": "3.63.0",

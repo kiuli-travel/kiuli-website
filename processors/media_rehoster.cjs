@@ -10,13 +10,15 @@
  */
 
 // Load environment variables
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env.local', override: true });
 
 const axios = require('axios');
-const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 const { getOutputDir, getOutputFilePath } = require('../utils/outputDir.cjs');
+
+// AWS SDK for direct S3 upload
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 // ANSI color codes for terminal output
 const colors = {
@@ -74,33 +76,73 @@ async function downloadImage(s3Key) {
   }
 }
 
-// Upload image to Payload CMS
-async function uploadToPayload(buffer, contentType, s3Key, apiUrl, apiKey) {
+// Upload image directly to S3 (bypassing Payload API size limits)
+async function uploadDirectlyToS3(buffer, contentType, s3Key, itineraryId) {
   try {
-    log(`    → Uploading to Payload CMS...`, colors.cyan);
+    log(`    → Uploading directly to S3...`, colors.cyan);
 
-    // Extract filename from s3Key
-    const filename = s3Key.split('/').pop() || `image-${Date.now()}.jpg`;
+    // Prefix filename with itineraryId for uniqueness across all itineraries
+    const filename = `${itineraryId}_${s3Key.replace(/\//g, '_')}` || `image-${Date.now()}.jpg`;
 
-    // Create form data
-    const formData = new FormData();
-    formData.append('file', buffer, {
-      filename: filename,
-      contentType: contentType,
-    });
-
-    // Make upload request
-    const uploadUrl = `${apiUrl}/api/media`;
-
-    const response = await axios.post(uploadUrl, formData, {
-      headers: {
-        ...formData.getHeaders(),
-        'Authorization': `users API-Key ${apiKey}`,
+    // Initialize S3 client
+    const s3Client = new S3Client({
+      region: process.env.S3_REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       },
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-      timeout: 60000,
     });
+
+    // Upload to S3
+    const command = new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET,
+      Key: filename,
+      Body: buffer,
+      ContentType: contentType,
+    });
+
+    await s3Client.send(command);
+
+    // Construct S3 URL
+    const s3BaseUrl = process.env.PAYLOAD_PUBLIC_MEDIA_BASE_URL;
+    const s3Url = `${s3BaseUrl}/${filename}`;
+
+    log(`    ✓ Uploaded to S3: ${(buffer.length / 1024 / 1024).toFixed(2)} MB`, colors.green);
+    log(`    → S3 URL: ${s3Url}`, colors.cyan);
+
+    return {
+      filename,
+      s3Url,
+      filesize: buffer.length,
+      mimeType: contentType,
+    };
+  } catch (error) {
+    throw new Error(`Failed to upload to S3: ${error.message}`);
+  }
+}
+
+// Create Payload media record (metadata only, no file upload)
+async function createPayloadMediaRecord(filename, s3Url, filesize, mimeType, apiUrl, apiKey) {
+  try {
+    log(`    → Creating Payload media record...`, colors.cyan);
+
+    // Create media record via Payload API
+    const response = await axios.post(
+      `${apiUrl}/api/media`,
+      {
+        filename: filename,
+        url: s3Url,
+        filesize: filesize,
+        mimeType: mimeType,
+      },
+      {
+        headers: {
+          'Authorization': `users API-Key ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      }
+    );
 
     if (response.status !== 200 && response.status !== 201) {
       throw new Error(`Unexpected response status: ${response.status}`);
@@ -108,57 +150,27 @@ async function uploadToPayload(buffer, contentType, s3Key, apiUrl, apiKey) {
 
     const mediaDoc = response.data.doc || response.data;
 
-    // Extract the uploaded file URL
-    let newS3Url = null;
-
-    // Check if S3 storage is configured
-    const s3BaseUrl = process.env.PAYLOAD_PUBLIC_MEDIA_BASE_URL;
-    const usingS3 = s3BaseUrl && (s3BaseUrl.includes('s3') || s3BaseUrl.includes('amazonaws'));
-
-    if (usingS3) {
-      // When using S3, always construct URL from filename
-      // Don't use mediaDoc.url as it may contain API paths like /api/media/file/...
-      if (mediaDoc.filename) {
-        newS3Url = `${s3BaseUrl}/${mediaDoc.filename}`;
-      } else if (mediaDoc.url && (mediaDoc.url.startsWith('http://') || mediaDoc.url.startsWith('https://'))) {
-        // URL is already absolute
-        newS3Url = mediaDoc.url;
-      }
-    } else {
-      // Local storage - use URL paths
-      if (mediaDoc.url) {
-        if (mediaDoc.url.startsWith('http://') || mediaDoc.url.startsWith('https://')) {
-          newS3Url = mediaDoc.url;
-        } else {
-          newS3Url = `${apiUrl}${mediaDoc.url}`;
-        }
-      } else if (mediaDoc.filename) {
-        newS3Url = `${apiUrl}/api/media/file/${mediaDoc.filename}`;
-      }
-    }
-
-    log(`    ✓ Uploaded successfully`, colors.green);
+    log(`    ✓ Payload media record created`, colors.green);
     log(`    → Payload Media ID: ${mediaDoc.id}`, colors.cyan);
-    log(`    → New URL: ${newS3Url}`, colors.cyan);
 
     return {
       payloadMediaID: mediaDoc.id,
-      newS3Url: newS3Url,
+      newS3Url: s3Url,
     };
   } catch (error) {
     if (error.response) {
       const statusCode = error.response.status;
       const errorData = error.response.data;
       throw new Error(
-        `Upload failed (${statusCode}): ${JSON.stringify(errorData)}`
+        `Failed to create Payload record (${statusCode}): ${JSON.stringify(errorData)}`
       );
     }
-    throw new Error(`Failed to upload to Payload: ${error.message}`);
+    throw new Error(`Failed to create Payload media record: ${error.message}`);
   }
 }
 
 // Process a single image with retry logic
-async function processImageWithRetry(s3Key, apiUrl, apiKey, maxRetries = 3) {
+async function processImageWithRetry(s3Key, apiUrl, apiKey, maxRetries = 3, itineraryId) {
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -169,14 +181,23 @@ async function processImageWithRetry(s3Key, apiUrl, apiKey, maxRetries = 3) {
         await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
 
-      // Download from iTrvl
+      // Phase 1: Download from iTrvl CDN
       const { buffer, contentType } = await downloadImage(s3Key);
 
-      // Upload to Payload
-      const { payloadMediaID, newS3Url } = await uploadToPayload(
+      // Phase 2: Upload directly to S3 (bypassing Payload API)
+      const { filename, s3Url, filesize, mimeType } = await uploadDirectlyToS3(
         buffer,
         contentType,
         s3Key,
+        itineraryId
+      );
+
+      // Phase 3: Create Payload media record (metadata only)
+      const { payloadMediaID, newS3Url } = await createPayloadMediaRecord(
+        filename,
+        s3Url,
+        filesize,
+        mimeType,
         apiUrl,
         apiKey
       );
@@ -283,7 +304,7 @@ async function rehostMedia(itineraryId) {
     const s3Key = images[i];
     log(`\n  [${i + 1}/${images.length}] Processing: ${s3Key}`, colors.magenta);
 
-    const result = await processImageWithRetry(s3Key, apiUrl, apiKey, 3);
+    const result = await processImageWithRetry(s3Key, apiUrl, apiKey, 3, itineraryId);
     mediaMapping.push(result);
 
     if (result.status === 'success') {

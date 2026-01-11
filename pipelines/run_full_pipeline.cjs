@@ -17,7 +17,7 @@
  */
 
 // Load environment variables
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env.local', override: true });
 
 const path = require('path');
 const fs = require('fs');

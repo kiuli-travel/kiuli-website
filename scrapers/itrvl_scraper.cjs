@@ -280,19 +280,46 @@ function mergeItineraryData(itinerariesData, renderDataClientData, parsedUrl) {
 }
 
 // Recursively extract all s3Keys from the data structure
-function extractS3Keys(obj, keys = []) {
+// Excludes agency branding assets (logos, terms and conditions)
+// Captures:
+//   1. Fields named 's3Key' (agency logos, etc)
+//   2. 'images' arrays in segments/mapPoints (itinerary photos)
+//   3. 'headerImage' fields (itinerary header photos)
+function extractS3Keys(obj, keys = [], path = '') {
   if (!obj || typeof obj !== 'object') {
     return keys;
   }
 
   if (Array.isArray(obj)) {
-    obj.forEach((item) => extractS3Keys(item, keys));
+    obj.forEach((item, idx) => extractS3Keys(item, keys, `${path}[${idx}]`));
   } else {
     Object.keys(obj).forEach((key) => {
+      const newPath = path ? `${path}.${key}` : key;
+
+      // Skip agency branding assets
+      if (newPath.includes('.agency.')) {
+        return;
+      }
+
+      // Case 1: Standard s3Key fields
       if (key === 's3Key' && typeof obj[key] === 'string') {
         keys.push(obj[key]);
-      } else if (typeof obj[key] === 'object') {
-        extractS3Keys(obj[key], keys);
+      }
+      // Case 2: 'images' arrays (contain s3Key strings directly)
+      else if (key === 'images' && Array.isArray(obj[key])) {
+        obj[key].forEach((imageKey) => {
+          if (typeof imageKey === 'string') {
+            keys.push(imageKey);
+          }
+        });
+      }
+      // Case 3: 'headerImage' fields (s3Key strings directly)
+      else if (key === 'headerImage' && typeof obj[key] === 'string') {
+        keys.push(obj[key]);
+      }
+      // Recurse into nested objects/arrays
+      else if (typeof obj[key] === 'object') {
+        extractS3Keys(obj[key], keys, newPath);
       }
     });
   }

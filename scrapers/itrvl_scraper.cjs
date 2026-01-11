@@ -247,16 +247,19 @@ function mergeItineraryData(itinerariesData, renderDataClientData, parsedUrl) {
   let price = 0;
 
   if (itinerariesData && Array.isArray(itinerariesData)) {
-    // Find the itinerary matching our ID
+    // Find the itinerary matching our ID (string comparison, no parseInt - hex strings don't parse correctly)
     const itinerary = itinerariesData.find(
-      (item) => item.id === parseInt(parsedUrl.itineraryId) || item.itineraryId === parseInt(parsedUrl.itineraryId)
+      (item) => item.id === parsedUrl.itineraryId || item.itineraryId === parsedUrl.itineraryId
     );
 
-    if (itinerary && itinerary.price) {
-      // Price should be in cents
-      price = typeof itinerary.price === 'number' ? itinerary.price : parseInt(itinerary.price) || 0;
-    } else if (itinerary && itinerary.totalPrice) {
-      price = typeof itinerary.totalPrice === 'number' ? itinerary.totalPrice : parseInt(itinerary.totalPrice) || 0;
+    // Extract price from finance.sellingPrice (the actual field in iTrvl API)
+    if (itinerary && itinerary.finance && itinerary.finance.sellingPrice) {
+      const rawPrice = itinerary.finance.sellingPrice;
+      price = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice) || 0;
+      // Convert to cents if price appears to be in dollars (less than 100000)
+      if (price > 0 && price < 100000) {
+        price = Math.round(price * 100);
+      }
     }
   }
 

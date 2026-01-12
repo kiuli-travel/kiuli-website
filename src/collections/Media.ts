@@ -154,6 +154,22 @@ export const Media: CollectionConfig = {
         description: 'Original iTrvl CDN URL',
       },
     },
+    {
+      name: 'originalS3Key',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'Original image path in S3 bucket',
+      },
+    },
+    {
+      name: 'imgixUrl',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'imgix URL for optimized serving',
+      },
+    },
   ],
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload

@@ -149,7 +149,7 @@ async function processSingleImage(s3Key, itineraryId) {
       'Authorization': `Bearer ${process.env.PAYLOAD_API_KEY}`,
       ...formData.getHeaders()
     },
-    body: formData
+    body: formData.getBuffer()
   });
 
   if (!uploadResponse.ok) {

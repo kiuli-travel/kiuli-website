@@ -1,15 +1,15 @@
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+/**
+ * Phase 3: Image Processing with Multipart Upload
+ *
+ * Key change from V4: Uses multipart/form-data to upload to Payload's
+ * Media collection. Payload's S3 plugin handles the actual S3 storage.
+ */
 
-const CONCURRENCY = 20;
+const FormData = require('form-data');
+const { labelImage } = require('../utils/imageLabeler');
+
+const CONCURRENCY = 10;
 const MAX_RETRIES = 2;
-
-let s3Client = null;
-function getS3Client() {
-  if (!s3Client) {
-    s3Client = new S3Client({ region: process.env.S3_REGION || 'eu-north-1' });
-  }
-  return s3Client;
-}
 
 function chunkArray(array, size) {
   const chunks = [];
@@ -23,120 +23,23 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function processWithRetry(fn, retries = MAX_RETRIES) {
-  for (let attempt = 1; attempt <= retries + 1; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (attempt > retries) throw err;
-      console.log(`[ProcessImages] Retry ${attempt}/${retries}...`);
-      await sleep(1000 * attempt);
-    }
-  }
-}
-
-async function processSingleImage(s3Key, itineraryId, labelImage) {
-  const filename = `${itineraryId}_${s3Key.replace(/\//g, '_')}`;
-  const sourceUrl = `https://itrvl-production-media.imgix.net/${s3Key}`;
-
-  console.log(`[ProcessImages] Processing: ${filename}`);
-
-  // 1. Download
-  const response = await fetch(sourceUrl);
-  if (!response.ok) {
-    throw new Error(`Download failed: ${response.status}`);
-  }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  const contentType = response.headers.get('content-type') || 'image/jpeg';
-
-  console.log(`[ProcessImages] Downloaded: ${(buffer.length / 1024).toFixed(1)} KB`);
-
-  // 2. Upload to S3
-  const s3 = getS3Client();
-  await s3.send(new PutObjectCommand({
-    Bucket: process.env.S3_BUCKET,
-    Key: `media/${filename}`,
-    Body: buffer,
-    ContentType: contentType
-  }));
-
-  const s3Url = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION || 'eu-north-1'}.amazonaws.com/media/${filename}`;
-  console.log(`[ProcessImages] Uploaded to S3`);
-
-  // 3. Label with AI (if function provided)
-  let labels = {};
-  if (labelImage) {
-    try {
-      labels = await labelImage(buffer);
-    } catch (err) {
-      console.error(`[ProcessImages] Labeling failed: ${err.message}`);
-      labels = getDefaultLabels();
-    }
-  } else {
-    labels = getDefaultLabels();
-  }
-
-  // 4. Create Payload record
-  const payloadResponse = await fetch(`${process.env.PAYLOAD_API_URL}/api/media`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.PAYLOAD_API_KEY}`
-    },
-    body: JSON.stringify({
-      filename,
-      url: s3Url,
-      s3Key,
-      sourceItinerary: itineraryId,
-      sourceUrl,
-      ...labels
-    })
-  });
-
-  if (!payloadResponse.ok) {
-    const errorText = await payloadResponse.text();
-    throw new Error(`Payload failed (${payloadResponse.status}): ${errorText}`);
-  }
-
-  const media = await payloadResponse.json();
-  console.log(`[ProcessImages] Created Payload record: ${media.doc?.id || media.id}`);
-
-  return media.doc?.id || media.id;
-}
-
-function getDefaultLabels() {
-  return {
-    location: 'Unknown',
-    country: 'Unknown',
-    imageType: 'landscape',
-    animals: [],
-    tags: ['safari', 'travel'],
-    altText: 'Safari travel image',
-    isHero: false,
-    quality: 'medium'
-  };
-}
-
-async function processImages(imagesToProcess, itineraryId, existingMedia, tracker, labelImage = null) {
+async function processImages(imagesToProcess, itineraryId, existingMedia, tracker) {
   const mediaMapping = { ...existingMedia };
   let processed = 0;
   let failed = 0;
   const total = imagesToProcess.length;
   const errors = [];
 
-  console.log(`[ProcessImages] Starting batch processing of ${total} images with concurrency ${CONCURRENCY}`);
+  console.log(`[ProcessImages] Processing ${total} images with concurrency ${CONCURRENCY}`);
 
   const batches = chunkArray(imagesToProcess, CONCURRENCY);
-  let batchNum = 0;
 
-  for (const batch of batches) {
-    batchNum++;
-    console.log(`[ProcessImages] Processing batch ${batchNum}/${batches.length}`);
+  for (let batchNum = 0; batchNum < batches.length; batchNum++) {
+    const batch = batches[batchNum];
+    console.log(`[ProcessImages] Batch ${batchNum + 1}/${batches.length}`);
 
     const results = await Promise.allSettled(
-      batch.map(s3Key =>
-        processWithRetry(() => processSingleImage(s3Key, itineraryId, labelImage))
-      )
+      batch.map(s3Key => processWithRetry(() => processSingleImage(s3Key, itineraryId)))
     );
 
     results.forEach((result, i) => {
@@ -156,9 +59,9 @@ async function processImages(imagesToProcess, itineraryId, existingMedia, tracke
       await tracker.updateProgress(processed + failed, total, failed);
     }
 
-    // Small delay between batches to avoid rate limits
-    if (batchNum < batches.length) {
-      await sleep(500);
+    // Delay between batches for rate limiting
+    if (batchNum < batches.length - 1) {
+      await sleep(1000);
     }
   }
 
@@ -167,4 +70,99 @@ async function processImages(imagesToProcess, itineraryId, existingMedia, tracke
   return { mediaMapping, processed, failed, errors };
 }
 
-module.exports = { processImages, processSingleImage, getDefaultLabels };
+async function processWithRetry(fn, retries = MAX_RETRIES) {
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt > retries) throw error;
+      console.log(`[ProcessImages] Retry ${attempt}/${retries}...`);
+      await sleep(2000 * attempt);
+    }
+  }
+}
+
+async function processSingleImage(s3Key, itineraryId) {
+  const filename = `${itineraryId}_${s3Key.replace(/\//g, '_')}`;
+  const sourceUrl = `https://itrvl-production-media.imgix.net/${s3Key}`;
+
+  console.log(`[ProcessImages] Processing: ${filename}`);
+
+  // 1. Download image
+  const downloadResponse = await fetch(sourceUrl);
+  if (!downloadResponse.ok) {
+    throw new Error(`Download failed: ${downloadResponse.status}`);
+  }
+
+  const buffer = Buffer.from(await downloadResponse.arrayBuffer());
+  const contentType = downloadResponse.headers.get('content-type') || 'image/jpeg';
+
+  console.log(`[ProcessImages] Downloaded: ${(buffer.length / 1024).toFixed(1)} KB`);
+
+  // 2. Label with AI
+  let labels;
+  try {
+    labels = await labelImage(buffer);
+    console.log(`[ProcessImages] Labeled: ${labels.imageType}, ${labels.country}`);
+  } catch (error) {
+    console.error(`[ProcessImages] Labeling failed: ${error.message}`);
+    labels = {
+      location: 'Unknown',
+      country: 'Unknown',
+      imageType: 'landscape',
+      animals: [],
+      tags: ['safari', 'travel'],
+      altText: filename,
+      isHero: false,
+      quality: 'medium'
+    };
+  }
+
+  // 3. Upload to Payload via multipart/form-data
+  const formData = new FormData();
+
+  // File field
+  formData.append('file', buffer, {
+    filename: filename,
+    contentType: contentType
+  });
+
+  // Metadata via _payload field
+  formData.append('_payload', JSON.stringify({
+    alt: labels.altText || filename,
+    location: labels.location,
+    country: labels.country,
+    imageType: labels.imageType,
+    animals: labels.animals,
+    tags: labels.tags,
+    altText: labels.altText,
+    isHero: labels.isHero,
+    quality: labels.quality,
+    sourceItinerary: itineraryId,
+    s3Key: s3Key,
+    sourceUrl: sourceUrl
+  }));
+
+  const uploadResponse = await fetch(`${process.env.PAYLOAD_API_URL}/api/media`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.PAYLOAD_API_KEY}`,
+      ...formData.getHeaders()
+    },
+    body: formData
+  });
+
+  if (!uploadResponse.ok) {
+    const errorText = await uploadResponse.text();
+    throw new Error(`Payload upload failed (${uploadResponse.status}): ${errorText}`);
+  }
+
+  const result = await uploadResponse.json();
+  const mediaId = result.doc?.id || result.id;
+
+  console.log(`[ProcessImages] Created Payload record: ${mediaId}`);
+
+  return mediaId;
+}
+
+module.exports = { processImages, processSingleImage };

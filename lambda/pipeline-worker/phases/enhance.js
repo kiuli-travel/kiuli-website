@@ -1,27 +1,27 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+/**
+ * Phase 4: Content Enhancement using OpenRouter
+ */
 
-const ENHANCEMENT_PROMPT = `You are a luxury travel content writer creating content for high-net-worth travelers.
+const { completeText } = require('../services/openrouter');
 
-Enhance the following travel description:
+const ENHANCEMENT_PROMPT = `You are a luxury travel content writer for high-net-worth safari travelers.
+
+Enhance the following safari segment description:
 - Expand by 100-200% with vivid sensory details
 - Preserve ALL factual information exactly
 - Add luxury keywords: exclusive, bespoke, curated, intimate, authentic
-- Include emotional resonance: anticipation, wonder, transformation
 - Maintain elegant, sophisticated tone
 - DO NOT add fictional details or pricing
 
 Original:
 {description}
 
-Enhanced:`;
+Respond with ONLY the enhanced text, no explanation or preamble:`;
 
 const CONCURRENCY = 5;
 
 async function enhance(rawData) {
   console.log('[Enhance] Starting content enhancement');
-
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const enhancedData = JSON.parse(JSON.stringify(rawData.itinerary));
 
@@ -31,7 +31,7 @@ async function enhance(rawData) {
 
   console.log(`[Enhance] Found ${segments.length} segments to enhance`);
 
-  // Process in batches
+  // Process in batches to respect rate limits
   for (let i = 0; i < segments.length; i += CONCURRENCY) {
     const batch = segments.slice(i, i + CONCURRENCY);
 
@@ -42,22 +42,23 @@ async function enhance(rawData) {
 
       try {
         const prompt = ENHANCEMENT_PROMPT.replace('{description}', segment.description);
-        const result = await model.generateContent(prompt);
-        const enhanced = result.response.text();
+        const enhanced = await completeText(prompt);
 
         if (enhanced && enhanced.length > segment.description.length) {
-          segment.enhancedDescription = enhanced;
-          console.log(`[Enhance] Enhanced segment: ${segment.title || 'untitled'}`);
+          segment.enhancedDescription = enhanced.trim();
+          console.log(`[Enhance] Enhanced: ${segment.title || segment.name || 'segment'}`);
+        } else {
+          segment.enhancedDescription = segment.description;
         }
-      } catch (err) {
-        console.error(`[Enhance] Failed to enhance segment: ${err.message}`);
+      } catch (error) {
+        console.error(`[Enhance] Failed: ${error.message}`);
         segment.enhancedDescription = segment.description;
       }
     }));
 
     // Small delay between batches
     if (i + CONCURRENCY < segments.length) {
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
 
@@ -65,18 +66,18 @@ async function enhance(rawData) {
   return enhancedData;
 }
 
-function findSegmentsWithDescriptions(obj, segments, path = '') {
-  if (!obj || typeof obj !== 'object') return;
+function findSegmentsWithDescriptions(obj, segments, depth = 0) {
+  if (!obj || typeof obj !== 'object' || depth > 10) return;
 
   if (Array.isArray(obj)) {
-    obj.forEach((item, idx) => findSegmentsWithDescriptions(item, segments, `${path}[${idx}]`));
+    obj.forEach(item => findSegmentsWithDescriptions(item, segments, depth + 1));
   } else {
     if (obj.description && typeof obj.description === 'string') {
       segments.push(obj);
     }
-    for (const [key, value] of Object.entries(obj)) {
+    for (const value of Object.values(obj)) {
       if (typeof value === 'object') {
-        findSegmentsWithDescriptions(value, segments, `${path}.${key}`);
+        findSegmentsWithDescriptions(value, segments, depth + 1);
       }
     }
   }

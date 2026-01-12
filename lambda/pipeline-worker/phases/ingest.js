@@ -28,8 +28,9 @@ async function ingest(data) {
     schema,
     faq: faqHtml,
     schemaStatus: 'pass',
-    status: 'draft',
-    processedAt: new Date().toISOString()
+    googleInspectionStatus: 'pending',
+    buildTimestamp: new Date().toISOString(),
+    _status: 'draft'
   };
 
   console.log(`[Ingest] Creating entry with ${mediaIds.length} images`);

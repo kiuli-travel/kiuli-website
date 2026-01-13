@@ -1,0 +1,222 @@
+/**
+ * Image Processor Lambda - V6 Phase 2
+ *
+ * Chunked image processing with global deduplication
+ * Self-invokes for next chunk, triggers Labeler when complete
+ */
+
+const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
+const { processImage } = require('./processImage');
+const payload = require('./shared/payload');
+const { notifyImagesProcessed } = require('./shared/notifications');
+
+const CHUNK_SIZE = 20;
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'eu-north-1' });
+
+exports.handler = async (event) => {
+  console.log('[ImageProcessor] Invoked');
+
+  const { jobId, itineraryId, chunkIndex = 0 } = event;
+
+  if (!jobId || !itineraryId) {
+    console.error('[ImageProcessor] Missing jobId or itineraryId');
+    return { success: false, error: 'Missing jobId or itineraryId' };
+  }
+
+  console.log(`[ImageProcessor] Job: ${jobId}, Chunk: ${chunkIndex}`);
+
+  try {
+    // 1. Get job with image statuses
+    const job = await payload.getJob(jobId);
+
+    if (!job) {
+      throw new Error(`Job not found: ${jobId}`);
+    }
+
+    const imageStatuses = job.imageStatuses || [];
+    const pendingImages = imageStatuses.filter(img => img.status === 'pending');
+
+    console.log(`[ImageProcessor] Total: ${imageStatuses.length}, Pending: ${pendingImages.length}`);
+
+    if (pendingImages.length === 0) {
+      // All images processed, move to labeling
+      console.log('[ImageProcessor] No pending images, triggering labeler');
+      await triggerLabeler(jobId, itineraryId);
+      return { success: true, message: 'No pending images' };
+    }
+
+    // 2. Get chunk to process
+    const chunk = pendingImages.slice(0, CHUNK_SIZE);
+    console.log(`[ImageProcessor] Processing chunk of ${chunk.length} images`);
+
+    // 3. Process each image in chunk
+    let processed = 0;
+    let skipped = 0;
+    let failed = 0;
+    const mediaMapping = {};
+
+    for (const imageStatus of chunk) {
+      const sourceS3Key = imageStatus.sourceS3Key;
+
+      try {
+        // Update status to processing
+        await updateImageStatus(jobId, sourceS3Key, 'processing', null, new Date().toISOString());
+
+        // Process image (includes dedup check)
+        const result = await processImage(sourceS3Key, itineraryId);
+
+        if (result.skipped) {
+          skipped++;
+          await updateImageStatus(jobId, sourceS3Key, 'skipped', result.mediaId, null, new Date().toISOString());
+        } else {
+          processed++;
+          await updateImageStatus(jobId, sourceS3Key, 'complete', result.mediaId, null, new Date().toISOString());
+        }
+
+        mediaMapping[sourceS3Key] = result.mediaId;
+
+      } catch (error) {
+        console.error(`[ImageProcessor] Failed: ${sourceS3Key}`, error.message);
+        failed++;
+        await updateImageStatus(jobId, sourceS3Key, 'failed', null, null, new Date().toISOString(), error.message);
+      }
+    }
+
+    // 4. Update job progress
+    const totalProcessed = (job.processedImages || 0) + processed;
+    const totalSkipped = (job.skippedImages || 0) + skipped;
+    const totalFailed = (job.failedImages || 0) + failed;
+
+    await payload.updateJob(jobId, {
+      processedImages: totalProcessed,
+      skippedImages: totalSkipped,
+      failedImages: totalFailed,
+      progress: Math.round(((totalProcessed + totalSkipped + totalFailed) / imageStatuses.length) * 100)
+    });
+
+    // 5. Update itinerary with new media IDs
+    if (Object.keys(mediaMapping).length > 0) {
+      await updateItineraryMedia(itineraryId, mediaMapping);
+    }
+
+    console.log(`[ImageProcessor] Chunk complete: ${processed} processed, ${skipped} skipped, ${failed} failed`);
+
+    // 6. Check if more images to process
+    const remainingPending = pendingImages.length - chunk.length;
+
+    if (remainingPending > 0) {
+      // Self-invoke for next chunk
+      console.log(`[ImageProcessor] ${remainingPending} images remaining, self-invoking...`);
+
+      await lambdaClient.send(new InvokeCommand({
+        FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME,
+        InvocationType: 'Event',
+        Payload: JSON.stringify({
+          jobId,
+          itineraryId,
+          chunkIndex: chunkIndex + 1
+        })
+      }));
+
+    } else {
+      // All done, trigger labeler
+      console.log('[ImageProcessor] All images processed, triggering labeler');
+
+      await payload.updateJob(jobId, {
+        phase2CompletedAt: new Date().toISOString(),
+        currentPhase: 'Phase 3: Labeling Images'
+      });
+
+      await notifyImagesProcessed(jobId, totalProcessed + totalSkipped, totalFailed);
+      await triggerLabeler(jobId, itineraryId);
+    }
+
+    return {
+      success: true,
+      processed,
+      skipped,
+      failed,
+      remaining: remainingPending
+    };
+
+  } catch (error) {
+    console.error('[ImageProcessor] Failed:', error);
+    await payload.failJob(jobId, error.message, 'image-processor');
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Update single image status in job
+ */
+async function updateImageStatus(jobId, sourceS3Key, status, mediaId = null, startedAt = null, completedAt = null, error = null) {
+  const job = await payload.getJob(jobId);
+  const imageStatuses = job.imageStatuses || [];
+
+  const updated = imageStatuses.map(img => {
+    if (img.sourceS3Key === sourceS3Key) {
+      return {
+        ...img,
+        status,
+        mediaId: mediaId || img.mediaId,
+        startedAt: startedAt || img.startedAt,
+        completedAt: completedAt || img.completedAt,
+        error: error || img.error
+      };
+    }
+    return img;
+  });
+
+  await payload.updateJob(jobId, { imageStatuses: updated });
+}
+
+/**
+ * Update itinerary with media mappings
+ */
+async function updateItineraryMedia(itineraryId, mediaMapping) {
+  try {
+    const itinerary = await payload.getItinerary(itineraryId);
+
+    // Collect all media IDs
+    const existingImages = itinerary.images || [];
+    const newMediaIds = Object.values(mediaMapping);
+    const allImages = [...new Set([...existingImages, ...newMediaIds])];
+
+    // Update itinerary images array
+    await payload.updateItinerary(itineraryId, {
+      images: allImages
+    });
+
+    // TODO: Update segment images based on source mapping
+    // This requires knowing which segments reference which source keys
+
+    console.log(`[ImageProcessor] Updated itinerary with ${newMediaIds.length} new media IDs`);
+
+  } catch (error) {
+    console.error('[ImageProcessor] Failed to update itinerary media:', error.message);
+  }
+}
+
+/**
+ * Trigger labeler Lambda
+ */
+async function triggerLabeler(jobId, itineraryId) {
+  const labelerArn = process.env.LAMBDA_LABELER_ARN;
+
+  if (!labelerArn) {
+    console.log('[ImageProcessor] LAMBDA_LABELER_ARN not set, skipping labeler');
+    return;
+  }
+
+  await lambdaClient.send(new InvokeCommand({
+    FunctionName: labelerArn,
+    InvocationType: 'Event',
+    Payload: JSON.stringify({
+      jobId,
+      itineraryId,
+      batchIndex: 0
+    })
+  }));
+
+  console.log('[ImageProcessor] Labeler Lambda invoked');
+}

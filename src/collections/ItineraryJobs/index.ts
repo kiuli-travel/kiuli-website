@@ -22,7 +22,7 @@ const authenticatedOrApiKey = ({ req }: AccessArgs) => {
 export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
   slug: 'itinerary-jobs',
   access: {
-    create: authenticated,
+    create: authenticatedOrApiKey,
     delete: authenticated,
     read: authenticatedOrApiKey,
     update: authenticatedOrApiKey,

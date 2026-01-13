@@ -1,0 +1,371 @@
+/**
+ * Transform Logic for V6 Pipeline
+ *
+ * Converts scraped data to V6 schema format
+ * Uses *Original fields for scraped content (enhancement comes later)
+ */
+
+/**
+ * Generate URL-friendly slug from title
+ */
+function generateSlug(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 100);
+}
+
+/**
+ * Extract countries from segments
+ */
+function extractCountries(segments) {
+  const countries = new Set();
+
+  for (const segment of segments) {
+    if (segment.country) countries.add(segment.country);
+    if (segment.countryName) countries.add(segment.countryName);
+  }
+
+  return Array.from(countries).filter(c => c && c !== 'Unknown');
+}
+
+/**
+ * Extract highlights from segments
+ */
+function extractHighlights(segments) {
+  const highlights = [];
+
+  for (const segment of segments) {
+    if ((segment.type === 'stay' || segment.type === 'accommodation') && segment.name) {
+      highlights.push(segment.name);
+    }
+  }
+
+  return [...new Set(highlights)].slice(0, 8);
+}
+
+/**
+ * Calculate total nights
+ */
+function calculateNights(segments, rawItinerary) {
+  if (rawItinerary?.nights) return rawItinerary.nights;
+
+  let nights = 0;
+  for (const segment of segments) {
+    if ((segment.type === 'stay' || segment.type === 'accommodation') && segment.nights) {
+      nights += segment.nights;
+    }
+  }
+
+  return nights || 7;
+}
+
+/**
+ * Group segments by day
+ */
+function groupSegmentsByDay(segments) {
+  const dayMap = new Map();
+
+  for (const segment of segments) {
+    let dayNum = segment.day || segment.dayNumber || 1;
+
+    if (!dayNum && segment.sequence) {
+      dayNum = Math.ceil(segment.sequence / 3);
+    }
+
+    if (!dayMap.has(dayNum)) {
+      dayMap.set(dayNum, {
+        dayNumber: dayNum,
+        date: segment.startDate || null,
+        title: null,
+        location: null,
+        segments: []
+      });
+    }
+
+    const day = dayMap.get(dayNum);
+
+    if (!day.title && (segment.type === 'stay' || segment.type === 'accommodation') && segment.name) {
+      day.title = segment.name;
+    }
+
+    if (!day.location && (segment.location || segment.locationName)) {
+      day.location = segment.location || segment.locationName;
+    }
+
+    day.segments.push(segment);
+  }
+
+  return Array.from(dayMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
+}
+
+/**
+ * Convert plain text to Lexical richText format
+ */
+function textToRichText(text) {
+  if (!text) return null;
+
+  return {
+    root: {
+      children: [
+        {
+          children: [
+            { text: text, type: 'text' }
+          ],
+          type: 'paragraph',
+          direction: 'ltr',
+          format: '',
+          indent: 0,
+          version: 1
+        }
+      ],
+      direction: 'ltr',
+      format: '',
+      indent: 0,
+      type: 'root',
+      version: 1
+    }
+  };
+}
+
+/**
+ * Map segment to V6 block format
+ * Uses *Original fields - enhanced versions added later
+ */
+function mapSegmentToBlock(segment, mediaMapping = {}) {
+  const type = segment.type?.toLowerCase();
+
+  let blockType = null;
+  if (type === 'stay' || type === 'accommodation') {
+    blockType = 'stay';
+  } else if (type === 'service' || type === 'activity') {
+    blockType = 'activity';
+  } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat') {
+    blockType = 'transfer';
+  } else {
+    return null;
+  }
+
+  // Get image IDs (will be populated after image processing)
+  const imageIds = [];
+  if (segment.images && Array.isArray(segment.images)) {
+    for (const img of segment.images) {
+      const s3Key = typeof img === 'string' ? img : img.s3Key || img.key;
+      if (s3Key && mediaMapping[s3Key]) {
+        imageIds.push(mediaMapping[s3Key]);
+      }
+    }
+  }
+
+  if (blockType === 'stay') {
+    return {
+      blockType: 'stay',
+      accommodationName: segment.name || segment.title || 'Accommodation',
+      // V6: Use descriptionOriginal for scraped content
+      descriptionOriginal: textToRichText(segment.description),
+      descriptionEnhanced: null,
+      nights: segment.nights || 1,
+      location: segment.location || segment.locationName || null,
+      country: segment.country || segment.countryName || null,
+      images: imageIds,
+      inclusions: textToRichText(segment.inclusions || segment.included),
+      roomType: segment.roomType || null,
+    };
+  }
+
+  if (blockType === 'activity') {
+    return {
+      blockType: 'activity',
+      title: segment.name || segment.title || 'Activity',
+      descriptionOriginal: textToRichText(segment.description),
+      descriptionEnhanced: null,
+      images: imageIds,
+    };
+  }
+
+  if (blockType === 'transfer') {
+    let transferType = 'road';
+    if (type === 'flight') transferType = 'flight';
+    if (type === 'boat') transferType = 'boat';
+
+    return {
+      blockType: 'transfer',
+      type: transferType,
+      title: segment.name || segment.title || 'Transfer',
+      from: segment.startLocation?.name || segment.from || null,
+      to: segment.endLocation?.name || segment.to || null,
+      descriptionOriginal: textToRichText(segment.description),
+      descriptionEnhanced: null,
+      departureTime: segment.departureTime || null,
+      arrivalTime: segment.arrivalTime || null,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Generate FAQ items (V6 format with *Original fields)
+ */
+function generateFaqItems(segments, title, countries) {
+  const faqItems = [];
+
+  const stays = segments.filter(s => s.type === 'stay' || s.type === 'accommodation');
+  for (const stay of stays.slice(0, 3)) {
+    if (stay.name) {
+      faqItems.push({
+        question: `What is included at ${stay.name}?`,
+        answerOriginal: textToRichText(
+          stay.inclusions || stay.description ||
+          `${stay.name} offers luxury accommodation with full board and activities as specified in the itinerary.`
+        ),
+        answerEnhanced: null,
+      });
+    }
+  }
+
+  const countryList = countries.length > 0 ? countries.join(' and ') : 'East Africa';
+
+  faqItems.push({
+    question: `What is the best time to visit ${countryList}?`,
+    answerOriginal: textToRichText(
+      `${countryList} offers excellent wildlife viewing year-round. Our travel designers can advise on the optimal timing based on your specific interests.`
+    ),
+    answerEnhanced: null,
+  });
+
+  faqItems.push({
+    question: 'What level of fitness is required for this safari?',
+    answerOriginal: textToRichText(
+      'This safari is suitable for most fitness levels. Game drives involve sitting in comfortable vehicles, and bush walks can be adjusted to your pace.'
+    ),
+    answerEnhanced: null,
+  });
+
+  faqItems.push({
+    question: 'Is this safari suitable for children?',
+    answerOriginal: textToRichText(
+      'Family safaris are a specialty. Some lodges have age restrictions for certain activities, but we can customize the itinerary for travelers of all ages.'
+    ),
+    answerEnhanced: null,
+  });
+
+  faqItems.push({
+    question: 'What should I pack for this safari?',
+    answerOriginal: textToRichText(
+      'We recommend neutral-colored clothing, comfortable walking shoes, sun protection, binoculars, and a camera. A detailed packing list will be provided upon booking.'
+    ),
+    answerEnhanced: null,
+  });
+
+  return faqItems;
+}
+
+/**
+ * Generate meta fields
+ */
+function generateMetaFields(title, nights, countries) {
+  const countryList = countries.length > 0 ? countries.join(' & ') : 'Africa';
+  const metaTitle = `${title} | ${nights}-Night Luxury Safari`.substring(0, 60);
+  const metaDescription = `Experience a ${nights}-night luxury safari through ${countryList}. Exclusive lodges, expert guides, and unforgettable wildlife encounters. Inquire with Kiuli today.`.substring(0, 160);
+
+  return { metaTitle, metaDescription };
+}
+
+/**
+ * Main transform function
+ */
+async function transform(rawData, mediaMapping = {}, itrvlUrl) {
+  console.log('[Transform] Starting V6 transformation');
+
+  const itinerary = rawData.itinerary?.itineraries?.[0] ||
+                    rawData.itinerary ||
+                    rawData;
+
+  const segments = itinerary.segments || [];
+  const title = itinerary.name || itinerary.itineraryName || 'Safari Itinerary';
+  const priceInCents = rawData.price || itinerary.sellFinance || 0;
+  const itineraryId = itinerary.id || rawData.itineraryId;
+
+  console.log(`[Transform] Processing: ${title}`);
+  console.log(`[Transform] Segments: ${segments.length}`);
+
+  const slug = generateSlug(title);
+  const nights = calculateNights(segments, itinerary);
+  const countries = extractCountries(segments);
+  const highlights = extractHighlights(segments);
+
+  console.log(`[Transform] Nights: ${nights}, Countries: ${countries.join(', ')}`);
+
+  const groupedDays = groupSegmentsByDay(segments);
+
+  const days = groupedDays.map(day => ({
+    dayNumber: day.dayNumber,
+    date: day.date,
+    title: day.title,
+    location: day.location,
+    segments: day.segments
+      .map(s => mapSegmentToBlock(s, mediaMapping))
+      .filter(Boolean)
+  }));
+
+  const faqItems = generateFaqItems(segments, title, countries);
+  const { metaTitle, metaDescription } = generateMetaFields(title, nights, countries);
+
+  const transformed = {
+    // Basic
+    title,
+    slug,
+    itineraryId,
+
+    // SEO
+    metaTitle,
+    metaDescription,
+
+    // Overview with V6 *Original fields
+    overview: {
+      summaryOriginal: textToRichText(itinerary.summary || itinerary.description || `A ${nights}-night luxury safari through ${countries.join(' and ')}.`),
+      summaryEnhanced: null,
+      nights,
+      countries: countries.map(c => ({ country: c })),
+      highlights: highlights.map(h => ({ highlight: h })),
+    },
+
+    // Investment
+    investmentLevel: {
+      fromPrice: Math.round(priceInCents / 100),
+      currency: 'USD',
+    },
+
+    // Structured days
+    days,
+
+    // FAQ with V6 format
+    faqItems,
+
+    // Why Kiuli (V6 format)
+    whyKiuliOriginal: textToRichText('Kiuli delivers exceptional safari experiences with expert local knowledge, exclusive access, and personalized service that turns your African dream into reality.'),
+    whyKiuliEnhanced: null,
+
+    // Images (populated after image processing)
+    images: Object.values(mediaMapping),
+
+    // Source
+    source: {
+      itrvlUrl,
+      lastScrapedAt: new Date().toISOString(),
+      rawData: rawData,
+    },
+
+    // Build info
+    buildTimestamp: new Date().toISOString(),
+    _status: 'draft',
+  };
+
+  console.log(`[Transform] Complete: ${days.length} days, ${faqItems.length} FAQs`);
+
+  return transformed;
+}
+
+module.exports = { transform, generateSlug, textToRichText };

@@ -1,0 +1,11 @@
+{
+  "name": "kiuli-image-processor",
+  "version": "6.0.0",
+  "description": "V6 Image Processor Lambda - Phase 2 (chunked image migration with dedup)",
+  "main": "handler.js",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-lambda": "^3.0.0",
+    "form-data": "^4.0.0"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "kiuli-shared",
+  "version": "6.0.0",
+  "description": "Shared utilities for Kiuli V6 Lambda pipeline",
+  "main": "payload.js",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0"
+  }
+}

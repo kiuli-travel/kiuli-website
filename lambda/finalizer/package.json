@@ -1,0 +1,7 @@
+{
+  "name": "kiuli-finalizer",
+  "version": "6.0.0",
+  "description": "V6 Finalizer Lambda - Phase 4 (hero selection, schema, checklist)",
+  "main": "handler.js",
+  "dependencies": {}
+}

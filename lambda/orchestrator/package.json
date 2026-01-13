@@ -1,0 +1,9 @@
+{
+  "name": "kiuli-orchestrator",
+  "version": "6.0.0",
+  "description": "V6 Orchestrator Lambda - Phase 1 (scrape, transform, create draft)",
+  "main": "handler.js",
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.0.0"
+  }
+}

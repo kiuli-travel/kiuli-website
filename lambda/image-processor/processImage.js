@@ -70,11 +70,14 @@ async function processImage(sourceS3Key, itineraryId) {
  * Image is already uploaded to S3, so we just need the record
  */
 async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType) {
-  const filename = sourceS3Key.split('/').pop() || 'image.jpg';
+  // Use full sourceS3Key as filename to ensure uniqueness
+  // (sourceS3Key includes UUID prefix, e.g., "abc123_filename.jpg")
+  const filename = sourceS3Key || 'image.jpg';
+  const displayName = (sourceS3Key.split('/').pop() || 'image.jpg').replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
 
   // Create media record with JSON metadata (no file upload)
   const mediaData = {
-    alt: filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+    alt: displayName,
     sourceS3Key: sourceS3Key,
     originalS3Key: s3Key,
     imgixUrl: getImgixUrl(s3Key),

@@ -10,6 +10,7 @@ import { Categories } from './collections/Categories'
 import { Itineraries } from './collections/Itineraries'
 import { ItineraryJobs } from './collections/ItineraryJobs'
 import { Media } from './collections/Media'
+import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
@@ -66,7 +67,7 @@ export default buildConfig({
       connectionString: process.env.POSTGRES_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, Notifications],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [

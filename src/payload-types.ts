@@ -74,6 +74,7 @@ export interface Config {
     users: User;
     itineraries: Itinerary;
     'itinerary-jobs': ItineraryJob;
+    notifications: Notification;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -98,6 +99,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     itineraries: ItinerariesSelect<false> | ItinerariesSelect<true>;
     'itinerary-jobs': ItineraryJobsSelect<false> | ItineraryJobsSelect<true>;
+    notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -278,6 +280,26 @@ export interface Post {
  */
 export interface Media {
   id: number;
+  /**
+   * Original S3 key from iTrvl CDN - CRITICAL for global deduplication
+   */
+  sourceS3Key?: string | null;
+  /**
+   * Image processing status
+   */
+  processingStatus?: ('pending' | 'processing' | 'complete' | 'failed') | null;
+  /**
+   * Error message if processing failed
+   */
+  processingError?: string | null;
+  /**
+   * AI labeling status
+   */
+  labelingStatus?: ('pending' | 'processing' | 'complete' | 'failed' | 'skipped') | null;
+  /**
+   * Itineraries using this image (for orphan detection)
+   */
+  usedInItineraries?: (number | Itinerary)[] | null;
   alt?: string | null;
   caption?: {
     root: {
@@ -439,6 +461,500 @@ export interface Media {
       filename?: string | null;
     };
   };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itineraries".
+ */
+export interface Itinerary {
+  id: number;
+  title: string;
+  /**
+   * URL-friendly identifier (auto-generated from title)
+   */
+  slug: string;
+  /**
+   * iTrvl itinerary ID for deduplication
+   */
+  itineraryId: string;
+  /**
+   * SEO title (max 60 chars). Auto-generated if blank.
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO description (max 160 chars). Auto-generated if blank.
+   */
+  metaDescription?: string | null;
+  /**
+   * Primary hero image for the itinerary page
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * Lock hero image to prevent auto-replacement on re-scrape
+   */
+  heroImageLocked?: boolean | null;
+  overview?: {
+    /**
+     * Original summary from scrape
+     */
+    summaryOriginal?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * AI-enhanced summary (editable)
+     */
+    summaryEnhanced?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * Total number of nights
+     */
+    nights?: number | null;
+    countries?:
+      | {
+          country: string;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Key highlights/experiences
+     */
+    highlights?:
+      | {
+          highlight: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Pricing information (revealed after value is established)
+   */
+  investmentLevel?: {
+    /**
+     * Starting price per person in dollars
+     */
+    fromPrice?: number | null;
+    /**
+     * Upper price range (optional)
+     */
+    toPrice?: number | null;
+    currency?: string | null;
+    /**
+     * What the price includes
+     */
+    includes?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  /**
+   * Day-by-day itinerary
+   */
+  days?:
+    | {
+        dayNumber: number;
+        /**
+         * Specific date (if applicable)
+         */
+        date?: string | null;
+        /**
+         * Day title, e.g., "Arrival in Nairobi"
+         */
+        title?: string | null;
+        location?: string | null;
+        segments?:
+          | (
+              | {
+                  accommodationName: string;
+                  /**
+                   * Original description from scrape
+                   */
+                  descriptionOriginal?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
+                   * AI-enhanced description (editable)
+                   */
+                  descriptionEnhanced?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  nights?: number | null;
+                  location?: string | null;
+                  country?: string | null;
+                  images?: (number | Media)[] | null;
+                  /**
+                   * What is included at this property
+                   */
+                  inclusions?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  roomType?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'stay';
+                }
+              | {
+                  title: string;
+                  /**
+                   * Original description from scrape
+                   */
+                  descriptionOriginal?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
+                   * AI-enhanced description (editable)
+                   */
+                  descriptionEnhanced?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  images?: (number | Media)[] | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'activity';
+                }
+              | {
+                  type?: ('flight' | 'road' | 'boat') | null;
+                  title?: string | null;
+                  from?: string | null;
+                  to?: string | null;
+                  /**
+                   * Original description from scrape
+                   */
+                  descriptionOriginal?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
+                   * AI-enhanced description (editable)
+                   */
+                  descriptionEnhanced?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  departureTime?: string | null;
+                  arrivalTime?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'transfer';
+                }
+            )[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * FAQ questions and answers for SEO/AIO
+   */
+  faqItems?:
+    | {
+        question: string;
+        /**
+         * Original answer from scrape
+         */
+        answerOriginal?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        /**
+         * AI-enhanced answer (editable)
+         */
+        answerEnhanced?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Original "Why Kiuli" content
+   */
+  whyKiuliOriginal?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * AI-enhanced "Why Kiuli" content (editable)
+   */
+  whyKiuliEnhanced?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * All images associated with this itinerary
+   */
+  images?: (number | Media)[] | null;
+  /**
+   * Gated publishing checklist - all must be true to publish
+   */
+  publishChecklist?: {
+    /**
+     * All images have been processed and uploaded
+     */
+    allImagesProcessed?: boolean | null;
+    /**
+     * No images in failed state
+     */
+    noFailedImages?: boolean | null;
+    /**
+     * Hero image has been selected
+     */
+    heroImageSelected?: boolean | null;
+    /**
+     * Content has been enhanced or reviewed
+     */
+    contentEnhanced?: boolean | null;
+    /**
+     * JSON-LD schema has been generated
+     */
+    schemaGenerated?: boolean | null;
+    /**
+     * Meta title and description are set
+     */
+    metaFieldsFilled?: boolean | null;
+  };
+  /**
+   * List of issues blocking publication
+   */
+  publishBlockers?:
+    | {
+        reason: string;
+        severity?: ('error' | 'warning') | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Content version number
+   */
+  version?: number | null;
+  /**
+   * History of previous versions
+   */
+  previousVersions?:
+    | {
+        versionNumber?: number | null;
+        scrapedAt?: string | null;
+        /**
+         * Snapshot of previous version data
+         */
+        data?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Product JSON-LD schema (auto-generated)
+   */
+  schema?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Google Rich Results Test status
+   */
+  schemaStatus?: ('pending' | 'pass' | 'fail') | null;
+  /**
+   * Original source data (for debugging)
+   */
+  source?: {
+    itrvlUrl?: string | null;
+    lastScrapedAt?: string | null;
+    /**
+     * Original scraped JSON for debugging
+     */
+    rawData?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
+  /**
+   * When this was last built/scraped
+   */
+  buildTimestamp?: string | null;
+  /**
+   * Google Search Console inspection status
+   */
+  googleInspectionStatus?: ('pending' | 'pass' | 'fail') | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -861,311 +1377,6 @@ export interface Form {
   createdAt: string;
 }
 /**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "itineraries".
- */
-export interface Itinerary {
-  id: number;
-  title: string;
-  /**
-   * URL-friendly identifier (auto-generated from title)
-   */
-  slug: string;
-  /**
-   * iTrvl itinerary ID for deduplication
-   */
-  itineraryId: string;
-  /**
-   * SEO title (max 60 chars). Auto-generated if blank.
-   */
-  metaTitle?: string | null;
-  /**
-   * SEO description (max 160 chars). Auto-generated if blank.
-   */
-  metaDescription?: string | null;
-  /**
-   * Primary hero image for the itinerary page
-   */
-  heroImage?: (number | null) | Media;
-  overview?: {
-    /**
-     * 2-3 sentence hook describing the experience
-     */
-    summary?: {
-      root: {
-        type: string;
-        children: {
-          type: any;
-          version: number;
-          [k: string]: unknown;
-        }[];
-        direction: ('ltr' | 'rtl') | null;
-        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-        indent: number;
-        version: number;
-      };
-      [k: string]: unknown;
-    } | null;
-    /**
-     * Total number of nights
-     */
-    nights?: number | null;
-    countries?:
-      | {
-          country: string;
-          id?: string | null;
-        }[]
-      | null;
-    /**
-     * Key highlights/experiences
-     */
-    highlights?:
-      | {
-          highlight: string;
-          id?: string | null;
-        }[]
-      | null;
-  };
-  /**
-   * Pricing information (revealed after value is established)
-   */
-  investmentLevel?: {
-    /**
-     * Starting price per person in dollars
-     */
-    fromPrice?: number | null;
-    /**
-     * Upper price range (optional)
-     */
-    toPrice?: number | null;
-    currency?: string | null;
-    /**
-     * What the price includes
-     */
-    includes?: {
-      root: {
-        type: string;
-        children: {
-          type: any;
-          version: number;
-          [k: string]: unknown;
-        }[];
-        direction: ('ltr' | 'rtl') | null;
-        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-        indent: number;
-        version: number;
-      };
-      [k: string]: unknown;
-    } | null;
-  };
-  /**
-   * Day-by-day itinerary
-   */
-  days?:
-    | {
-        dayNumber: number;
-        /**
-         * Specific date (if applicable)
-         */
-        date?: string | null;
-        /**
-         * Day title, e.g., "Arrival in Nairobi"
-         */
-        title?: string | null;
-        location?: string | null;
-        segments?:
-          | (
-              | {
-                  accommodationName: string;
-                  description?: {
-                    root: {
-                      type: string;
-                      children: {
-                        type: any;
-                        version: number;
-                        [k: string]: unknown;
-                      }[];
-                      direction: ('ltr' | 'rtl') | null;
-                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-                      indent: number;
-                      version: number;
-                    };
-                    [k: string]: unknown;
-                  } | null;
-                  nights?: number | null;
-                  location?: string | null;
-                  country?: string | null;
-                  images?: (number | Media)[] | null;
-                  /**
-                   * What is included at this property
-                   */
-                  inclusions?: {
-                    root: {
-                      type: string;
-                      children: {
-                        type: any;
-                        version: number;
-                        [k: string]: unknown;
-                      }[];
-                      direction: ('ltr' | 'rtl') | null;
-                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-                      indent: number;
-                      version: number;
-                    };
-                    [k: string]: unknown;
-                  } | null;
-                  roomType?: string | null;
-                  id?: string | null;
-                  blockName?: string | null;
-                  blockType: 'stay';
-                }
-              | {
-                  title: string;
-                  description?: {
-                    root: {
-                      type: string;
-                      children: {
-                        type: any;
-                        version: number;
-                        [k: string]: unknown;
-                      }[];
-                      direction: ('ltr' | 'rtl') | null;
-                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-                      indent: number;
-                      version: number;
-                    };
-                    [k: string]: unknown;
-                  } | null;
-                  images?: (number | Media)[] | null;
-                  id?: string | null;
-                  blockName?: string | null;
-                  blockType: 'activity';
-                }
-              | {
-                  type?: ('flight' | 'road' | 'boat') | null;
-                  title?: string | null;
-                  from?: string | null;
-                  to?: string | null;
-                  description?: {
-                    root: {
-                      type: string;
-                      children: {
-                        type: any;
-                        version: number;
-                        [k: string]: unknown;
-                      }[];
-                      direction: ('ltr' | 'rtl') | null;
-                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-                      indent: number;
-                      version: number;
-                    };
-                    [k: string]: unknown;
-                  } | null;
-                  departureTime?: string | null;
-                  arrivalTime?: string | null;
-                  id?: string | null;
-                  blockName?: string | null;
-                  blockType: 'transfer';
-                }
-            )[]
-          | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * FAQ questions and answers for SEO/AIO
-   */
-  faqItems?:
-    | {
-        question: string;
-        answer: {
-          root: {
-            type: string;
-            children: {
-              type: any;
-              version: number;
-              [k: string]: unknown;
-            }[];
-            direction: ('ltr' | 'rtl') | null;
-            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-            indent: number;
-            version: number;
-          };
-          [k: string]: unknown;
-        };
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Why book this through Kiuli (value proposition)
-   */
-  whyKiuli?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * All images associated with this itinerary
-   */
-  images?: (number | Media)[] | null;
-  /**
-   * Product JSON-LD schema (auto-generated)
-   */
-  schema?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  /**
-   * Google Rich Results Test status
-   */
-  schemaStatus?: ('pending' | 'pass' | 'fail') | null;
-  /**
-   * Original source data (for debugging)
-   */
-  source?: {
-    itrvlUrl?: string | null;
-    lastScrapedAt?: string | null;
-    /**
-     * Original scraped JSON for debugging
-     */
-    rawData?:
-      | {
-          [k: string]: unknown;
-        }
-      | unknown[]
-      | string
-      | number
-      | boolean
-      | null;
-  };
-  /**
-   * When this was last built/scraped
-   */
-  buildTimestamp?: string | null;
-  /**
-   * Google Search Console inspection status
-   */
-  googleInspectionStatus?: ('pending' | 'pass' | 'fail') | null;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
  * Manage iTrvl itinerary processing jobs. Paste an iTrvl URL to create a job, then use the "Trigger Processing" button to start the pipeline.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1213,6 +1424,49 @@ export interface ItineraryJob {
    * Images that failed to process
    */
   failedImages?: number | null;
+  /**
+   * Per-image processing status for granular tracking
+   */
+  imageStatuses?:
+    | {
+        /**
+         * Original S3 key from iTrvl CDN
+         */
+        sourceS3Key: string;
+        /**
+         * Payload Media ID if created
+         */
+        mediaId?: string | null;
+        status?: ('pending' | 'processing' | 'complete' | 'failed' | 'skipped') | null;
+        /**
+         * Error message if failed
+         */
+        error?: string | null;
+        startedAt?: string | null;
+        completedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Number of images that have been AI-labeled
+   */
+  imagesLabeled?: number | null;
+  /**
+   * Total images requiring labeling
+   */
+  imagesToLabel?: number | null;
+  /**
+   * When AI labeling phase started
+   */
+  labelingStartedAt?: string | null;
+  /**
+   * When AI labeling phase completed
+   */
+  labelingCompletedAt?: string | null;
+  /**
+   * Estimated seconds until completion
+   */
+  estimatedTimeRemaining?: number | null;
   /**
    * Real-time processing logs and progress updates
    */
@@ -1265,6 +1519,61 @@ export interface ItineraryJob {
     | number
     | boolean
     | null;
+  /**
+   * When Phase 1 (ingest/scrape) completed
+   */
+  phase1CompletedAt?: string | null;
+  /**
+   * When Phase 2 (image processing) completed
+   */
+  phase2CompletedAt?: string | null;
+  /**
+   * When Phase 3 (AI labeling) completed
+   */
+  phase3CompletedAt?: string | null;
+  /**
+   * When Phase 4 (content enhancement) completed
+   */
+  phase4CompletedAt?: string | null;
+  /**
+   * When Phase 5 (finalization) completed
+   */
+  phase5CompletedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Pipeline notifications and alerts
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface Notification {
+  id: number;
+  /**
+   * Notification type/severity
+   */
+  type: 'success' | 'error' | 'warning' | 'info';
+  /**
+   * Notification message
+   */
+  message: string;
+  /**
+   * Related job (if applicable)
+   */
+  job?: (number | null) | ItineraryJob;
+  /**
+   * Related itinerary (if applicable)
+   */
+  itinerary?: (number | null) | Itinerary;
+  /**
+   * Has this notification been read?
+   */
+  read?: boolean | null;
+  /**
+   * When the notification was read
+   */
+  readAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1485,6 +1794,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'itinerary-jobs';
         value: number | ItineraryJob;
+      } | null)
+    | ({
+        relationTo: 'notifications';
+        value: number | Notification;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -1719,6 +2032,11 @@ export interface PostsSelect<T extends boolean = true> {
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
+  sourceS3Key?: T;
+  processingStatus?: T;
+  processingError?: T;
+  labelingStatus?: T;
+  usedInItineraries?: T;
   alt?: T;
   caption?: T;
   location?: T;
@@ -1878,10 +2196,12 @@ export interface ItinerariesSelect<T extends boolean = true> {
   metaTitle?: T;
   metaDescription?: T;
   heroImage?: T;
+  heroImageLocked?: T;
   overview?:
     | T
     | {
-        summary?: T;
+        summaryOriginal?: T;
+        summaryEnhanced?: T;
         nights?: T;
         countries?:
           | T
@@ -1918,7 +2238,8 @@ export interface ItinerariesSelect<T extends boolean = true> {
                 | T
                 | {
                     accommodationName?: T;
-                    description?: T;
+                    descriptionOriginal?: T;
+                    descriptionEnhanced?: T;
                     nights?: T;
                     location?: T;
                     country?: T;
@@ -1932,7 +2253,8 @@ export interface ItinerariesSelect<T extends boolean = true> {
                 | T
                 | {
                     title?: T;
-                    description?: T;
+                    descriptionOriginal?: T;
+                    descriptionEnhanced?: T;
                     images?: T;
                     id?: T;
                     blockName?: T;
@@ -1944,7 +2266,8 @@ export interface ItinerariesSelect<T extends boolean = true> {
                     title?: T;
                     from?: T;
                     to?: T;
-                    description?: T;
+                    descriptionOriginal?: T;
+                    descriptionEnhanced?: T;
                     departureTime?: T;
                     arrivalTime?: T;
                     id?: T;
@@ -1957,11 +2280,39 @@ export interface ItinerariesSelect<T extends boolean = true> {
     | T
     | {
         question?: T;
-        answer?: T;
+        answerOriginal?: T;
+        answerEnhanced?: T;
         id?: T;
       };
-  whyKiuli?: T;
+  whyKiuliOriginal?: T;
+  whyKiuliEnhanced?: T;
   images?: T;
+  publishChecklist?:
+    | T
+    | {
+        allImagesProcessed?: T;
+        noFailedImages?: T;
+        heroImageSelected?: T;
+        contentEnhanced?: T;
+        schemaGenerated?: T;
+        metaFieldsFilled?: T;
+      };
+  publishBlockers?:
+    | T
+    | {
+        reason?: T;
+        severity?: T;
+        id?: T;
+      };
+  version?: T;
+  previousVersions?:
+    | T
+    | {
+        versionNumber?: T;
+        scrapedAt?: T;
+        data?: T;
+        id?: T;
+      };
   schema?: T;
   schemaStatus?: T;
   source?:
@@ -1992,6 +2343,22 @@ export interface ItineraryJobsSelect<T extends boolean = true> {
   processedImages?: T;
   skippedImages?: T;
   failedImages?: T;
+  imageStatuses?:
+    | T
+    | {
+        sourceS3Key?: T;
+        mediaId?: T;
+        status?: T;
+        error?: T;
+        startedAt?: T;
+        completedAt?: T;
+        id?: T;
+      };
+  imagesLabeled?: T;
+  imagesToLabel?: T;
+  labelingStartedAt?: T;
+  labelingCompletedAt?: T;
+  estimatedTimeRemaining?: T;
   progressLog?: T;
   errorMessage?: T;
   errorPhase?: T;
@@ -2003,6 +2370,25 @@ export interface ItineraryJobsSelect<T extends boolean = true> {
   completedAt?: T;
   duration?: T;
   timings?: T;
+  phase1CompletedAt?: T;
+  phase2CompletedAt?: T;
+  phase3CompletedAt?: T;
+  phase4CompletedAt?: T;
+  phase5CompletedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications_select".
+ */
+export interface NotificationsSelect<T extends boolean = true> {
+  type?: T;
+  message?: T;
+  job?: T;
+  itinerary?: T;
+  read?: T;
+  readAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

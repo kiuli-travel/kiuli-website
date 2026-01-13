@@ -35,6 +35,74 @@ export const Media: CollectionConfig = {
     update: authenticatedOrApiKey,
   },
   fields: [
+    // === V6 DEDUPLICATION ===
+    {
+      name: 'sourceS3Key',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: {
+        readOnly: true,
+        description: 'Original S3 key from iTrvl CDN - CRITICAL for global deduplication',
+      },
+    },
+
+    // === V6 PROCESSING STATUS ===
+    {
+      name: 'processingStatus',
+      type: 'select',
+      defaultValue: 'pending',
+      options: [
+        { label: 'Pending', value: 'pending' },
+        { label: 'Processing', value: 'processing' },
+        { label: 'Complete', value: 'complete' },
+        { label: 'Failed', value: 'failed' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description: 'Image processing status',
+      },
+    },
+    {
+      name: 'processingError',
+      type: 'text',
+      admin: {
+        description: 'Error message if processing failed',
+        condition: (data) => data?.processingStatus === 'failed',
+      },
+    },
+
+    // === V6 LABELING STATUS ===
+    {
+      name: 'labelingStatus',
+      type: 'select',
+      defaultValue: 'pending',
+      options: [
+        { label: 'Pending', value: 'pending' },
+        { label: 'Processing', value: 'processing' },
+        { label: 'Complete', value: 'complete' },
+        { label: 'Failed', value: 'failed' },
+        { label: 'Skipped', value: 'skipped' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description: 'AI labeling status',
+      },
+    },
+
+    // === V6 USAGE TRACKING ===
+    {
+      name: 'usedInItineraries',
+      type: 'relationship',
+      relationTo: 'itineraries',
+      hasMany: true,
+      admin: {
+        readOnly: true,
+        description: 'Itineraries using this image (for orphan detection)',
+      },
+    },
+
+    // === EXISTING FIELDS ===
     {
       name: 'alt',
       type: 'text',

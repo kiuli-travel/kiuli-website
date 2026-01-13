@@ -83,6 +83,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
         description: 'Primary hero image for the itinerary page',
       },
     },
+    {
+      name: 'heroImageLocked',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Lock hero image to prevent auto-replacement on re-scrape',
+      },
+    },
 
     // === OVERVIEW ===
     {
@@ -90,10 +98,17 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'group',
       fields: [
         {
-          name: 'summary',
+          name: 'summaryOriginal',
           type: 'richText',
           admin: {
-            description: '2-3 sentence hook describing the experience',
+            description: 'Original summary from scrape',
+          },
+        },
+        {
+          name: 'summaryEnhanced',
+          type: 'richText',
+          admin: {
+            description: 'AI-enhanced summary (editable)',
           },
         },
         {
@@ -218,8 +233,18 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   required: true,
                 },
                 {
-                  name: 'description',
+                  name: 'descriptionOriginal',
                   type: 'richText',
+                  admin: {
+                    description: 'Original description from scrape',
+                  },
+                },
+                {
+                  name: 'descriptionEnhanced',
+                  type: 'richText',
+                  admin: {
+                    description: 'AI-enhanced description (editable)',
+                  },
                 },
                 {
                   name: 'nights',
@@ -267,8 +292,18 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   required: true,
                 },
                 {
-                  name: 'description',
+                  name: 'descriptionOriginal',
                   type: 'richText',
+                  admin: {
+                    description: 'Original description from scrape',
+                  },
+                },
+                {
+                  name: 'descriptionEnhanced',
+                  type: 'richText',
+                  admin: {
+                    description: 'AI-enhanced description (editable)',
+                  },
                 },
                 {
                   name: 'images',
@@ -308,8 +343,18 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                 },
                 {
-                  name: 'description',
+                  name: 'descriptionOriginal',
                   type: 'richText',
+                  admin: {
+                    description: 'Original description from scrape',
+                  },
+                },
+                {
+                  name: 'descriptionEnhanced',
+                  type: 'richText',
+                  admin: {
+                    description: 'AI-enhanced description (editable)',
+                  },
                 },
                 {
                   name: 'departureTime',
@@ -340,19 +385,35 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           required: true,
         },
         {
-          name: 'answer',
+          name: 'answerOriginal',
           type: 'richText',
-          required: true,
+          admin: {
+            description: 'Original answer from scrape',
+          },
+        },
+        {
+          name: 'answerEnhanced',
+          type: 'richText',
+          admin: {
+            description: 'AI-enhanced answer (editable)',
+          },
         },
       ],
     },
 
     // === WHY KIULI ===
     {
-      name: 'whyKiuli',
+      name: 'whyKiuliOriginal',
       type: 'richText',
       admin: {
-        description: 'Why book this through Kiuli (value proposition)',
+        description: 'Original "Why Kiuli" content',
+      },
+    },
+    {
+      name: 'whyKiuliEnhanced',
+      type: 'richText',
+      admin: {
+        description: 'AI-enhanced "Why Kiuli" content (editable)',
       },
     },
 
@@ -365,6 +426,127 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       admin: {
         description: 'All images associated with this itinerary',
       },
+    },
+
+    // === PUBLISH CHECKLIST (V6) ===
+    {
+      name: 'publishChecklist',
+      type: 'group',
+      admin: {
+        description: 'Gated publishing checklist - all must be true to publish',
+      },
+      fields: [
+        {
+          name: 'allImagesProcessed',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'All images have been processed and uploaded',
+          },
+        },
+        {
+          name: 'noFailedImages',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'No images in failed state',
+          },
+        },
+        {
+          name: 'heroImageSelected',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Hero image has been selected',
+          },
+        },
+        {
+          name: 'contentEnhanced',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Content has been enhanced or reviewed',
+          },
+        },
+        {
+          name: 'schemaGenerated',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'JSON-LD schema has been generated',
+          },
+        },
+        {
+          name: 'metaFieldsFilled',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Meta title and description are set',
+          },
+        },
+      ],
+    },
+
+    // === PUBLISH BLOCKERS (V6) ===
+    {
+      name: 'publishBlockers',
+      type: 'array',
+      admin: {
+        description: 'List of issues blocking publication',
+        readOnly: true,
+      },
+      fields: [
+        {
+          name: 'reason',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'severity',
+          type: 'select',
+          options: [
+            { label: 'Error', value: 'error' },
+            { label: 'Warning', value: 'warning' },
+          ],
+          defaultValue: 'error',
+        },
+      ],
+    },
+
+    // === VERSIONING (V6) ===
+    {
+      name: 'version',
+      type: 'number',
+      defaultValue: 1,
+      admin: {
+        description: 'Content version number',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'previousVersions',
+      type: 'array',
+      admin: {
+        description: 'History of previous versions',
+        readOnly: true,
+      },
+      fields: [
+        {
+          name: 'versionNumber',
+          type: 'number',
+        },
+        {
+          name: 'scrapedAt',
+          type: 'date',
+        },
+        {
+          name: 'data',
+          type: 'json',
+          admin: {
+            description: 'Snapshot of previous version data',
+          },
+        },
+      ],
     },
 
     // === SCHEMA (JSON-LD) ===
@@ -390,7 +572,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
 
-    // === SOURCE DATA (hidden in admin) ===
+    // === SOURCE DATA ===
     {
       name: 'source',
       type: 'group',

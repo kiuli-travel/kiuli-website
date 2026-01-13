@@ -164,6 +164,116 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
                 readOnly: true,
               },
             },
+            // V6: Per-image status tracking
+            {
+              name: 'imageStatuses',
+              type: 'array',
+              label: 'Image Statuses',
+              admin: {
+                description: 'Per-image processing status for granular tracking',
+                readOnly: true,
+              },
+              fields: [
+                {
+                  name: 'sourceS3Key',
+                  type: 'text',
+                  required: true,
+                  admin: {
+                    description: 'Original S3 key from iTrvl CDN',
+                  },
+                },
+                {
+                  name: 'mediaId',
+                  type: 'text',
+                  admin: {
+                    description: 'Payload Media ID if created',
+                  },
+                },
+                {
+                  name: 'status',
+                  type: 'select',
+                  defaultValue: 'pending',
+                  options: [
+                    { label: 'Pending', value: 'pending' },
+                    { label: 'Processing', value: 'processing' },
+                    { label: 'Complete', value: 'complete' },
+                    { label: 'Failed', value: 'failed' },
+                    { label: 'Skipped', value: 'skipped' },
+                  ],
+                },
+                {
+                  name: 'error',
+                  type: 'text',
+                  admin: {
+                    description: 'Error message if failed',
+                  },
+                },
+                {
+                  name: 'startedAt',
+                  type: 'date',
+                  admin: {
+                    date: { pickerAppearance: 'dayAndTime' },
+                  },
+                },
+                {
+                  name: 'completedAt',
+                  type: 'date',
+                  admin: {
+                    date: { pickerAppearance: 'dayAndTime' },
+                  },
+                },
+              ],
+            },
+            // V6: Labeling progress
+            {
+              name: 'imagesLabeled',
+              type: 'number',
+              defaultValue: 0,
+              label: 'Images Labeled',
+              admin: {
+                description: 'Number of images that have been AI-labeled',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'imagesToLabel',
+              type: 'number',
+              label: 'Images to Label',
+              admin: {
+                description: 'Total images requiring labeling',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'labelingStartedAt',
+              type: 'date',
+              label: 'Labeling Started',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When AI labeling phase started',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'labelingCompletedAt',
+              type: 'date',
+              label: 'Labeling Completed',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When AI labeling phase completed',
+                readOnly: true,
+              },
+            },
+            // V6: Estimated time
+            {
+              name: 'estimatedTimeRemaining',
+              type: 'number',
+              label: 'Est. Time Remaining (sec)',
+              admin: {
+                description: 'Estimated seconds until completion',
+                readOnly: true,
+              },
+            },
             {
               name: 'progressLog',
               type: 'textarea',
@@ -281,6 +391,57 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
               label: 'Phase Timings',
               admin: {
                 description: 'Breakdown of time spent in each pipeline phase',
+                readOnly: true,
+              },
+            },
+            // V6: Phase timestamps
+            {
+              name: 'phase1CompletedAt',
+              type: 'date',
+              label: 'Phase 1 (Ingest) Completed',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When Phase 1 (ingest/scrape) completed',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'phase2CompletedAt',
+              type: 'date',
+              label: 'Phase 2 (Images) Completed',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When Phase 2 (image processing) completed',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'phase3CompletedAt',
+              type: 'date',
+              label: 'Phase 3 (Labeling) Completed',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When Phase 3 (AI labeling) completed',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'phase4CompletedAt',
+              type: 'date',
+              label: 'Phase 4 (Enhance) Completed',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When Phase 4 (content enhancement) completed',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'phase5CompletedAt',
+              type: 'date',
+              label: 'Phase 5 (Finalize) Completed',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When Phase 5 (finalization) completed',
                 readOnly: true,
               },
             },

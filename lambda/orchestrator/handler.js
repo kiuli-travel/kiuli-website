@@ -67,7 +67,14 @@ exports.handler = async (event) => {
       throw new Error(`Scraper failed: ${scraperResponse.status} - ${error}`);
     }
 
-    const rawData = await scraperResponse.json();
+    const scraperResult = await scraperResponse.json();
+
+    // Scraper returns { success: true, data: { itinerary, images, imageMapping } }
+    if (!scraperResult.success || !scraperResult.data) {
+      throw new Error(`Scraper returned invalid response: ${JSON.stringify(scraperResult).slice(0, 200)}`);
+    }
+
+    const rawData = scraperResult.data;
     console.log(`[Orchestrator] Scrape complete: ${rawData.images?.length || 0} images found`);
 
     // Update phase timestamp
@@ -77,7 +84,9 @@ exports.handler = async (event) => {
 
     // 3. Check for existing itinerary (versioning)
     let existingItinerary = null;
-    const itineraryId = rawData.itineraryId;
+    // Extract itineraryId from the itinerary data
+    const itineraryData = rawData.itinerary?.itineraries?.[0] || {};
+    const itineraryId = itineraryData.id;
 
     if (mode === 'update' || mode === 'create') {
       existingItinerary = await payload.findItineraryByItineraryId(itineraryId);

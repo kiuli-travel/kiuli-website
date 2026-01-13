@@ -2,11 +2,11 @@
  * Per-image processing with global deduplication
  */
 
-const FormData = require('form-data');
 const { uploadToS3, generateS3Key, getImgixUrl } = require('./shared/s3');
 const payload = require('./shared/payload');
 
-const ITRVL_CDN_BASE = 'https://dj1cfrkz8wfyi.cloudfront.net';
+// iTrvl uses imgix CDN for their production media
+const ITRVL_CDN_BASE = 'https://itrvl-production-media.imgix.net';
 
 /**
  * Process a single image
@@ -26,14 +26,9 @@ async function processImage(sourceS3Key, itineraryId) {
   if (existingMedia) {
     console.log(`[ProcessImage] Dedup hit: ${sourceS3Key} -> ${existingMedia.id}`);
 
-    // Update usedInItineraries to track usage
-    const usedIn = existingMedia.usedInItineraries || [];
-    if (!usedIn.includes(itineraryId)) {
-      await payload.updateMedia(existingMedia.id, {
-        usedInItineraries: [...usedIn, itineraryId]
-      });
-    }
-
+    // Note: We skip updating usedInItineraries here because:
+    // 1. It causes 413 errors due to Payload returning full populated documents
+    // 2. Usage tracking is better done via itinerary.images array anyway
     return {
       mediaId: existingMedia.id,
       skipped: true
@@ -71,38 +66,36 @@ async function processImage(sourceS3Key, itineraryId) {
 }
 
 /**
- * Create Media record in Payload via multipart form upload
+ * Create Media record in Payload with metadata only
+ * Image is already uploaded to S3, so we just need the record
  */
 async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType) {
   const filename = sourceS3Key.split('/').pop() || 'image.jpg';
 
-  // Build form data
-  const form = new FormData();
-
-  // Add file
-  form.append('file', buffer, {
-    filename,
-    contentType
-  });
-
-  // Add metadata fields
-  form.append('alt', filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '));
-  form.append('sourceS3Key', sourceS3Key);
-  form.append('originalS3Key', s3Key);
-  form.append('imgixUrl', getImgixUrl(s3Key));
-  form.append('sourceItinerary', itineraryId);
-  form.append('processingStatus', 'complete');
-  form.append('labelingStatus', 'pending');
-  form.append('usedInItineraries', itineraryId);
+  // Create media record with JSON metadata (no file upload)
+  const mediaData = {
+    alt: filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+    sourceS3Key: sourceS3Key,
+    originalS3Key: s3Key,
+    imgixUrl: getImgixUrl(s3Key),
+    url: getImgixUrl(s3Key), // Set url field for Payload
+    filename: filename,
+    mimeType: contentType,
+    filesize: buffer.length,
+    sourceItinerary: itineraryId,
+    processingStatus: 'complete',
+    labelingStatus: 'pending',
+    usedInItineraries: [itineraryId]
+  };
 
   // POST to Payload
   const response = await fetch(`${payload.PAYLOAD_API_URL}/api/media`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${payload.PAYLOAD_API_KEY}`,
-      ...form.getHeaders()
+      'Content-Type': 'application/json'
     },
-    body: form
+    body: JSON.stringify(mediaData)
   });
 
   if (!response.ok) {

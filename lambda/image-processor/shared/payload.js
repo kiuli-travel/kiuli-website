@@ -153,16 +153,21 @@ async function getItinerary(id) {
 }
 
 async function createItinerary(data) {
-  return create('itineraries', data);
+  const result = await create('itineraries', data);
+  // Payload returns { doc: {...}, message: "..." }
+  return result.doc || result;
 }
 
 async function updateItinerary(id, data) {
-  return update('itineraries', id, data);
+  const result = await update('itineraries', id, data);
+  // Payload returns { doc: {...}, message: "..." }
+  return result.doc || result;
 }
 
 async function findItineraryByItineraryId(itineraryId) {
+  // Use bracket notation - Payload doesn't parse JSON where clauses correctly
   return findOne('itineraries', {
-    where: JSON.stringify({ itineraryId: { equals: itineraryId } })
+    'where[itineraryId][equals]': itineraryId
   });
 }
 
@@ -173,8 +178,9 @@ async function getMedia(id) {
 }
 
 async function findMediaBySourceS3Key(sourceS3Key) {
+  // Use bracket notation - Payload doesn't parse JSON where clauses correctly
   return findOne('media', {
-    where: JSON.stringify({ sourceS3Key: { equals: sourceS3Key } })
+    'where[sourceS3Key][equals]': sourceS3Key
   });
 }
 

@@ -36,13 +36,10 @@ exports.handler = async (event) => {
     }
 
     // 2. Get unlabeled media for this itinerary
+    // Use bracket notation - Payload doesn't parse JSON where clauses correctly
     const mediaResult = await payload.find('media', {
-      where: JSON.stringify({
-        and: [
-          { labelingStatus: { equals: 'pending' } },
-          { usedInItineraries: { contains: itineraryId } }
-        ]
-      }),
+      'where[and][0][labelingStatus][equals]': 'pending',
+      'where[and][1][usedInItineraries][contains]': itineraryId,
       limit: BATCH_SIZE.toString()
     });
 

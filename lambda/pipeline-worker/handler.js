@@ -3,10 +3,9 @@ const { deduplicate } = require('./phases/deduplicate');
 const { processImages } = require('./phases/processImages');
 const { enhance } = require('./phases/enhance');
 const { generateSchema } = require('./phases/schema');
-const { formatFaq } = require('./phases/faq');
+const { transform } = require('./phases/transform');
 const { ingest } = require('./phases/ingest');
 const { JobTracker } = require('./services/jobTracker');
-const { labelImage } = require('./utils/imageLabeler');
 
 exports.handler = async (event) => {
   console.log('[Handler] Lambda invoked');
@@ -55,8 +54,7 @@ exports.handler = async (event) => {
       uniqueImages,
       itineraryId,
       existingMedia,
-      tracker,
-      labelImage
+      tracker
     );
     await tracker.completePhase('images', {
       processedImages: processed,
@@ -76,21 +74,20 @@ exports.handler = async (event) => {
     const schema = generateSchema(enhancedData, rawData.price, itineraryId, mediaUrls);
     await tracker.completePhase('schema');
 
-    // Phase 6: Format FAQ
-    await tracker.startPhase('faq');
-    const faqHtml = formatFaq(enhancedData);
-    await tracker.completePhase('faq');
+    // Phase 6: Transform to structured format
+    await tracker.startPhase('transform');
+    const transformedData = await transform(
+      rawData,
+      enhancedData,
+      mediaMapping,
+      null,  // mediaRecords - not yet tracking labels
+      itrvlUrl
+    );
+    await tracker.completePhase('transform');
 
     // Phase 7: Ingest to Payload
     await tracker.startPhase('ingesting');
-    const payloadId = await ingest({
-      rawData,
-      enhancedData,
-      schema,
-      faqHtml,
-      mediaMapping,
-      itineraryId
-    });
+    const payloadId = await ingest(transformedData, schema);
     await tracker.completePhase('ingesting');
 
     // Complete

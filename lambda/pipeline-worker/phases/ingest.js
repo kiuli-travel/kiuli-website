@@ -1,59 +1,78 @@
-async function ingest(data) {
-  const {
-    rawData,
-    enhancedData,
-    schema,
-    faqHtml,
-    mediaMapping,
-    itineraryId
-  } = data;
+/**
+ * Phase 8: Ingest — Save transformed data to Payload CMS
+ */
 
-  console.log('[Ingest] Creating Payload itinerary entry');
+async function ingest(transformedData, schema) {
+  console.log('[Ingest] Starting Payload ingest');
 
-  // Extract title
-  const title = enhancedData.name || enhancedData.title || rawData.itinerary?.name || 'Safari Itinerary';
+  const payloadUrl = process.env.PAYLOAD_API_URL;
+  const apiKey = process.env.PAYLOAD_API_KEY;
 
-  // Get media IDs (filter out any non-existent mappings)
-  const mediaIds = Object.values(mediaMapping).filter(id => id);
+  if (!payloadUrl || !apiKey) {
+    throw new Error('Missing PAYLOAD_API_URL or PAYLOAD_API_KEY');
+  }
 
-  // Build payload
+  // Add schema to transformed data
   const payload = {
-    title,
-    itineraryId,
-    price: rawData.price,
-    priceFormatted: `$${(rawData.price / 100).toFixed(2)}`,
-    images: mediaIds,
-    rawItinerary: rawData.itinerary,
-    enhancedItinerary: enhancedData,
-    schema,
-    faq: faqHtml,
-    schemaStatus: 'pass',
+    ...transformedData,
+    schema: schema,
+    schemaStatus: 'pending',
     googleInspectionStatus: 'pending',
-    buildTimestamp: new Date().toISOString(),
-    _status: 'draft'
   };
 
-  console.log(`[Ingest] Creating entry with ${mediaIds.length} images`);
+  console.log(`[Ingest] Creating itinerary: ${payload.title}`);
+  console.log(`[Ingest] Slug: ${payload.slug}`);
+  console.log(`[Ingest] Days: ${payload.days?.length || 0}`);
+  console.log(`[Ingest] Images: ${payload.images?.length || 0}`);
 
-  const response = await fetch(`${process.env.PAYLOAD_API_URL}/api/itineraries`, {
+  const response = await fetch(`${payloadUrl}/api/itineraries`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.PAYLOAD_API_KEY}`
+      'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Payload ingestion failed (${response.status}): ${errorText}`);
+    console.error(`[Ingest] Payload error: ${response.status}`);
+    console.error(`[Ingest] Response: ${responseText.substring(0, 500)}`);
+    throw new Error(`Payload ingest failed (${response.status}): ${responseText.substring(0, 200)}`);
   }
 
-  const result = await response.json();
-  const payloadId = result.doc?.id || result.id;
+  let result;
+  try {
+    result = JSON.parse(responseText);
+  } catch (e) {
+    throw new Error(`Invalid JSON response from Payload: ${responseText.substring(0, 200)}`);
+  }
 
-  console.log(`[Ingest] Created itinerary: ${payloadId}`);
-  return payloadId;
+  const docId = result.doc?.id || result.id;
+
+  if (!docId) {
+    console.error('[Ingest] Response:', responseText.substring(0, 500));
+    throw new Error('No document ID in Payload response');
+  }
+
+  console.log(`[Ingest] Created itinerary: ${docId}`);
+
+  // Verify the document exists
+  const verifyResponse = await fetch(`${payloadUrl}/api/itineraries/${docId}`, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!verifyResponse.ok) {
+    console.error(`[Ingest] Verification failed: ${verifyResponse.status}`);
+    throw new Error(`Verification failed: Document ${docId} not found after creation`);
+  }
+
+  console.log(`[Ingest] Verified: Itinerary ${docId} exists`);
+
+  return docId;
 }
 
 module.exports = { ingest };

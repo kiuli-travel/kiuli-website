@@ -1,0 +1,28 @@
+=== PART A: VERCEL ENVIRONMENT VERIFICATION ===
+Generated: Sat 10 Jan 2026 11:47:25 UTC
+
+--- Vercel CLI Version ---
+Vercel CLI 48.9.0
+48.9.0
+
+--- Vercel Whoami ---
+Vercel CLI 48.9.0
+Error: The specified token is not valid. Use `vercel login` to generate a new token.
+Not authenticated
+
+--- Vercel Project Link Status ---
+{"projectId":"prj_vrh5ybaiepLvWwDiqrFCsh1Vf73N","orgId":"team_SMB6onRUlNI7bZ5SDPcFaVzw","projectName":"kiuli-website"}
+--- Vercel Environment Variables ---
+Vercel CLI 48.9.0
+Error: No existing credentials found. Please run `vercel login` or pass "--token"
+Learn More: https://err.sh/vercel/no-credentials-found
+
+--- Vercel Deployments (Last 10) ---
+Vercel CLI 48.9.0
+Error: No existing credentials found. Please run `vercel login` or pass "--token"
+Learn More: https://err.sh/vercel/no-credentials-found
+
+--- Vercel Domains ---
+Vercel CLI 48.9.0
+Error: No existing credentials found. Please run `vercel login` or pass "--token"
+Learn More: https://err.sh/vercel/no-credentials-found

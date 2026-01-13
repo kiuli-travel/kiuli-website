@@ -1,0 +1,653 @@
+{
+  "summary": {
+    "itineraryId": "680dff493cf205005cf76e8f",
+    "itineraryName": "A Family Adventure to Southern Africa in search of the Big Seven",
+    "rawSegmentCount": 32,
+    "presSegmentCount": 32,
+    "emptySegmentCount": 0,
+    "fieldsInRawOnly": [
+      "notes",
+      "notes.clientNotes",
+      "notes.contact",
+      "notes.contactEmail",
+      "notes.contactNumber",
+      "notes.day1Itinerary",
+      "notes.day2Itinerary",
+      "notes.day3Itinerary",
+      "notes.inclusions"
+    ],
+    "fieldsInPresOnly": [
+      "agentIncludeExclude",
+      "airline",
+      "clientIncludeExclude",
+      "country",
+      "countryRegionCode",
+      "fromPoint",
+      "images",
+      "regionCode",
+      "regionName",
+      "rooms",
+      "title",
+      "toPoint"
+    ],
+    "sharedFields": [
+      "arrangedBy",
+      "arrivalTime",
+      "countryCode",
+      "countryName",
+      "day",
+      "departureTime",
+      "description",
+      "endDate",
+      "fkKey",
+      "hideFromClient",
+      "id",
+      "interConnectId",
+      "inventoryStatus",
+      "linkedSystemId",
+      "location",
+      "locationCode",
+      "locationName",
+      "mealBasisBoard",
+      "name",
+      "nights",
+      "optionKeys",
+      "parentBySequence",
+      "roomNames",
+      "roomNamesClient",
+      "roomType",
+      "roomTypeIds",
+      "sequence",
+      "startDate",
+      "status",
+      "supplierCode",
+      "supplierName",
+      "systemTypes",
+      "tourplanCode",
+      "transitPointCode",
+      "travelEx",
+      "travelExCode",
+      "travelExName",
+      "travelFor",
+      "travelForCode",
+      "travelForName",
+      "travelHubCode",
+      "travelHubExDescription",
+      "travelHubForDescription",
+      "type"
+    ]
+  },
+  "contentComparison": [
+    {
+      "type": "entry",
+      "rawTotal": 62,
+      "presTotal": 62,
+      "difference": 0,
+      "rawFields": {
+        "description": 62,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 0,
+        "description": 62,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 1,
+      "type": "point",
+      "rawTotal": 31,
+      "presTotal": 31,
+      "difference": 0,
+      "rawFields": {
+        "description": 31,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 31,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 2,
+      "type": "service",
+      "rawTotal": 381,
+      "presTotal": 409,
+      "difference": 28,
+      "rawFields": {
+        "description": 381,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 28,
+        "description": 381,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 3,
+      "type": "road",
+      "rawTotal": 215,
+      "presTotal": 215,
+      "difference": 0,
+      "rawFields": {
+        "description": 53,
+        "clientNotes": 162,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 53,
+        "description": 162,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 4,
+      "type": "stay",
+      "rawTotal": 298,
+      "presTotal": 1237,
+      "difference": 939,
+      "rawFields": {
+        "description": 18,
+        "clientNotes": 0,
+        "inclusions": 280
+      },
+      "presFields": {
+        "title": 18,
+        "description": 1173,
+        "clientIncludeExclude": 46
+      }
+    },
+    {
+      "sequence": 5,
+      "type": "service",
+      "rawTotal": 98,
+      "presTotal": 873,
+      "difference": 775,
+      "rawFields": {
+        "description": 98,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 15,
+        "description": 858,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 6,
+      "type": "service",
+      "rawTotal": 82,
+      "presTotal": 100,
+      "difference": 18,
+      "rawFields": {
+        "description": 82,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 18,
+        "description": 82,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 7,
+      "type": "service",
+      "rawTotal": 133,
+      "presTotal": 168,
+      "difference": 35,
+      "rawFields": {
+        "description": 133,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 35,
+        "description": 133,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 8,
+      "type": "road",
+      "rawTotal": 195,
+      "presTotal": 195,
+      "difference": 0,
+      "rawFields": {
+        "description": 43,
+        "clientNotes": 152,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 43,
+        "description": 152,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 9,
+      "type": "stay",
+      "rawTotal": 505,
+      "presTotal": 1658,
+      "difference": 1153,
+      "rawFields": {
+        "description": 21,
+        "clientNotes": 0,
+        "inclusions": 484
+      },
+      "presFields": {
+        "title": 21,
+        "description": 1288,
+        "clientIncludeExclude": 349
+      }
+    },
+    {
+      "sequence": 10,
+      "type": "service",
+      "rawTotal": 461,
+      "presTotal": 516,
+      "difference": 55,
+      "rawFields": {
+        "description": 461,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 56,
+        "description": 460,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 11,
+      "type": "road",
+      "rawTotal": 221,
+      "presTotal": 221,
+      "difference": 0,
+      "rawFields": {
+        "description": 56,
+        "clientNotes": 165,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 56,
+        "description": 165,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 12,
+      "type": "point",
+      "rawTotal": 31,
+      "presTotal": 31,
+      "difference": 0,
+      "rawFields": {
+        "description": 31,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 31,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 13,
+      "type": "flight",
+      "rawTotal": 87,
+      "presTotal": 62,
+      "difference": -25,
+      "rawFields": {
+        "description": 87,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 62,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 14,
+      "type": "point",
+      "rawTotal": 27,
+      "presTotal": 27,
+      "difference": 0,
+      "rawFields": {
+        "description": 27,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 27,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 15,
+      "type": "road",
+      "rawTotal": 209,
+      "presTotal": 209,
+      "difference": 0,
+      "rawFields": {
+        "description": 52,
+        "clientNotes": 157,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 52,
+        "description": 157,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 16,
+      "type": "stay",
+      "rawTotal": 160,
+      "presTotal": 1001,
+      "difference": 841,
+      "rawFields": {
+        "description": 21,
+        "clientNotes": 0,
+        "inclusions": 139
+      },
+      "presFields": {
+        "title": 21,
+        "description": 830,
+        "clientIncludeExclude": 150
+      }
+    },
+    {
+      "sequence": 17,
+      "type": "flight",
+      "rawTotal": 158,
+      "presTotal": 158,
+      "difference": 0,
+      "rawFields": {
+        "description": 64,
+        "clientNotes": 94,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 64,
+        "description": 94,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 18,
+      "type": "point",
+      "rawTotal": 39,
+      "presTotal": 39,
+      "difference": 0,
+      "rawFields": {
+        "description": 39,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 39,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 19,
+      "type": "flight",
+      "rawTotal": 100,
+      "presTotal": 75,
+      "difference": -25,
+      "rawFields": {
+        "description": 100,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 75,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 20,
+      "type": "point",
+      "rawTotal": 30,
+      "presTotal": 30,
+      "difference": 0,
+      "rawFields": {
+        "description": 30,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 30,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 21,
+      "type": "flight",
+      "rawTotal": 83,
+      "presTotal": 83,
+      "difference": 0,
+      "rawFields": {
+        "description": 83,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 83,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 22,
+      "type": "point",
+      "rawTotal": 22,
+      "presTotal": 22,
+      "difference": 0,
+      "rawFields": {
+        "description": 22,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 22,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 23,
+      "type": "road",
+      "rawTotal": 270,
+      "presTotal": 270,
+      "difference": 0,
+      "rawFields": {
+        "description": 48,
+        "clientNotes": 222,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 48,
+        "description": 222,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 24,
+      "type": "stay",
+      "rawTotal": 835,
+      "presTotal": 1487,
+      "difference": 652,
+      "rawFields": {
+        "description": 22,
+        "clientNotes": 0,
+        "inclusions": 813
+      },
+      "presFields": {
+        "title": 22,
+        "description": 1329,
+        "clientIncludeExclude": 136
+      }
+    },
+    {
+      "sequence": 25,
+      "type": "service",
+      "rawTotal": 656,
+      "presTotal": 687,
+      "difference": 31,
+      "rawFields": {
+        "description": 656,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 32,
+        "description": 655,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 26,
+      "type": "road",
+      "rawTotal": 270,
+      "presTotal": 270,
+      "difference": 0,
+      "rawFields": {
+        "description": 48,
+        "clientNotes": 222,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 48,
+        "description": 222,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 27,
+      "type": "point",
+      "rawTotal": 22,
+      "presTotal": 22,
+      "difference": 0,
+      "rawFields": {
+        "description": 22,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 22,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 28,
+      "type": "flight",
+      "rawTotal": 84,
+      "presTotal": 58,
+      "difference": -26,
+      "rawFields": {
+        "description": 84,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 58,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 30,
+      "type": "point",
+      "rawTotal": 30,
+      "presTotal": 30,
+      "difference": 0,
+      "rawFields": {
+        "description": 30,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 30,
+        "description": 0,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "sequence": 29,
+      "type": "service",
+      "rawTotal": 382,
+      "presTotal": 420,
+      "difference": 38,
+      "rawFields": {
+        "description": 382,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 31,
+        "description": 389,
+        "clientIncludeExclude": 0
+      }
+    },
+    {
+      "type": "exit",
+      "rawTotal": 64,
+      "presTotal": 62,
+      "difference": -2,
+      "rawFields": {
+        "description": 64,
+        "clientNotes": 0,
+        "inclusions": 0
+      },
+      "presFields": {
+        "title": 0,
+        "description": 62,
+        "clientIncludeExclude": 0
+      }
+    }
+  ],
+  "sampleSegment": {
+    "sequence": 4,
+    "type": "stay",
+    "raw": {
+      "description": "One&Only Cape Town",
+      "inclusions": "Island Family Suite: Breakfast and 15% VAT;  Welcome bottle of Wine; Bespoke Bar Cart featuring One&Only Cape Town complimentary Infused Fynbos Liqueur Gin; Personal Pantry with complimentary non-alcoholic beverages; Garment pressing service daily - one outfit per guest, per day."
+    },
+    "presentation": {
+      "title": "One&Only Cape Town",
+      "description": "The One&Only Cape Town is a luxurious resort set against the stunning backdrop of Table Mountain, offering an idyllic blend of natural beauty and sophisticated comfort. With spacious, well-appointed rooms and suites that boast sweeping views of either the marina or the mountain, this world-class resort provides an unparalleled experience of relaxation and indulgence. Guests can enjoy exceptional dining at Nobu, one of the world’s most renowned restaurants, and explore a variety of other dining and bar options, including the contemporary Italian cuisine at Isola and the relaxed atmosphere at Vista Bar & Lounge. The resort’s award-winning One&Only Spa is the perfect place to unwind, while its prime location offers easy access to Cape Town's vibrant attractions, including the nearby V&A Waterfront.\n\nThe KidsOnly programme offers fun, supervised activities for children, with tailored experiences for older kids — making it a great choice for families.\n\nINSIDER'S TIP: For a memorable experience, try booking a private cabana by the pool for the day. It offers the perfect combination of privacy and luxury, complete with attentive service and unforgettable views.\n",
+      "clientIncludeExclude": "Island Family Suite: Includes: Breakfast only.",
+      "images": [
+        "7dba51b4-ee1f-4107-922d-8ba0999ac54e_10.jpg",
+        "7e963f23-ab23-40a0-a0a6-0c2abc33b946_15.jpg",
+        "a76ebf12-4151-499c-8255-72fe0ce4b61a_12.jpg",
+        "564d1e71-296c-4e3f-bc21-cb59689bbfe1_14.jpg",
+        "1f1742fa-6e45-4a29-adfc-f23f0a66e1d1_11.jpg",
+        "d9f7fcc2-ce91-426c-ab25-105daa6cf38a_13.jpg",
+        "f710c0de-4efd-4142-80b7-dd904d144e7b_7.jpg",
+        "171573c2-27a7-4344-9552-0e7935267cbf_9.jpg",
+        "06db965a-c33a-425e-b431-a4064f1899cc_1.jpg",
+        "757bb496-523f-46b0-b07a-33ecc1d79157_6.jpg",
+        "3467b0e0-8676-45ff-b380-9e95481c5f90_8.jpg",
+        "386cf17b-739c-4006-a71b-50ec169aecff_4.jpg",
+        "64383812-44a5-46bb-807c-4cc947ae781a_5.jpg",
+        "891b879a-48c2-4b27-a242-9ab336616d94_3.jpg"
+      ]
+    }
+  }
+}

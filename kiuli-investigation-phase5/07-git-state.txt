@@ -1,0 +1,80 @@
+=== PART G: GIT & UNCOMMITTED CHANGES ===
+Generated: Sat 10 Jan 2026 11:50:40 UTC
+
+--- Current Branch ---
+main
+
+--- Git Status ---
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   package-lock.json
+	modified:   package.json
+	modified:   pipelines/run_full_pipeline.cjs
+	modified:   processors/media_rehoster.cjs
+	modified:   scrapers/itrvl_scraper.cjs
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.env.production
+	.envrc
+	kiuli-investigation-phase4/
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+--- Recent Commits (last 15) ---
+32a27d2 feat: add admin UI for itinerary job management
+9280717 feat: add job tracking to scrape-itinerary API route
+e2e1264 refactor: enable parallel processing with unique output directories
+c50edd5 fix: regenerate importMap to remove Vercel Blob storage
+353cffd feat: add comprehensive retry logic and fix validation flow
+054d2d9 docs: add comprehensive scraper pipeline documentation
+3d1793d chore: remove obsolete files and update configuration
+ad0389f fix(critical): replace child_process.spawn with direct function calls
+720de52 fix: remove conflicting vercelBlobStorage plugin
+a43e815 fix: include Google Generative AI in file tracing
+c493855 fix: trim environment variables to prevent header errors
+cfb3bbe fix: use getOutputDir() helper in all processor scripts
+9392b22 fix: add dunder-* to utility dependency wildcards
+f607c6e fix: add complete es-* utility dependency tree with wildcards
+61facd1 fix: add mime-db dependency for mime-types
+
+--- Uncommitted Changes Detail ---
+ package-lock.json               | 1922 ++++++++++++++++++++++++++-------------
+ package.json                    |    1 +
+ pipelines/run_full_pipeline.cjs |    2 +-
+ processors/media_rehoster.cjs   |  143 +--
+ scrapers/itrvl_scraper.cjs      |   35 +-
+ 5 files changed, 1429 insertions(+), 674 deletions(-)
+
+--- Untracked Files ---
+.env.production
+.envrc
+kiuli-investigation-phase4/00-MANIFEST.txt
+kiuli-investigation-phase4/01-next-config.txt
+kiuli-investigation-phase4/02-media-collection.txt
+kiuli-investigation-phase4/03-url-parsing.txt
+kiuli-investigation-phase4/04-claude-settings.txt
+kiuli-investigation-phase4/05-scraper-full.txt
+kiuli-investigation-phase4/06-pipeline-runner-full.txt
+kiuli-investigation-phase4/07-media-rehoster-full.txt
+kiuli-investigation-phase4/08-content-enhancer-full.txt
+kiuli-investigation-phase4/09-schema-generator-full.txt
+kiuli-investigation-phase4/10-faq-formatter-full.txt
+kiuli-investigation-phase4/11-payload-ingester-full.txt
+kiuli-investigation-phase4/12-collections-itineraries.txt
+kiuli-investigation-phase4/13-collections-itineraryjobs.txt
+kiuli-investigation-phase4/14-api-scrape-route.txt
+kiuli-investigation-phase4/15-payload-config.txt
+kiuli-investigation-phase4/16-s3-storage-plugin.txt
+kiuli-investigation-phase4/17-validation-scripts.txt
+kiuli-investigation-phase4/18-product-schema.txt
+kiuli-investigation-phase4/19-config-files.txt
+kiuli-investigation-phase4/20-evidence-state.txt
+
+--- Remote Status ---
+origin	https://github.com/kiuli-travel/kiuli-website.git (fetch)
+origin	https://github.com/kiuli-travel/kiuli-website.git (push)

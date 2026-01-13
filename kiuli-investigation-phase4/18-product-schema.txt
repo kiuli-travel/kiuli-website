@@ -1,0 +1,114 @@
+=== FILE: schemas/kiuli-product.schema.json ===
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiuli.com/schemas/product.json",
+  "title": "Kiuli Product Schema",
+  "description": "JSON Schema for validating Kiuli travel product JSON-LD before external API submission",
+  "type": "object",
+  "required": [
+    "@context",
+    "@type",
+    "name",
+    "description",
+    "image",
+    "brand",
+    "sku",
+    "offers"
+  ],
+  "properties": {
+    "@context": {
+      "type": "string",
+      "const": "https://schema.org",
+      "description": "Must be https://schema.org"
+    },
+    "@type": {
+      "type": "string",
+      "const": "Product",
+      "description": "Must be Product (NOT Trip)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Product name - must be present and non-empty"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Product description - must be present and ≤ 500 characters"
+    },
+    "image": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "format": "uri",
+        "not": {
+          "pattern": "itrvl\\.imgix\\.net"
+        },
+        "description": "Must be rehosted Payload/S3 URL, NOT itrvl.imgix.net domain"
+      },
+      "description": "Array of rehosted image URLs - no itrvl.imgix.net domains allowed"
+    },
+    "brand": {
+      "type": "object",
+      "required": ["@type", "name"],
+      "properties": {
+        "@type": {
+          "type": "string",
+          "const": "Brand"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "description": "Brand information"
+    },
+    "sku": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stock Keeping Unit - typically the Itinerary ID"
+    },
+    "offers": {
+      "type": "object",
+      "required": ["@type", "priceCurrency", "price", "availability", "url"],
+      "properties": {
+        "@type": {
+          "type": "string",
+          "const": "Offer"
+        },
+        "priceCurrency": {
+          "type": "string",
+          "const": "USD",
+          "description": "Must be USD"
+        },
+        "price": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]{2}$",
+          "description": "Must be a string with exactly two decimal places (e.g., '12000.00')"
+        },
+        "availability": {
+          "type": "string",
+          "const": "https://schema.org/InStock",
+          "description": "Must be https://schema.org/InStock"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical Kiuli URL for the product"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Offer details for the product"
+    }
+  },
+  "additionalProperties": false
+}
+
+--- All schema files ---
+total 8
+drwxr-xr-x   3 grahamwallington  staff    96 13 Nov 17:16 .
+drwxr-xr-x  49 grahamwallington  staff  1568 10 Jan 09:11 ..
+-rw-r--r--   1 grahamwallington  staff  2896 13 Nov 17:16 kiuli-product.schema.json

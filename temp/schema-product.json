@@ -1,0 +1,11 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "A Family Adventure to Southern Africa in search of the Big Seven",
+  "description": "The One&Only Cape Town is a luxurious resort set against the stunning backdrop of Table Mountain, offering an idyllic blend of natural beauty and sophisticated comfort. With spacious, well-appointed rooms and suites that boast sweeping views of either the marina or the mountain, this world-class resort provides an unparalleled experience of relaxation and indulgence. Guests can enjoy exceptional dining at Nobu, one of the world’s most renowned restaurants, and explore a variety of other dining and bar options, including the contemporary Italian cuisine at Isola and the relaxed atmosphere at Vista Bar & Lounge. The resort’s award-winning One&Only Spa is the perfect place to unwind, while its prime location offers easy access to Cape Town's vibrant attractions, including the nearby V&A Waterfront.\n\nThe KidsOnly programme offers fun, supervised activities for children, with tailored experiences for older kids — making it a great choice for families.\n\nINSIDER'S TIP: For a memorable experience, try booking a private cabana by the pool for the day. It offers the perfect combination of privacy and luxury, complete with attentive service and unforgettable views.\n",
+  "brand": {
+    "@type": "Brand",
+    "name": "Kiuli Safaris"
+  },
+  "sku": "KIULI-1762722436535"
+}

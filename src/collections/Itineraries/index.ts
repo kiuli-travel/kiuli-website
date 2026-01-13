@@ -1,6 +1,5 @@
 import type { CollectionConfig, AccessArgs } from 'payload'
 import { authenticated } from '../../access/authenticated'
-import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
 
 // Allow authenticated users OR API key access for Lambda pipeline
 const authenticatedOrApiKey = ({ req }: AccessArgs) => {
@@ -18,7 +17,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   access: {
     create: authenticatedOrApiKey,
     delete: authenticated,
-    read: authenticatedOrPublished,
+    read: authenticatedOrApiKey,
     update: authenticatedOrApiKey,
   },
   admin: {

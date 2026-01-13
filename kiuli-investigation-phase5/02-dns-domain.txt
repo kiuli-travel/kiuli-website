@@ -1,0 +1,57 @@
+=== PART B: DNS & DOMAIN VERIFICATION ===
+Generated: Sat 10 Jan 2026 11:48:01 UTC
+
+--- DNS Resolution: kiuli.com ---
+216.198.79.1
+
+--- DNS Resolution: www.kiuli.com ---
+d53b9e60df51b774.vercel-dns-017.com.
+216.198.79.65
+64.29.17.65
+
+--- DNS Resolution: admin.kiuli.com ---
+d53b9e60df51b774.vercel-dns-017.com.
+216.198.79.65
+64.29.17.65
+
+--- HTTP Headers: https://kiuli.com ---
+HTTP/2 200 
+accept-ch: Sec-CH-Prefers-Color-Scheme
+accept-ranges: bytes
+access-control-allow-origin: *
+age: 2048911
+cache-control: public, max-age=0, must-revalidate
+content-disposition: inline
+content-type: text/html; charset=utf-8
+critical-ch: Sec-CH-Prefers-Color-Scheme
+date: Sat, 10 Jan 2026 11:48:12 GMT
+etag: "4208205eb21c8dba0b067fd10752764b"
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch
+x-matched-path: /
+x-nextjs-prerender: 1
+x-nextjs-stale-time: 300
+x-powered-by: Next.js, Payload
+x-vercel-cache: HIT
+x-vercel-id: lhr1::plz9w-1768045691783-20249076b7c1
+
+--- HTTP Headers: https://admin.kiuli.com ---
+HTTP/2 308 
+accept-ch: Sec-CH-Prefers-Color-Scheme
+cache-control: public, max-age=0, must-revalidate
+content-type: text/plain
+critical-ch: Sec-CH-Prefers-Color-Scheme
+date: Sat, 10 Jan 2026 11:48:13 GMT
+location: https://admin.kiuli.com/admin
+refresh: 0;url=https://admin.kiuli.com/admin
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: Sec-CH-Prefers-Color-Scheme
+x-powered-by: Next.js, Payload
+x-vercel-id: lhr1::742qj-1768045693193-64f3de8893b8
+
+
+--- Test www redirect ---
+HTTP/2 308 
+HTTP/2 200 

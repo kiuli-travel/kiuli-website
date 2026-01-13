@@ -1,0 +1,79 @@
+{
+  "testName": "AIO (AI Overviews) Optimization",
+  "testedAt": "2025-11-09T21:07:17.109Z",
+  "tested": {
+    "itinerary": "A Family Adventure to Southern Africa in search of the Big Seven",
+    "property": "One&Only Cape Town"
+  },
+  "formats": [
+    {
+      "format": "FAQ Format",
+      "description": "Question-answer pairs that AI can extract directly",
+      "score": 98,
+      "grade": "A",
+      "breakdown": {
+        "factDensity": 25,
+        "structuredData": 23,
+        "aiParsability": 25,
+        "scannability": 25
+      }
+    },
+    {
+      "format": "Table/List Format",
+      "description": "Structured data that AI can parse systematically",
+      "score": 95,
+      "grade": "A",
+      "breakdown": {
+        "factDensity": 25,
+        "structuredData": 25,
+        "aiParsability": 20,
+        "scannability": 25
+      }
+    },
+    {
+      "format": "Bullet Points",
+      "description": "Scannable lists for quick information extraction",
+      "score": 90,
+      "grade": "A",
+      "breakdown": {
+        "factDensity": 25,
+        "structuredData": 20,
+        "aiParsability": 20,
+        "scannability": 25
+      }
+    },
+    {
+      "format": "Narrative Paragraphs",
+      "description": "Traditional prose format",
+      "score": 70,
+      "grade": "B",
+      "breakdown": {
+        "factDensity": 25,
+        "structuredData": 10,
+        "aiParsability": 20,
+        "scannability": 15
+      }
+    }
+  ],
+  "winner": {
+    "format": "FAQ Format",
+    "score": 98,
+    "grade": "A"
+  },
+  "recommendation": "Use FAQ Format format. Excellent for AI extraction.",
+  "insights": [
+    "AI Overviews favor structured, fact-dense content",
+    "FAQ format provides direct question-answer pairs",
+    "Tables enable systematic data extraction",
+    "Bullet points balance structure with readability",
+    "Narrative prose requires more AI processing"
+  ],
+  "implementation": [
+    "Primary format: FAQ Format",
+    "Include key facts in first 200 characters",
+    "Use clear headers and structure markers",
+    "Keep fact density high",
+    "Consider FAQ section for common questions"
+  ],
+  "note": "Google has not published official AIO optimization guidelines. These scores are based on observed patterns in AI Overview appearances and general AI parsability principles."
+}

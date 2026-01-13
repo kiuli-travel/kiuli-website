@@ -361,6 +361,14 @@ export interface Media {
    * Original iTrvl CDN URL
    */
   sourceUrl?: string | null;
+  /**
+   * Original image path in S3 bucket
+   */
+  originalS3Key?: string | null;
+  /**
+   * imgix URL for optimized serving
+   */
+  imgixUrl?: string | null;
   folder?: (number | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
@@ -1502,6 +1510,8 @@ export interface MediaSelect<T extends boolean = true> {
   sourceItinerary?: T;
   s3Key?: T;
   sourceUrl?: T;
+  originalS3Key?: T;
+  imgixUrl?: T;
   folder?: T;
   updatedAt?: T;
   createdAt?: T;

@@ -1,0 +1,62 @@
+=== PART F: LOCAL PIPELINE EXECUTION TEST ===
+Generated: Sat 10 Jan 2026 11:50:19 UTC
+
+--- Node.js Version ---
+v24.4.1
+
+--- Pipeline Files Existence Check ---
+total 32
+drwxr-xr-x   3 grahamwallington  staff     96 16 Nov 14:16 .
+drwxr-xr-x  50 grahamwallington  staff   1600 10 Jan 10:34 ..
+-rw-r--r--   1 grahamwallington  staff  14766 16 Nov 14:16 run_full_pipeline.cjs
+
+total 24
+drwxr-xr-x   3 grahamwallington  staff     96 16 Nov 16:00 .
+drwxr-xr-x  50 grahamwallington  staff   1600 10 Jan 10:34 ..
+-rw-r--r--   1 grahamwallington  staff  11210 16 Nov 16:00 itrvl_scraper.cjs
+
+total 80
+drwxr-xr-x   6 grahamwallington  staff    192 16 Nov 19:03 .
+drwxr-xr-x  50 grahamwallington  staff   1600 10 Jan 10:34 ..
+-rw-r--r--   1 grahamwallington  staff   8937 16 Nov 12:08 content_enhancer.cjs
+-rw-r--r--   1 grahamwallington  staff   5858 16 Nov 12:10 faq_formatter.cjs
+-rw-r--r--   1 grahamwallington  staff  10865 16 Nov 19:03 media_rehoster.cjs
+-rw-r--r--   1 grahamwallington  staff   7652 16 Nov 12:09 schema_generator.cjs
+
+--- Environment Variables Check (.env.local) ---
+AWS_ACCESS_KEY_ID=<CONFIGURED>
+AWS_SECRET_ACCESS_KEY=<CONFIGURED>
+BLOB_READ_WRITE_TOKEN=<CONFIGURED>
+CRON_SECRET=<CONFIGURED>
+DATABASE_URL=<CONFIGURED>
+DATABASE_URL_UNPOOLED=<CONFIGURED>
+NEON_PROJECT_ID=<CONFIGURED>
+PAYLOAD_PUBLIC_MEDIA_BASE_URL=<CONFIGURED>
+PAYLOAD_SECRET=<CONFIGURED>
+PGDATABASE=<CONFIGURED>
+PGHOST=<CONFIGURED>
+PGHOST_UNPOOLED=<CONFIGURED>
+PGPASSWORD=<CONFIGURED>
+PGUSER=<CONFIGURED>
+POSTGRES_DATABASE=<CONFIGURED>
+POSTGRES_HOST=<CONFIGURED>
+POSTGRES_PASSWORD=<CONFIGURED>
+POSTGRES_PRISMA_URL=<CONFIGURED>
+POSTGRES_URL=<CONFIGURED>
+POSTGRES_URL_NON_POOLING=<CONFIGURED>
+POSTGRES_URL_NO_SSL=<CONFIGURED>
+POSTGRES_USER=<CONFIGURED>
+PREVIEW_SECRET=<CONFIGURED>
+S3_BUCKET=<CONFIGURED>
+S3_REGION=<CONFIGURED>
+VERCEL_OIDC_TOKEN=<CONFIGURED>
+NEXT_PUBLIC_SERVER_URL=<CONFIGURED>
+PAYLOAD_API_URL=<CONFIGURED>
+PAYLOAD_API_KEY=<CONFIGURED>
+GEMINI_API_KEY=<CONFIGURED>
+
+--- Local Output Directory ---
+total 0
+drwxr-xr-x@  3 grahamwallington  staff    96 16 Nov 19:03 .
+drwxr-xr-x  50 grahamwallington  staff  1600 10 Jan 10:34 ..
+drwxr-xr-x@  4 grahamwallington  staff   128 17 Nov 01:52 680dff493cf205005cf76e8f

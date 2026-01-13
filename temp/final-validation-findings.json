@@ -1,0 +1,177 @@
+{
+  "findings": {
+    "idMatching": true,
+    "missingSegmentCount": 0,
+    "missingSegmentTypes": [],
+    "notesInRaw": true,
+    "notesInPresentation": false,
+    "clientIncludeExcludeInPresentation": true,
+    "staySegmentsMatchAccommodations": true,
+    "presentationDescriptionCoverage": "20/32"
+  },
+  "missingSegments": [],
+  "descriptionCoverage": {
+    "withDesc": [
+      {
+        "type": "entry",
+        "length": 62
+      },
+      {
+        "seq": 2,
+        "type": "service",
+        "length": 381
+      },
+      {
+        "seq": 3,
+        "type": "road",
+        "length": 162
+      },
+      {
+        "seq": 4,
+        "type": "stay",
+        "length": 1173
+      },
+      {
+        "seq": 5,
+        "type": "service",
+        "length": 858
+      },
+      {
+        "seq": 6,
+        "type": "service",
+        "length": 82
+      },
+      {
+        "seq": 7,
+        "type": "service",
+        "length": 133
+      },
+      {
+        "seq": 8,
+        "type": "road",
+        "length": 152
+      },
+      {
+        "seq": 9,
+        "type": "stay",
+        "length": 1288
+      },
+      {
+        "seq": 10,
+        "type": "service",
+        "length": 460
+      },
+      {
+        "seq": 11,
+        "type": "road",
+        "length": 165
+      },
+      {
+        "seq": 15,
+        "type": "road",
+        "length": 157
+      },
+      {
+        "seq": 16,
+        "type": "stay",
+        "length": 830
+      },
+      {
+        "seq": 17,
+        "type": "flight",
+        "length": 94
+      },
+      {
+        "seq": 23,
+        "type": "road",
+        "length": 222
+      },
+      {
+        "seq": 24,
+        "type": "stay",
+        "length": 1329
+      },
+      {
+        "seq": 25,
+        "type": "service",
+        "length": 655
+      },
+      {
+        "seq": 26,
+        "type": "road",
+        "length": 222
+      },
+      {
+        "seq": 29,
+        "type": "service",
+        "length": 389
+      },
+      {
+        "type": "exit",
+        "length": 64
+      }
+    ],
+    "withoutDesc": [
+      {
+        "seq": 1,
+        "type": "point",
+        "desc": "NONE"
+      },
+      {
+        "seq": 12,
+        "type": "point",
+        "desc": "NONE"
+      },
+      {
+        "seq": 13,
+        "type": "flight",
+        "desc": "NONE"
+      },
+      {
+        "seq": 14,
+        "type": "point",
+        "desc": "NONE"
+      },
+      {
+        "seq": 18,
+        "type": "point",
+        "desc": "NONE"
+      },
+      {
+        "seq": 19,
+        "type": "flight",
+        "desc": "NONE"
+      },
+      {
+        "seq": 20,
+        "type": "point",
+        "desc": "NONE"
+      },
+      {
+        "seq": 21,
+        "type": "flight",
+        "desc": "NONE"
+      },
+      {
+        "seq": 22,
+        "type": "point",
+        "desc": "NONE"
+      },
+      {
+        "seq": 27,
+        "type": "point",
+        "desc": "NONE"
+      },
+      {
+        "seq": 28,
+        "type": "flight",
+        "desc": "NONE"
+      },
+      {
+        "seq": 30,
+        "type": "point",
+        "desc": "NONE"
+      }
+    ]
+  }
+}

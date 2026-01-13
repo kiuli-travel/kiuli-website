@@ -1,0 +1,93 @@
+=== PART D: PAYLOAD CMS & API VERIFICATION ===
+Generated: $(date -u)
+
+--- Payload Admin Panel Accessibility ---
+HTTP/2 200 
+accept-ch: Sec-CH-Prefers-Color-Scheme
+age: 0
+cache-control: private, no-cache, no-store, max-age=0, must-revalidate
+content-type: text/html; charset=utf-8
+critical-ch: Sec-CH-Prefers-Color-Scheme
+date: Sat, 10 Jan 2026 11:49:08 GMT
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch
+x-matched-path: /admin/[[...segments]]
+x-powered-by: Next.js, Payload
+x-vercel-cache: MISS
+x-vercel-id: lhr1::iad1::zf9bg-1768045746658-5f0da5d34d31
+
+
+--- API Endpoints Test ---
+Testing /api/itineraries:
+HTTP/2 404 
+accept-ch: Sec-CH-Prefers-Color-Scheme
+access-control-allow-headers: Origin, X-Requested-With, Content-Type, Accept, Authorization, Content-Encoding, x-apollo-tracing, X-Payload-HTTP-Method-Override
+access-control-allow-methods: PUT, PATCH, POST, GET, DELETE, OPTIONS
+age: 0
+cache-control: public, max-age=0, must-revalidate
+content-type: application/json
+critical-ch: Sec-CH-Prefers-Color-Scheme
+date: Sat, 10 Jan 2026 11:49:10 GMT
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch
+x-matched-path: /api/[...slug]
+x-powered-by: Next.js, Payload
+x-vercel-cache: MISS
+
+Testing /api/itinerary-jobs:
+HTTP/2 404 
+accept-ch: Sec-CH-Prefers-Color-Scheme
+access-control-allow-headers: Origin, X-Requested-With, Content-Type, Accept, Authorization, Content-Encoding, x-apollo-tracing, X-Payload-HTTP-Method-Override
+access-control-allow-methods: PUT, PATCH, POST, GET, DELETE, OPTIONS
+age: 0
+cache-control: public, max-age=0, must-revalidate
+content-type: application/json
+critical-ch: Sec-CH-Prefers-Color-Scheme
+date: Sat, 10 Jan 2026 11:49:21 GMT
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch
+x-matched-path: /api/[...slug]
+x-powered-by: Next.js, Payload
+x-vercel-cache: MISS
+
+Testing /api/media:
+HTTP/2 404 
+accept-ch: Sec-CH-Prefers-Color-Scheme
+access-control-allow-headers: Origin, X-Requested-With, Content-Type, Accept, Authorization, Content-Encoding, x-apollo-tracing, X-Payload-HTTP-Method-Override
+access-control-allow-methods: PUT, PATCH, POST, GET, DELETE, OPTIONS
+age: 0
+cache-control: public, max-age=0, must-revalidate
+content-type: application/json
+critical-ch: Sec-CH-Prefers-Color-Scheme
+date: Sat, 10 Jan 2026 11:49:21 GMT
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch
+x-matched-path: /api/[...slug]
+x-powered-by: Next.js, Payload
+x-vercel-cache: MISS
+
+--- Scrape Itinerary Endpoint (unauthenticated test) ---
+HTTP/2 405 
+accept-ch: Sec-CH-Prefers-Color-Scheme
+age: 0
+cache-control: public, max-age=0, must-revalidate
+critical-ch: Sec-CH-Prefers-Color-Scheme
+date: Sat, 10 Jan 2026 11:49:35 GMT
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch
+x-matched-path: /api/scrape-itinerary
+x-powered-by: Next.js, Payload
+x-vercel-cache: MISS
+x-vercel-id: lhr1::iad1::4kl4z-1768045761733-a39b253b57cc
+
+
+--- API Body Response Test ---
+GET /api/itineraries body:
+{"docs":[],"hasNextPage":false,"hasPrevPage":false,"limit":10,"nextPage":null,"page":1,"pagingCounter":1,"prevPage":null,"totalDocs":0,"totalPages":1}
+POST /api/scrape-itinerary body (empty POST):
+{"success":false,"error":"Unexpected end of JSON input"}

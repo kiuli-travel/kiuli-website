@@ -868,47 +868,258 @@ export interface Itinerary {
   id: number;
   title: string;
   /**
-   * Unique identifier from iTrvl
+   * URL-friendly identifier (auto-generated from title)
+   */
+  slug: string;
+  /**
+   * iTrvl itinerary ID for deduplication
    */
   itineraryId: string;
   /**
-   * Price in cents (e.g., 1000000 = $10,000)
+   * SEO title (max 60 chars). Auto-generated if blank.
    */
-  price?: number | null;
+  metaTitle?: string | null;
   /**
-   * Human-readable price string
+   * SEO description (max 160 chars). Auto-generated if blank.
    */
-  priceFormatted?: string | null;
+  metaDescription?: string | null;
   /**
-   * Rehosted images from the itinerary
+   * Primary hero image for the itinerary page
+   */
+  heroImage?: (number | null) | Media;
+  overview?: {
+    /**
+     * 2-3 sentence hook describing the experience
+     */
+    summary?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * Total number of nights
+     */
+    nights?: number | null;
+    countries?:
+      | {
+          country: string;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Key highlights/experiences
+     */
+    highlights?:
+      | {
+          highlight: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Pricing information (revealed after value is established)
+   */
+  investmentLevel?: {
+    /**
+     * Starting price per person in dollars
+     */
+    fromPrice?: number | null;
+    /**
+     * Upper price range (optional)
+     */
+    toPrice?: number | null;
+    currency?: string | null;
+    /**
+     * What the price includes
+     */
+    includes?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+  };
+  /**
+   * Day-by-day itinerary
+   */
+  days?:
+    | {
+        dayNumber: number;
+        /**
+         * Specific date (if applicable)
+         */
+        date?: string | null;
+        /**
+         * Day title, e.g., "Arrival in Nairobi"
+         */
+        title?: string | null;
+        location?: string | null;
+        segments?:
+          | (
+              | {
+                  accommodationName: string;
+                  description?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  nights?: number | null;
+                  location?: string | null;
+                  country?: string | null;
+                  images?: (number | Media)[] | null;
+                  /**
+                   * What is included at this property
+                   */
+                  inclusions?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  roomType?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'stay';
+                }
+              | {
+                  title: string;
+                  description?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  images?: (number | Media)[] | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'activity';
+                }
+              | {
+                  type?: ('flight' | 'road' | 'boat') | null;
+                  title?: string | null;
+                  from?: string | null;
+                  to?: string | null;
+                  description?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  departureTime?: string | null;
+                  arrivalTime?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'transfer';
+                }
+            )[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * FAQ questions and answers for SEO/AIO
+   */
+  faqItems?:
+    | {
+        question: string;
+        answer: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Why book this through Kiuli (value proposition)
+   */
+  whyKiuli?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * All images associated with this itinerary
    */
   images?: (number | Media)[] | null;
   /**
-   * Raw itinerary JSON from Phase 2
-   */
-  rawItinerary?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  /**
-   * AI-enhanced itinerary JSON from Phase 4
-   */
-  enhancedItinerary?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  /**
-   * Product schema from Phase 5
+   * Product JSON-LD schema (auto-generated)
    */
   schema?:
     | {
@@ -920,25 +1131,36 @@ export interface Itinerary {
     | boolean
     | null;
   /**
-   * Formatted FAQ HTML from Phase 6
+   * Google Rich Results Test status
    */
-  faq?: string | null;
+  schemaStatus?: ('pending' | 'pass' | 'fail') | null;
   /**
-   * Internal schema validation status from Phase 5
+   * Original source data (for debugging)
    */
-  schemaStatus: 'pending' | 'pass' | 'fail';
+  source?: {
+    itrvlUrl?: string | null;
+    lastScrapedAt?: string | null;
+    /**
+     * Original scraped JSON for debugging
+     */
+    rawData?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
   /**
-   * External Google Rich Results Test validation status
+   * When this was last built/scraped
    */
-  googleInspectionStatus: 'pending' | 'pass' | 'fail';
+  buildTimestamp?: string | null;
   /**
-   * Timestamp when this itinerary was processed
+   * Google Search Console inspection status
    */
-  buildTimestamp: string;
-  /**
-   * Error details if pipeline or validation failed
-   */
-  googleFailureLog?: string | null;
+  googleInspectionStatus?: ('pending' | 'pass' | 'fail') | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -1651,18 +1873,106 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface ItinerariesSelect<T extends boolean = true> {
   title?: T;
+  slug?: T;
   itineraryId?: T;
-  price?: T;
-  priceFormatted?: T;
+  metaTitle?: T;
+  metaDescription?: T;
+  heroImage?: T;
+  overview?:
+    | T
+    | {
+        summary?: T;
+        nights?: T;
+        countries?:
+          | T
+          | {
+              country?: T;
+              id?: T;
+            };
+        highlights?:
+          | T
+          | {
+              highlight?: T;
+              id?: T;
+            };
+      };
+  investmentLevel?:
+    | T
+    | {
+        fromPrice?: T;
+        toPrice?: T;
+        currency?: T;
+        includes?: T;
+      };
+  days?:
+    | T
+    | {
+        dayNumber?: T;
+        date?: T;
+        title?: T;
+        location?: T;
+        segments?:
+          | T
+          | {
+              stay?:
+                | T
+                | {
+                    accommodationName?: T;
+                    description?: T;
+                    nights?: T;
+                    location?: T;
+                    country?: T;
+                    images?: T;
+                    inclusions?: T;
+                    roomType?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              activity?:
+                | T
+                | {
+                    title?: T;
+                    description?: T;
+                    images?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              transfer?:
+                | T
+                | {
+                    type?: T;
+                    title?: T;
+                    from?: T;
+                    to?: T;
+                    description?: T;
+                    departureTime?: T;
+                    arrivalTime?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+            };
+        id?: T;
+      };
+  faqItems?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
+  whyKiuli?: T;
   images?: T;
-  rawItinerary?: T;
-  enhancedItinerary?: T;
   schema?: T;
-  faq?: T;
   schemaStatus?: T;
-  googleInspectionStatus?: T;
+  source?:
+    | T
+    | {
+        itrvlUrl?: T;
+        lastScrapedAt?: T;
+        rawData?: T;
+      };
   buildTimestamp?: T;
-  googleFailureLog?: T;
+  googleInspectionStatus?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;

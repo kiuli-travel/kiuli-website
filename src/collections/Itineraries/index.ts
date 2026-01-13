@@ -14,22 +14,35 @@ const authenticatedOrApiKey = ({ req }: AccessArgs) => {
 
 export const Itineraries: CollectionConfig<'itineraries'> = {
   slug: 'itineraries',
-  access: {
-    create: authenticatedOrApiKey,
-    delete: authenticated,
-    read: authenticatedOrApiKey,
-    update: authenticatedOrApiKey,
-  },
   admin: {
-    defaultColumns: ['title', 'schemaStatus', 'googleInspectionStatus', 'updatedAt'],
     useAsTitle: 'title',
+    defaultColumns: ['title', 'slug', 'overview.nights', '_status', 'updatedAt'],
+  },
+  access: {
+    read: authenticatedOrApiKey,
+    create: authenticatedOrApiKey,
+    update: authenticatedOrApiKey,
+    delete: authenticated,
+  },
+  versions: {
+    drafts: true,
   },
   fields: [
+    // === BASIC INFO ===
     {
       name: 'title',
       type: 'text',
       required: true,
-      label: 'Itinerary Title',
+    },
+    {
+      name: 'slug',
+      type: 'text',
+      required: true,
+      unique: true,
+      index: true,
+      admin: {
+        description: 'URL-friendly identifier (auto-generated from title)',
+      },
     },
     {
       name: 'itineraryId',
@@ -37,160 +50,393 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       required: true,
       unique: true,
       index: true,
-      label: 'iTrvl Itinerary ID',
       admin: {
-        description: 'Unique identifier from iTrvl',
+        description: 'iTrvl itinerary ID for deduplication',
         readOnly: true,
       },
     },
+
+    // === SEO ===
     {
-      name: 'price',
-      type: 'number',
-      label: 'Price (cents)',
-      admin: {
-        description: 'Price in cents (e.g., 1000000 = $10,000)',
-        readOnly: true,
-      },
-    },
-    {
-      name: 'priceFormatted',
+      name: 'metaTitle',
       type: 'text',
-      label: 'Price (formatted)',
+      maxLength: 60,
       admin: {
-        description: 'Human-readable price string',
-        readOnly: true,
+        description: 'SEO title (max 60 chars). Auto-generated if blank.',
       },
     },
     {
-      name: 'images',
+      name: 'metaDescription',
+      type: 'textarea',
+      maxLength: 160,
+      admin: {
+        description: 'SEO description (max 160 chars). Auto-generated if blank.',
+      },
+    },
+
+    // === HERO ===
+    {
+      name: 'heroImage',
       type: 'relationship',
       relationTo: 'media',
-      hasMany: true,
-      label: 'Itinerary Images',
       admin: {
-        description: 'Rehosted images from the itinerary',
+        description: 'Primary hero image for the itinerary page',
       },
     },
+
+    // === OVERVIEW ===
     {
-      type: 'tabs',
-      tabs: [
+      name: 'overview',
+      type: 'group',
+      fields: [
         {
-          label: 'Content',
+          name: 'summary',
+          type: 'richText',
+          admin: {
+            description: '2-3 sentence hook describing the experience',
+          },
+        },
+        {
+          name: 'nights',
+          type: 'number',
+          min: 1,
+          admin: {
+            description: 'Total number of nights',
+          },
+        },
+        {
+          name: 'countries',
+          type: 'array',
           fields: [
             {
-              name: 'rawItinerary',
-              type: 'json',
-              label: 'Raw Itinerary Data',
-              admin: {
-                description: 'Raw itinerary JSON from Phase 2',
-              },
-            },
-            {
-              name: 'enhancedItinerary',
-              type: 'json',
-              label: 'Enhanced Itinerary Data',
-              admin: {
-                description: 'AI-enhanced itinerary JSON from Phase 4',
-              },
-            },
-            {
-              name: 'schema',
-              type: 'json',
-              label: 'JSON-LD Schema',
-              admin: {
-                description: 'Product schema from Phase 5',
-              },
-            },
-            {
-              name: 'faq',
-              type: 'textarea',
-              label: 'FAQ HTML',
-              admin: {
-                description: 'Formatted FAQ HTML from Phase 6',
-              },
+              name: 'country',
+              type: 'text',
+              required: true,
             },
           ],
         },
         {
-          label: 'Metadata',
+          name: 'highlights',
+          type: 'array',
+          admin: {
+            description: 'Key highlights/experiences',
+          },
           fields: [
             {
-              name: 'schemaStatus',
-              type: 'select',
+              name: 'highlight',
+              type: 'text',
               required: true,
-              defaultValue: 'pending',
-              options: [
-                {
-                  label: 'Pending',
-                  value: 'pending',
-                },
-                {
-                  label: 'Pass',
-                  value: 'pass',
-                },
-                {
-                  label: 'Fail',
-                  value: 'fail',
-                },
-              ],
-              label: 'Schema Validation Status',
-              admin: {
-                description: 'Internal schema validation status from Phase 5',
-              },
-            },
-            {
-              name: 'googleInspectionStatus',
-              type: 'select',
-              required: true,
-              defaultValue: 'pending',
-              options: [
-                {
-                  label: 'Pending',
-                  value: 'pending',
-                },
-                {
-                  label: 'Pass',
-                  value: 'pass',
-                },
-                {
-                  label: 'Fail',
-                  value: 'fail',
-                },
-              ],
-              label: 'Google Rich Results Test Status',
-              admin: {
-                description: 'External Google Rich Results Test validation status',
-              },
-            },
-            {
-              name: 'buildTimestamp',
-              type: 'date',
-              required: true,
-              admin: {
-                date: {
-                  pickerAppearance: 'dayAndTime',
-                },
-                description: 'Timestamp when this itinerary was processed',
-              },
-              label: 'Build Timestamp',
-            },
-            {
-              name: 'googleFailureLog',
-              type: 'textarea',
-              label: 'Failure Log',
-              admin: {
-                description: 'Error details if pipeline or validation failed',
-              },
             },
           ],
         },
       ],
     },
-  ],
-  versions: {
-    drafts: {
-      autosave: false,
+
+    // === INVESTMENT LEVEL ===
+    {
+      name: 'investmentLevel',
+      type: 'group',
+      admin: {
+        description: 'Pricing information (revealed after value is established)',
+      },
+      fields: [
+        {
+          name: 'fromPrice',
+          type: 'number',
+          admin: {
+            description: 'Starting price per person in dollars',
+          },
+        },
+        {
+          name: 'toPrice',
+          type: 'number',
+          admin: {
+            description: 'Upper price range (optional)',
+          },
+        },
+        {
+          name: 'currency',
+          type: 'text',
+          defaultValue: 'USD',
+        },
+        {
+          name: 'includes',
+          type: 'richText',
+          admin: {
+            description: 'What the price includes',
+          },
+        },
+      ],
     },
-    maxPerDoc: 20,
-  },
+
+    // === STRUCTURED DAYS ===
+    {
+      name: 'days',
+      type: 'array',
+      admin: {
+        description: 'Day-by-day itinerary',
+      },
+      fields: [
+        {
+          name: 'dayNumber',
+          type: 'number',
+          required: true,
+        },
+        {
+          name: 'date',
+          type: 'date',
+          admin: {
+            description: 'Specific date (if applicable)',
+          },
+        },
+        {
+          name: 'title',
+          type: 'text',
+          admin: {
+            description: 'Day title, e.g., "Arrival in Nairobi"',
+          },
+        },
+        {
+          name: 'location',
+          type: 'text',
+        },
+        {
+          name: 'segments',
+          type: 'blocks',
+          blocks: [
+            // STAY BLOCK
+            {
+              slug: 'stay',
+              labels: {
+                singular: 'Stay',
+                plural: 'Stays',
+              },
+              fields: [
+                {
+                  name: 'accommodationName',
+                  type: 'text',
+                  required: true,
+                },
+                {
+                  name: 'description',
+                  type: 'richText',
+                },
+                {
+                  name: 'nights',
+                  type: 'number',
+                  min: 1,
+                },
+                {
+                  name: 'location',
+                  type: 'text',
+                },
+                {
+                  name: 'country',
+                  type: 'text',
+                },
+                {
+                  name: 'images',
+                  type: 'relationship',
+                  relationTo: 'media',
+                  hasMany: true,
+                },
+                {
+                  name: 'inclusions',
+                  type: 'richText',
+                  admin: {
+                    description: 'What is included at this property',
+                  },
+                },
+                {
+                  name: 'roomType',
+                  type: 'text',
+                },
+              ],
+            },
+            // ACTIVITY BLOCK
+            {
+              slug: 'activity',
+              labels: {
+                singular: 'Activity',
+                plural: 'Activities',
+              },
+              fields: [
+                {
+                  name: 'title',
+                  type: 'text',
+                  required: true,
+                },
+                {
+                  name: 'description',
+                  type: 'richText',
+                },
+                {
+                  name: 'images',
+                  type: 'relationship',
+                  relationTo: 'media',
+                  hasMany: true,
+                },
+              ],
+            },
+            // TRANSFER BLOCK
+            {
+              slug: 'transfer',
+              labels: {
+                singular: 'Transfer',
+                plural: 'Transfers',
+              },
+              fields: [
+                {
+                  name: 'type',
+                  type: 'select',
+                  options: [
+                    { label: 'Flight', value: 'flight' },
+                    { label: 'Road', value: 'road' },
+                    { label: 'Boat', value: 'boat' },
+                  ],
+                },
+                {
+                  name: 'title',
+                  type: 'text',
+                },
+                {
+                  name: 'from',
+                  type: 'text',
+                },
+                {
+                  name: 'to',
+                  type: 'text',
+                },
+                {
+                  name: 'description',
+                  type: 'richText',
+                },
+                {
+                  name: 'departureTime',
+                  type: 'text',
+                },
+                {
+                  name: 'arrivalTime',
+                  type: 'text',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+
+    // === FAQ ===
+    {
+      name: 'faqItems',
+      type: 'array',
+      admin: {
+        description: 'FAQ questions and answers for SEO/AIO',
+      },
+      fields: [
+        {
+          name: 'question',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'answer',
+          type: 'richText',
+          required: true,
+        },
+      ],
+    },
+
+    // === WHY KIULI ===
+    {
+      name: 'whyKiuli',
+      type: 'richText',
+      admin: {
+        description: 'Why book this through Kiuli (value proposition)',
+      },
+    },
+
+    // === ALL IMAGES (for gallery) ===
+    {
+      name: 'images',
+      type: 'relationship',
+      relationTo: 'media',
+      hasMany: true,
+      admin: {
+        description: 'All images associated with this itinerary',
+      },
+    },
+
+    // === SCHEMA (JSON-LD) ===
+    {
+      name: 'schema',
+      type: 'json',
+      admin: {
+        description: 'Product JSON-LD schema (auto-generated)',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'schemaStatus',
+      type: 'select',
+      defaultValue: 'pending',
+      options: [
+        { label: 'Pending', value: 'pending' },
+        { label: 'Pass', value: 'pass' },
+        { label: 'Fail', value: 'fail' },
+      ],
+      admin: {
+        description: 'Google Rich Results Test status',
+      },
+    },
+
+    // === SOURCE DATA (hidden in admin) ===
+    {
+      name: 'source',
+      type: 'group',
+      admin: {
+        description: 'Original source data (for debugging)',
+      },
+      fields: [
+        {
+          name: 'itrvlUrl',
+          type: 'text',
+        },
+        {
+          name: 'lastScrapedAt',
+          type: 'date',
+        },
+        {
+          name: 'rawData',
+          type: 'json',
+          admin: {
+            description: 'Original scraped JSON for debugging',
+          },
+        },
+      ],
+    },
+
+    // === BUILD INFO ===
+    {
+      name: 'buildTimestamp',
+      type: 'date',
+      admin: {
+        readOnly: true,
+        description: 'When this was last built/scraped',
+      },
+    },
+    {
+      name: 'googleInspectionStatus',
+      type: 'select',
+      defaultValue: 'pending',
+      options: [
+        { label: 'Pending', value: 'pending' },
+        { label: 'Pass', value: 'pass' },
+        { label: 'Fail', value: 'fail' },
+      ],
+      admin: {
+        description: 'Google Search Console inspection status',
+      },
+    },
+  ],
 }

@@ -1,6 +1,6 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-vercel-postgres'
 
-export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    CREATE TYPE "public"."enum_media_processing_status" AS ENUM('pending', 'processing', 'complete', 'failed');
   CREATE TYPE "public"."enum_media_labeling_status" AS ENUM('pending', 'processing', 'complete', 'failed', 'skipped');
@@ -175,7 +175,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "_itineraries_v" DROP COLUMN "version_why_kiuli";`)
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({ db }: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    ALTER TABLE "media_rels" DISABLE ROW LEVEL SECURITY;
   ALTER TABLE "itineraries_publish_blockers" DISABLE ROW LEVEL SECURITY;

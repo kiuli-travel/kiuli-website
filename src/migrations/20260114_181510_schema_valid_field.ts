@@ -1,6 +1,6 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-vercel-postgres'
 
-export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    ALTER TYPE "public"."enum_itineraries_schema_status" ADD VALUE 'warn' BEFORE 'fail';
   ALTER TYPE "public"."enum__itineraries_v_version_schema_status" ADD VALUE 'warn' BEFORE 'fail';
@@ -8,7 +8,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "_itineraries_v" ADD COLUMN "version_publish_checklist_schema_valid" boolean DEFAULT false;`)
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({ db }: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    ALTER TABLE "itineraries" ALTER COLUMN "schema_status" SET DATA TYPE text;
   ALTER TABLE "itineraries" ALTER COLUMN "schema_status" SET DEFAULT 'pending'::text;

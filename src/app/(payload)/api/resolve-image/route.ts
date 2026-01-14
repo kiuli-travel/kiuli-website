@@ -141,7 +141,6 @@ export async function POST(request: NextRequest) {
     const failed = imageStatuses.filter((img) => img.status === 'failed').length
 
     // Update job
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await payload.update({
       collection: 'itinerary-jobs',
       id: jobId,
@@ -151,7 +150,8 @@ export async function POST(request: NextRequest) {
         skippedImages: skipped,
         failedImages: failed,
         totalImages: imageStatuses.length,
-      } as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as Record<string, any>,
     })
 
     // Check if all images are now resolved (no more failed)
@@ -265,7 +265,6 @@ async function handleFileUpload(request: NextRequest) {
     const failed = imageStatuses.filter((img) => img.status === 'failed').length
 
     // Update job
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await payload.update({
       collection: 'itinerary-jobs',
       id: jobId,
@@ -274,7 +273,8 @@ async function handleFileUpload(request: NextRequest) {
         processedImages: processed,
         skippedImages: skipped,
         failedImages: failed,
-      } as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as Record<string, any>,
     })
 
     const allResolved = failed === 0

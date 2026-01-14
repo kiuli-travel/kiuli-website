@@ -1,6 +1,6 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-vercel-postgres'
 
-export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db }: MigrateUpArgs): Promise<void> {
   // Create enum types if they don't exist
   await db.execute(sql`
     DO $$ BEGIN
@@ -283,7 +283,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   `);
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({ db }: MigrateDownArgs): Promise<void> {
   // Note: down migration is simplified since we can't easily undo IF NOT EXISTS operations
   await db.execute(sql`
     DROP TABLE IF EXISTS "itineraries" CASCADE;

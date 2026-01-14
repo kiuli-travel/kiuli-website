@@ -273,6 +273,7 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
                         backgroundColor: '#f0f0f0',
                       }}
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- External dynamic URLs from imgix/S3 */}
                       <img
                         src={getImageUrl(img)}
                         alt={img.alt || img.filename}

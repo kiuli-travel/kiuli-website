@@ -170,11 +170,11 @@ export async function POST(request: NextRequest) {
   const payload = await getPayload({ config })
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const itinerary = await payload.findByID({
       collection: 'itineraries',
       id: itineraryId,
-    }) as any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as Record<string, any>
 
     if (!itinerary) {
       return NextResponse.json(
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const faqs = (itinerary.faqs as any[]) || []
+      const faqs = (itinerary.faqItems as any[]) || []
       if (!faqs[faqIndex]) {
         return NextResponse.json(
           { success: false, error: 'FAQ not found' },
@@ -291,7 +291,7 @@ export async function POST(request: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const days = JSON.parse(JSON.stringify((itinerary.days as any[]) || []))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const faqs = JSON.parse(JSON.stringify((itinerary.faqs as any[]) || []))
+      const faqs = JSON.parse(JSON.stringify((itinerary.faqItems as any[]) || []))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const overview = JSON.parse(JSON.stringify(itinerary.overview as any || {}))
 

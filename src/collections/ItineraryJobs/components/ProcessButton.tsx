@@ -4,8 +4,7 @@ import React, { useState } from 'react'
 import { Button, useForm } from '@payloadcms/ui'
 
 export const ProcessButton: React.FC = () => {
-  // useDocumentInfo available if needed for document context
-  const { getData, getDataByPath } = useForm()
+  const { getDataByPath } = useForm()
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -14,8 +13,7 @@ export const ProcessButton: React.FC = () => {
       setIsProcessing(true)
       setMessage('')
 
-      // Get the current form data
-      const formData = getData()
+      // Get the iTrvl URL from form
       const itrvlUrl = getDataByPath('itrvlUrl')
 
       if (!itrvlUrl) {
@@ -45,8 +43,9 @@ export const ProcessButton: React.FC = () => {
       } else {
         setMessage(`Error: ${result.error || 'Failed to trigger processing'}`)
       }
-    } catch (error: any) {
-      setMessage(`Error: ${error.message || 'Failed to trigger processing'}`)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to trigger processing'
+      setMessage(`Error: ${message}`)
     } finally {
       setIsProcessing(false)
     }

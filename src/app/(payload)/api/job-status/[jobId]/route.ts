@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
+function validateApiKey(request: NextRequest): boolean {
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false
+  }
+  const token = authHeader.slice(7)
+  return token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY
+}
+
 interface ImageStatus {
   sourceS3Key: string
   status: string
@@ -15,16 +24,24 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
+  // Validate authentication
+  if (!validateApiKey(request)) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized: Invalid or missing API key' },
+      { status: 401 }
+    )
+  }
+
   const { jobId } = await params
 
   const payload = await getPayload({ config })
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const job = await payload.findByID({
       collection: 'itinerary-jobs',
       id: jobId,
-    }) as any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as Record<string, any>
 
     if (!job) {
       return NextResponse.json(

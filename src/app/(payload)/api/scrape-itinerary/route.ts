@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
 
 export const maxDuration = 30 // Only need 30s now - just creates job and triggers Lambda
+
+// Initialize Lambda client
+const lambdaClient = new LambdaClient({
+  region: process.env.AWS_REGION || 'eu-north-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+  },
+})
 
 function parseItrvlUrl(url: string): { accessKey: string; itineraryId: string } | null {
   try {
@@ -29,7 +39,8 @@ function validateApiKey(request: NextRequest): boolean {
     return false
   }
   const token = authHeader.slice(7)
-  return token === process.env.SCRAPER_API_KEY
+  // Accept either SCRAPER_API_KEY or PAYLOAD_API_KEY
+  return token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY
 }
 
 export async function POST(request: NextRequest) {
@@ -71,6 +82,19 @@ export async function POST(request: NextRequest) {
 
   const payload = await getPayload({ config })
 
+  // Check for existing itinerary if mode is 'update'
+  let existingItinerary = null
+  if (mode === 'update') {
+    const existing = await payload.find({
+      collection: 'itineraries',
+      where: {
+        itineraryId: { equals: parsed.itineraryId },
+      },
+      limit: 1,
+    })
+    existingItinerary = existing.docs[0] || null
+  }
+
   // Create job record
   const job = await payload.create({
     collection: 'itinerary-jobs',
@@ -79,55 +103,61 @@ export async function POST(request: NextRequest) {
       itineraryId: parsed.itineraryId,
       accessKey: parsed.accessKey,
       status: 'pending',
-      currentPhase: 'queued',
+      currentPhase: 'Queued',
+      startedAt: new Date().toISOString(),
     },
   })
 
-  console.log(`[scrape-itinerary] Created job ${job.id} for itinerary ${parsed.itineraryId}`)
+  console.log(`[scrape-itinerary] Created job ${job.id} for itinerary ${parsed.itineraryId} (mode: ${mode})`)
 
-  // Trigger Lambda asynchronously
-  const lambdaUrl = process.env.LAMBDA_PIPELINE_URL
-  const invokeSecret = process.env.LAMBDA_INVOKE_SECRET
+  // Trigger V6 Orchestrator Lambda asynchronously
+  const orchestratorArn = process.env.LAMBDA_ORCHESTRATOR_ARN || 'kiuli-v6-orchestrator'
 
-  if (!lambdaUrl) {
-    // Fallback: update job to failed
+  try {
+    // Invoke Lambda asynchronously (Event invocation type)
+    await lambdaClient.send(
+      new InvokeCommand({
+        FunctionName: orchestratorArn,
+        InvocationType: 'Event', // Async - returns immediately
+        Payload: JSON.stringify({
+          jobId: job.id,
+          itrvlUrl,
+          itineraryId: parsed.itineraryId,
+          accessKey: parsed.accessKey,
+          mode,
+          existingItineraryId: existingItinerary?.id || null,
+        }),
+      })
+    )
+
+    console.log(`[scrape-itinerary] Triggered orchestrator for job ${job.id}`)
+  } catch (err) {
+    console.error('[scrape-itinerary] Failed to trigger Lambda:', err)
+
+    // Update job to failed
     await payload.update({
       collection: 'itinerary-jobs',
       id: job.id,
       data: {
         status: 'failed',
-        errorMessage: 'LAMBDA_PIPELINE_URL not configured',
+        errorMessage: `Failed to trigger orchestrator: ${(err as Error).message}`,
+        errorPhase: 'initialization',
       },
     })
 
     return NextResponse.json(
-      { success: false, error: 'Pipeline not configured' },
+      { success: false, error: 'Failed to start processing pipeline' },
       { status: 500 }
     )
   }
-
-  // Fire and forget - don't await the Lambda
-  fetch(lambdaUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-invoke-secret': invokeSecret || '',
-    },
-    body: JSON.stringify({
-      jobId: job.id,
-      itrvlUrl,
-      itineraryId: parsed.itineraryId,
-      accessKey: parsed.accessKey,
-    }),
-  }).catch((err) => {
-    console.error('[scrape-itinerary] Failed to trigger Lambda:', err)
-  })
 
   // Return immediately with job ID
   return NextResponse.json({
     success: true,
     jobId: job.id,
     itineraryId: parsed.itineraryId,
+    mode,
+    existingItineraryId: existingItinerary?.id || null,
     message: `Processing started. Poll /api/job-status/${job.id} for progress.`,
   })
 }

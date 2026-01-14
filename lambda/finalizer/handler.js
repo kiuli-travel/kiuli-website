@@ -37,10 +37,9 @@ exports.handler = async (event) => {
     }
 
     // Get all media for this itinerary
+    // Use bracket notation - Payload doesn't parse JSON where clauses correctly
     const mediaResult = await payload.find('media', {
-      where: JSON.stringify({
-        usedInItineraries: { contains: itineraryId }
-      }),
+      'where[usedInItineraries][contains]': itineraryId,
       limit: '500'
     });
 
@@ -136,15 +135,19 @@ exports.handler = async (event) => {
     const jobStarted = job.startedAt ? new Date(job.startedAt).getTime() : startTime;
     const totalDuration = (Date.now() - jobStarted) / 1000;
 
+    // Note: status only accepts: pending, processing, completed, failed
+    // Store finalStatus in the job for UI purposes (ready_for_review vs needs_attention)
     await payload.updateJob(jobId, {
-      status: finalStatus === 'ready_for_review' ? 'completed' : finalStatus,
+      status: 'completed',  // Pipeline completed successfully
       currentPhase: 'Complete',
       phase4CompletedAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       duration: totalDuration,
       progress: 100,
       payloadId: itineraryId,
-      processedItinerary: itineraryId
+      processedItinerary: itineraryId,
+      // Store review status in notes for now
+      notes: `Final status: ${finalStatus}. Blockers: ${publishBlockers.length > 0 ? publishBlockers.map(b => b.reason).join(', ') : 'None'}`
     });
 
     // 7. Send notification

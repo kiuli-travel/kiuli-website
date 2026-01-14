@@ -94,10 +94,10 @@ exports.handler = async (event) => {
       progress: Math.round(((totalProcessed + totalSkipped + totalFailed) / imageStatuses.length) * 100)
     });
 
-    // 5. Update itinerary with new media IDs
-    if (Object.keys(mediaMapping).length > 0) {
-      await updateItineraryMedia(itineraryId, mediaMapping);
-    }
+    // 5. Skip itinerary media update here - defer to finalizer
+    // This avoids 413 errors when the images array grows large
+    // The finalizer will update itinerary.images from job.imageStatuses
+    console.log(`[ImageProcessor] Skipping itinerary media update (${Object.keys(mediaMapping).length} IDs), deferring to finalizer`);
 
     console.log(`[ImageProcessor] Chunk complete: ${processed} processed, ${skipped} skipped, ${failed} failed`);
 

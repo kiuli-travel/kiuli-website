@@ -62,13 +62,10 @@ exports.handler = async (event) => {
 
     // 3. Update total to label count on first batch
     if (batchIndex === 0) {
+      // Use bracket notation - Payload doesn't parse JSON where clauses correctly
       const totalUnlabeled = await payload.find('media', {
-        where: JSON.stringify({
-          and: [
-            { labelingStatus: { equals: 'pending' } },
-            { usedInItineraries: { contains: itineraryId } }
-          ]
-        }),
+        'where[and][0][labelingStatus][equals]': 'pending',
+        'where[and][1][usedInItineraries][contains]': itineraryId,
         limit: '1'
       });
 
@@ -109,13 +106,10 @@ exports.handler = async (event) => {
     console.log(`[Labeler] Batch complete: ${labeled} labeled, ${failed} failed`);
 
     // 6. Check if more to label
+    // Use bracket notation - Payload doesn't parse JSON where clauses correctly
     const remainingResult = await payload.find('media', {
-      where: JSON.stringify({
-        and: [
-          { labelingStatus: { equals: 'pending' } },
-          { usedInItineraries: { contains: itineraryId } }
-        ]
-      }),
+      'where[and][0][labelingStatus][equals]': 'pending',
+      'where[and][1][usedInItineraries][contains]': itineraryId,
       limit: '1'
     });
 

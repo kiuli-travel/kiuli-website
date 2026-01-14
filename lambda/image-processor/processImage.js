@@ -102,8 +102,24 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to create media: ${response.status} - ${error}`);
+    const errorText = await response.text();
+
+    // Handle race condition: another Lambda might have created this media
+    if (response.status === 400 && errorText.includes('Value must be unique')) {
+      console.log(`[ProcessImage] Race condition detected for: ${sourceS3Key}, retrying dedup lookup`);
+
+      // Re-check for existing media (another instance likely just created it)
+      const existingMedia = await payload.findMediaBySourceS3Key(sourceS3Key);
+      if (existingMedia) {
+        console.log(`[ProcessImage] Found existing media after race: ${existingMedia.id}`);
+        return existingMedia.id;
+      }
+
+      // If still not found, throw the original error
+      throw new Error(`Failed to create media: ${response.status} - ${errorText}`);
+    }
+
+    throw new Error(`Failed to create media: ${response.status} - ${errorText}`);
   }
 
   const media = await response.json();

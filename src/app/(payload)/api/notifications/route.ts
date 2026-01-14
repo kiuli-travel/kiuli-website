@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Mark notifications as read/unread
+// POST - Create or manage notifications
 export async function POST(request: NextRequest) {
   // Validate authentication
   if (!validateApiKey(request)) {
@@ -99,9 +99,55 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const payload = await getPayload({ config })
+
+  // Handle notification creation (no action field = create)
+  if (!body.action) {
+    const { type, message, job, itinerary } = body
+
+    if (!type || !message) {
+      return NextResponse.json(
+        { success: false, error: 'type and message are required for creating notifications' },
+        { status: 400 }
+      )
+    }
+
+    if (!['success', 'error', 'warning', 'info'].includes(type)) {
+      return NextResponse.json(
+        { success: false, error: 'type must be one of: success, error, warning, info' },
+        { status: 400 }
+      )
+    }
+
+    try {
+      const notification = await payload.create({
+        collection: 'notifications',
+        data: {
+          type,
+          message,
+          read: false,
+          ...(job && { job: typeof job === 'string' ? parseInt(job, 10) : job }),
+          ...(itinerary && { itinerary: typeof itinerary === 'string' ? parseInt(itinerary, 10) : itinerary }),
+        },
+      })
+
+      return NextResponse.json({
+        success: true,
+        doc: notification,
+        id: notification.id,
+      })
+    } catch (error) {
+      console.error('[notifications] Error creating:', error)
+      return NextResponse.json(
+        { success: false, error: 'Failed to create notification' },
+        { status: 500 }
+      )
+    }
+  }
+
   const { action, notificationIds, markAll } = body
 
-  if (!action || !['read', 'unread', 'delete'].includes(action)) {
+  if (!['read', 'unread', 'delete'].includes(action)) {
     return NextResponse.json(
       { success: false, error: 'action must be one of: read, unread, delete' },
       { status: 400 }
@@ -114,8 +160,6 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     )
   }
-
-  const payload = await getPayload({ config })
 
   try {
     let updated = 0

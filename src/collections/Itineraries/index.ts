@@ -525,6 +525,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           },
         },
         {
+          name: 'schemaValid',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Schema passes validation for Google Rich Results',
+          },
+        },
+        {
           name: 'metaFieldsFilled',
           type: 'checkbox',
           defaultValue: false,
@@ -613,10 +621,11 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       options: [
         { label: 'Pending', value: 'pending' },
         { label: 'Pass', value: 'pass' },
+        { label: 'Warning', value: 'warn' },
         { label: 'Fail', value: 'fail' },
       ],
       admin: {
-        description: 'Google Rich Results Test status',
+        description: 'Schema validation status (pass/warn/fail)',
       },
     },
 

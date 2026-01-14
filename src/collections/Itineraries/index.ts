@@ -111,6 +111,9 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       relationTo: 'media',
       admin: {
         description: 'Primary hero image for the itinerary page',
+        components: {
+          Field: '/components/admin/ImageSelector',
+        },
       },
     },
     {
@@ -303,6 +306,11 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'relationship',
                   relationTo: 'media',
                   hasMany: true,
+                  admin: {
+                    components: {
+                      Field: '/components/admin/ImageSelector',
+                    },
+                  },
                 },
                 {
                   name: 'inclusions',
@@ -349,6 +357,11 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'relationship',
                   relationTo: 'media',
                   hasMany: true,
+                  admin: {
+                    components: {
+                      Field: '/components/admin/ImageSelector',
+                    },
+                  },
                 },
               ],
             },
@@ -473,6 +486,9 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       hasMany: true,
       admin: {
         description: 'All images associated with this itinerary',
+        components: {
+          Field: '/components/admin/ImageSelector',
+        },
       },
     },
 

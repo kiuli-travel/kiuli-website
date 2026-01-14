@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 
 interface MediaImage {
   id: number
@@ -273,19 +274,12 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
                         backgroundColor: '#f0f0f0',
                       }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- External dynamic URLs from imgix/S3 */}
-                      <img
+                      <Image
                         src={getImageUrl(img)}
-                        alt={img.alt || img.filename}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                        }}
-                        loading="lazy"
+                        alt={img.alt || img.filename || 'Image'}
+                        fill
+                        sizes="150px"
+                        style={{ objectFit: 'cover' }}
                       />
                       {selectedId === img.id && (
                         <div

@@ -10,6 +10,26 @@ const NEXT_PUBLIC_SERVER_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
 const nextConfig = {
   images: {
     remotePatterns: [
+      // imgix CDN for optimized images
+      {
+        protocol: 'https',
+        hostname: 'kiuli.imgix.net',
+      },
+      // S3 bucket for raw images
+      {
+        protocol: 'https',
+        hostname: 'kiuli-bucket.s3.eu-north-1.amazonaws.com',
+      },
+      // S3 wildcard pattern for any S3 bucket
+      {
+        protocol: 'https',
+        hostname: '*.s3.*.amazonaws.com',
+      },
+      // GitHub raw content for Payload logo
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+      },
       ...[NEXT_PUBLIC_SERVER_URL /* 'https://example.com' */].map((item) => {
         const url = new URL(item)
 
@@ -31,8 +51,7 @@ const nextConfig = {
   },
   reactStrictMode: true,
   redirects,
-  experimental: {
-    outputFileTracingIncludes: {
+  outputFileTracingIncludes: {
       '/api/scrape-itinerary': [
         './scrapers/itrvl_scraper.cjs',
         './processors/**/*',
@@ -136,7 +155,6 @@ const nextConfig = {
         // Include Google Generative AI (Gemini) for content enhancement
         './node_modules/@google/generative-ai/**',
       ],
-    },
   },
 }
 

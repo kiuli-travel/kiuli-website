@@ -80,6 +80,15 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
               },
             },
             {
+              name: 'jobControlPanel',
+              type: 'ui',
+              admin: {
+                components: {
+                  Field: './components/JobControlPanel#JobControlPanel',
+                },
+              },
+            },
+            {
               name: 'status',
               type: 'select',
               required: true,

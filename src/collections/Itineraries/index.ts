@@ -17,6 +17,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'overview.nights', '_status', 'updatedAt'],
+    description: 'Safari itineraries imported from iTrvl',
   },
   access: {
     read: authenticatedOrApiKey,
@@ -28,6 +29,35 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     drafts: true,
   },
   fields: [
+    // === ADMIN UI COMPONENTS ===
+    {
+      name: 'enhanceAllUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: './components/EnhanceAll#EnhanceAll',
+        },
+      },
+    },
+    {
+      name: 'imageStatusUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: './components/ImageStatusGrid#ImageStatusGrid',
+        },
+      },
+    },
+    {
+      name: 'publishChecklistUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: './components/PublishChecklist#PublishChecklist',
+        },
+      },
+    },
+
     // === BASIC INFO ===
     {
       name: 'title',
@@ -109,6 +139,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           type: 'richText',
           admin: {
             description: 'AI-enhanced summary (editable)',
+          },
+        },
+        {
+          name: 'enhanceOverviewUI',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: './components/EnhanceButton#EnhanceOverviewButton',
+            },
           },
         },
         {
@@ -414,6 +453,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'richText',
       admin: {
         description: 'AI-enhanced "Why Kiuli" content (editable)',
+      },
+    },
+    {
+      name: 'enhanceWhyKiuliUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: './components/EnhanceButton#EnhanceWhyKiuliButton',
+        },
       },
     },
 

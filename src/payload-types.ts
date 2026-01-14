@@ -463,6 +463,8 @@ export interface Media {
   };
 }
 /**
+ * Safari itineraries imported from iTrvl
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "itineraries".
  */
@@ -869,6 +871,10 @@ export interface Itinerary {
      */
     schemaGenerated?: boolean | null;
     /**
+     * Schema passes validation for Google Rich Results
+     */
+    schemaValid?: boolean | null;
+    /**
      * Meta title and description are set
      */
     metaFieldsFilled?: boolean | null;
@@ -922,9 +928,9 @@ export interface Itinerary {
     | boolean
     | null;
   /**
-   * Google Rich Results Test status
+   * Schema validation status (pass/warn/fail)
    */
-  schemaStatus?: ('pending' | 'pass' | 'fail') | null;
+  schemaStatus?: ('pending' | 'pass' | 'warn' | 'fail') | null;
   /**
    * Original source data (for debugging)
    */
@@ -2295,6 +2301,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
         heroImageSelected?: T;
         contentEnhanced?: T;
         schemaGenerated?: T;
+        schemaValid?: T;
         metaFieldsFilled?: T;
       };
   publishBlockers?:

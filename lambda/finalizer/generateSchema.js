@@ -38,10 +38,16 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
   const currency = itinerary.investmentLevel?.currency || 'USD';
 
   // Build schema
+  // Deduplicate images: use Set to ensure no duplicates, hero image first
+  const allImages = heroImageUrl
+    ? [heroImageUrl, ...imageUrls.filter(url => url !== heroImageUrl)]
+    : imageUrls;
+  const uniqueImages = [...new Set(allImages)];
+
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    'name': itinerary.title,
+    'name': (itinerary.title || '').trim(),  // Fix: trim whitespace
     'description': itinerary.metaDescription || `A ${nights}-night luxury safari through ${countryList}`,
     'url': `${SITE_URL}/itineraries/${itinerary.slug}`,
     'brand': {
@@ -50,7 +56,7 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
       'url': SITE_URL
     },
     'category': 'Luxury Safari',
-    'image': heroImageUrl ? [heroImageUrl, ...imageUrls] : imageUrls,
+    'image': uniqueImages,  // Fix: deduplicated images
     'offers': {
       '@type': 'Offer',
       'priceCurrency': currency,
@@ -74,18 +80,29 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
   // };
 
   // Add FAQ schema if we have FAQ items
+  // Filter out FAQ items with placeholder text like "Unknown Country"
   if (itinerary.faqItems && itinerary.faqItems.length > 0) {
-    schema.mainEntity = {
-      '@type': 'FAQPage',
-      'mainEntity': itinerary.faqItems.map(faq => ({
-        '@type': 'Question',
-        'name': faq.question,
-        'acceptedAnswer': {
-          '@type': 'Answer',
-          'text': extractTextFromRichText(faq.answerEnhanced || faq.answerOriginal)
-        }
-      }))
-    };
+    const validFaqItems = itinerary.faqItems.filter(faq => {
+      const question = faq.question || '';
+      const answerText = extractTextFromRichText(faq.answerEnhanced || faq.answerOriginal);
+      // Skip FAQs with "Unknown" placeholder content
+      const hasUnknown = /unknown/i.test(question) || /unknown/i.test(answerText);
+      return !hasUnknown;
+    });
+
+    if (validFaqItems.length > 0) {
+      schema.mainEntity = {
+        '@type': 'FAQPage',
+        'mainEntity': validFaqItems.map(faq => ({
+          '@type': 'Question',
+          'name': faq.question,
+          'acceptedAnswer': {
+            '@type': 'Answer',
+            'text': extractTextFromRichText(faq.answerEnhanced || faq.answerOriginal)
+          }
+        }))
+      };
+    }
   }
 
   return schema;

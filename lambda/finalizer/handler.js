@@ -12,8 +12,55 @@
 
 const { selectHeroImage } = require('./selectHero');
 const { generateSchema } = require('./generateSchema');
+const { validateSchema, formatValidationResult } = require('./schemaValidator');
 const payload = require('./shared/payload');
 const { notifyJobCompleted } = require('./shared/notifications');
+
+/**
+ * Reconcile job counter fields with authoritative imageStatuses array
+ *
+ * Problem: Counter fields (processedImages, skippedImages, failedImages) are
+ * updated incrementally per chunk in image-processor and can get out of sync.
+ *
+ * Solution: Recalculate from imageStatuses and update job before using counters.
+ *
+ * @param {string|number} jobId - The job ID
+ * @returns {Object} The reconciled counts
+ */
+async function reconcileJobCounters(jobId) {
+  const job = await payload.getJob(jobId);
+  const statuses = job.imageStatuses || [];
+
+  // Count by status from authoritative imageStatuses array
+  const counts = {
+    totalImages: statuses.length,
+    processedImages: statuses.filter(s => s.status === 'complete').length,
+    skippedImages: statuses.filter(s => s.status === 'skipped').length,
+    failedImages: statuses.filter(s => s.status === 'failed').length,
+  };
+
+  // Log if there was a discrepancy
+  const wasOutOfSync =
+    job.totalImages !== counts.totalImages ||
+    job.processedImages !== counts.processedImages ||
+    job.skippedImages !== counts.skippedImages ||
+    job.failedImages !== counts.failedImages;
+
+  if (wasOutOfSync) {
+    console.log(`[Finalizer] Counter reconciliation:`);
+    console.log(`  totalImages: ${job.totalImages} -> ${counts.totalImages}`);
+    console.log(`  processedImages: ${job.processedImages} -> ${counts.processedImages}`);
+    console.log(`  skippedImages: ${job.skippedImages} -> ${counts.skippedImages}`);
+    console.log(`  failedImages: ${job.failedImages} -> ${counts.failedImages}`);
+
+    // Update job with reconciled counts
+    await payload.updateJob(jobId, counts);
+  } else {
+    console.log(`[Finalizer] Counters already in sync`);
+  }
+
+  return counts;
+}
 
 /**
  * Link images to segments by matching source s3Keys to processed mediaIds
@@ -161,11 +208,14 @@ exports.handler = async (event) => {
     const mediaRecords = mediaResult.docs || [];
     console.log(`[Finalizer] Found ${mediaRecords.length} media records`);
 
-    // 2. Get job and link images to segments
+    // 2. Get job and reconcile counters
     const job = await payload.getJob(jobId);
     if (!job) {
       throw new Error(`Job not found: ${jobId}`);
     }
+
+    // Reconcile counter fields with authoritative imageStatuses array
+    const reconciledCounts = await reconcileJobCounters(jobId);
 
     // Link images to segments using job.imageStatuses mapping
     const updatedDays = linkImagesToSegments(itinerary, job);
@@ -180,21 +230,22 @@ exports.handler = async (event) => {
       console.log(`[Finalizer] Hero image locked: ${heroImageId}`);
     }
 
-    // 3. Generate JSON-LD schema
+    // 4. Generate and validate JSON-LD schema
     const schema = generateSchema(itinerary, mediaRecords, heroImageId);
-    console.log('[Finalizer] Generated JSON-LD schema');
+    const schemaValidation = validateSchema(schema);
+    console.log('[Finalizer] ' + formatValidationResult(schemaValidation));
 
-    // 5. Calculate publish checklist
-    const failedImages = job.failedImages || 0;
-    const totalImages = job.totalImages || 0;
-    const processedImages = (job.processedImages || 0) + (job.skippedImages || 0);
+    // 5. Calculate publish checklist using reconciled counts
+    const { totalImages, processedImages, skippedImages, failedImages } = reconciledCounts;
+    const totalProcessed = processedImages + skippedImages;
 
     const publishChecklist = {
-      allImagesProcessed: processedImages >= totalImages,
+      allImagesProcessed: totalProcessed >= totalImages,
       noFailedImages: failedImages === 0,
       heroImageSelected: !!heroImageId,
       contentEnhanced: false,  // Enhancement is manual step
       schemaGenerated: !!schema,
+      schemaValid: schemaValidation.status !== 'fail',
       metaFieldsFilled: !!(itinerary.metaTitle && itinerary.metaDescription)
     };
 
@@ -203,7 +254,7 @@ exports.handler = async (event) => {
 
     if (!publishChecklist.allImagesProcessed) {
       publishBlockers.push({
-        reason: `${totalImages - processedImages} images not yet processed`,
+        reason: `${totalImages - totalProcessed} images not yet processed`,
         severity: 'error'
       });
     }
@@ -236,6 +287,18 @@ exports.handler = async (event) => {
       });
     }
 
+    if (!publishChecklist.schemaValid) {
+      publishBlockers.push({
+        reason: `Schema validation failed: ${schemaValidation.errors.join(', ')}`,
+        severity: 'error'
+      });
+    } else if (schemaValidation.warnings.length > 0) {
+      publishBlockers.push({
+        reason: `Schema warnings: ${schemaValidation.warnings.join(', ')}`,
+        severity: 'warning'
+      });
+    }
+
     // Determine final status
     const hasErrors = publishBlockers.some(b => b.severity === 'error');
     const finalStatus = hasErrors ? 'needs_attention' : 'ready_for_review';
@@ -260,7 +323,7 @@ exports.handler = async (event) => {
       images: [...new Set(allMediaIds)],
       heroImage: heroImageId,
       schema,
-      schemaStatus: 'pass',
+      schemaStatus: schemaValidation.status,  // 'pass', 'warn', or 'fail'
       publishChecklist,
       publishBlockers
     });

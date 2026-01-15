@@ -27,14 +27,14 @@ const IMAGE_ENRICHMENT_SCHEMA = {
     },
     timeOfDay: {
       type: 'string',
-      enum: ['dawn', 'morning', 'midday', 'afternoon', 'golden-hour', 'dusk', 'night', 'unknown'],
-      description: 'Time of day visible in image'
+      enum: ['dawn', 'morning', 'midday', 'afternoon', 'golden-hour', 'dusk', 'night'],
+      description: 'Time of day visible in image (best estimate from lighting)'
     },
     setting: {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['lodge-interior', 'lodge-exterior', 'pool-deck', 'bedroom', 'dining', 'savanna', 'river-water', 'forest', 'mountain', 'bush-dinner', 'game-drive', 'walking-safari', 'aerial', 'spa', 'other']
+        enum: ['lodge-interior', 'lodge-exterior', 'pool-deck', 'bedroom', 'dining', 'savanna', 'river-water', 'forest', 'mountain', 'bush-dinner', 'game-drive', 'walking-safari', 'aerial', 'spa']
       },
       description: '1-3 applicable settings'
     },
@@ -72,7 +72,7 @@ const IMAGE_ENRICHMENT_SCHEMA = {
     },
     imageType: {
       type: 'string',
-      enum: ['wildlife', 'landscape', 'property', 'room', 'dining', 'activity', 'people', 'aerial', 'detail', 'other'],
+      enum: ['wildlife', 'landscape', 'accommodation', 'activity', 'people', 'food', 'aerial', 'detail'],
       description: 'Primary image category'
     }
   },

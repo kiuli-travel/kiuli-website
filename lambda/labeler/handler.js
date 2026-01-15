@@ -74,7 +74,11 @@ exports.handler = async (event) => {
       });
     }
 
-    // 4. Process batch with concurrency limit
+    // 4. Get job for imageStatuses context lookup
+    const job = await payload.getJob(jobId);
+    const imageStatuses = job.imageStatuses || [];
+
+    // 5. Process batch with concurrency limit
     let labeled = 0;
     let failed = 0;
 
@@ -83,7 +87,7 @@ exports.handler = async (event) => {
       const group = unlabeledMedia.slice(i, i + CONCURRENT);
 
       const results = await Promise.allSettled(
-        group.map(media => processMediaLabeling(media))
+        group.map(media => processMediaLabeling(media, imageStatuses))
       );
 
       for (const result of results) {
@@ -95,8 +99,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // 5. Update job progress
-    const job = await payload.getJob(jobId);
+    // 6. Update job progress
     const totalLabeled = (job.imagesLabeled || 0) + labeled;
 
     await payload.updateJob(jobId, {
@@ -158,8 +161,10 @@ exports.handler = async (event) => {
 
 /**
  * Process labeling for a single media item
+ * @param {object} media - Payload Media document
+ * @param {array} imageStatuses - Job imageStatuses for context lookup
  */
-async function processMediaLabeling(media) {
+async function processMediaLabeling(media, imageStatuses = []) {
   const mediaId = media.id;
 
   try {
@@ -168,31 +173,29 @@ async function processMediaLabeling(media) {
       labelingStatus: 'processing'
     });
 
-    // Get image URL for labeling
-    const imageUrl = media.imgixUrl || media.url;
+    // Look up context from imageStatuses
+    // Match by mediaId (set during image processing) or sourceS3Key
+    const imageStatus = imageStatuses.find(s =>
+      s.mediaId === String(mediaId) ||
+      s.mediaId === mediaId ||
+      s.sourceS3Key === media.sourceS3Key
+    );
 
-    if (!imageUrl) {
-      throw new Error('No image URL available');
-    }
+    const context = {
+      propertyName: imageStatus?.propertyName || media.sourceProperty || null,
+      country: imageStatus?.country || media.country || null,
+      segmentType: imageStatus?.segmentType || media.sourceSegmentType || null,
+      segmentTitle: imageStatus?.segmentTitle || media.sourceSegmentTitle || null,
+      dayIndex: imageStatus?.dayIndex || media.sourceDayIndex || null,
+    };
 
-    // Call AI labeling
-    const labels = await labelImage(imageUrl);
+    // Call AI labeling with context (new GPT-4o function)
+    const labels = await labelImage(media, context);
 
-    // Update media with labels
-    await payload.updateMedia(mediaId, {
-      labelingStatus: 'complete',
-      location: labels.location,
-      country: labels.country,
-      imageType: labels.imageType,
-      animals: labels.animals,
-      tags: labels.tags,
-      altText: labels.altText,
-      alt: labels.altText,  // Also set the main alt field
-      isHero: labels.isHero,
-      quality: labels.quality
-    });
+    // Update media with all enrichment fields
+    await payload.updateMedia(mediaId, labels);
 
-    console.log(`[Labeler] Labeled: ${mediaId} -> ${labels.imageType}, ${labels.country}`);
+    console.log(`[Labeler] Labeled: ${mediaId} -> ${labels.imageType}, ${context.propertyName || 'no property'}`);
 
     return { success: true, mediaId };
 
@@ -200,7 +203,8 @@ async function processMediaLabeling(media) {
     console.error(`[Labeler] Failed to label ${mediaId}:`, error.message);
 
     await payload.updateMedia(mediaId, {
-      labelingStatus: 'failed'
+      labelingStatus: 'failed',
+      processingError: error.message
     });
 
     return { success: false, mediaId, error: error.message };

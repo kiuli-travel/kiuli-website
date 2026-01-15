@@ -18,6 +18,18 @@ const { notifyJobStarted } = require('./shared/notifications');
 
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'eu-north-1' });
 
+/**
+ * Map iTrvl segment type to Kiuli segment type enum
+ */
+function mapSegmentType(type) {
+  if (!type) return null;
+  const t = type.toLowerCase();
+  if (t === 'stay' || t === 'accommodation') return 'stay';
+  if (t === 'service' || t === 'activity' || t === 'tour') return 'activity';
+  if (t === 'transfer' || t === 'flight' || t === 'transport' || t === 'road') return 'transfer';
+  return null;
+}
+
 exports.handler = async (event) => {
   console.log('[Orchestrator] Invoked');
   const startTime = Date.now();
@@ -99,13 +111,60 @@ exports.handler = async (event) => {
     console.log('[Orchestrator] Transforming data...');
     const transformedData = await transform(rawData, {}, itrvlUrl);
 
-    // 5. Build image list for job
-    const imageList = (rawData.images || []).map(s3Key => ({
-      sourceS3Key: s3Key,
-      status: 'pending'
-    }));
+    // 5. Build image list WITH context from segments
+    const imageList = [];
+    const segments = rawData.itinerary?.itineraries?.[0]?.segments || [];
+    const itineraryCountries = rawData.itinerary?.itineraries?.[0]?.countries || [];
+    const defaultCountry = itineraryCountries[0] || null;
 
-    console.log(`[Orchestrator] Image list: ${imageList.length} images`);
+    segments.forEach((segment, segmentIndex) => {
+      const segmentImages = segment.images || [];
+      if (segmentImages.length === 0) return;
+
+      // Get segment day (may be null for some segment types)
+      const dayIndex = segment.day || segment.dayNumber || null;
+
+      // Map segment type to our enum
+      const segmentType = mapSegmentType(segment.type);
+
+      // Get property/segment name
+      const propertyName = segment.title || segment.name || segment.supplierName || null;
+
+      // Get country (prefer segment-level, fallback to itinerary-level)
+      const country = segment.country || segment.countryName || defaultCountry;
+
+      segmentImages.forEach(s3Key => {
+        imageList.push({
+          sourceS3Key: typeof s3Key === 'string' ? s3Key : (s3Key.s3Key || s3Key),
+          status: 'pending',
+          propertyName,
+          segmentType,
+          segmentTitle: propertyName,
+          dayIndex,
+          segmentIndex,
+          country,
+        });
+      });
+    });
+
+    // Fallback: if no images found in segments, use flat array (legacy support)
+    if (imageList.length === 0 && rawData.images?.length > 0) {
+      console.log('[Orchestrator] Warning: No images in segments, using flat array without context');
+      rawData.images.forEach(s3Key => {
+        imageList.push({
+          sourceS3Key: s3Key,
+          status: 'pending',
+          propertyName: null,
+          segmentType: null,
+          segmentTitle: null,
+          dayIndex: null,
+          segmentIndex: null,
+          country: defaultCountry,
+        });
+      });
+    }
+
+    console.log(`[Orchestrator] Image list: ${imageList.length} images with context`);
 
     // 6. Create or update itinerary
     let payloadItinerary;

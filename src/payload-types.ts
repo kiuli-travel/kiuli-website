@@ -391,6 +391,63 @@ export interface Media {
    * imgix URL for optimized serving
    */
   imgixUrl?: string | null;
+  /**
+   * Property/lodge name from iTrvl (e.g., Angama Mara)
+   */
+  sourceProperty?: string | null;
+  /**
+   * Segment type where image was found
+   */
+  sourceSegmentType?: ('stay' | 'activity' | 'transfer') | null;
+  /**
+   * Segment title (e.g., Kigali City Tour)
+   */
+  sourceSegmentTitle?: string | null;
+  /**
+   * Day number in itinerary (1-indexed)
+   */
+  sourceDayIndex?: number | null;
+  /**
+   * Scene description (e.g., "infinity pool overlooking savanna at sunset")
+   */
+  scene?: string | null;
+  /**
+   * Mood/atmosphere of the image
+   */
+  mood?: ('serene' | 'adventurous' | 'romantic' | 'dramatic' | 'intimate' | 'luxurious' | 'wild' | 'peaceful')[] | null;
+  /**
+   * Time of day visible in image
+   */
+  timeOfDay?: ('dawn' | 'morning' | 'midday' | 'afternoon' | 'golden-hour' | 'dusk' | 'night') | null;
+  /**
+   * Physical setting/location type
+   */
+  setting?:
+    | (
+        | 'lodge-interior'
+        | 'lodge-exterior'
+        | 'pool-deck'
+        | 'bedroom'
+        | 'dining'
+        | 'savanna'
+        | 'river-water'
+        | 'forest'
+        | 'mountain'
+        | 'bush-dinner'
+        | 'game-drive'
+        | 'walking-safari'
+        | 'aerial'
+        | 'spa'
+      )[]
+    | null;
+  /**
+   * Composition style - how the image could be used
+   */
+  composition?: ('hero' | 'establishing' | 'detail' | 'portrait' | 'action' | 'panoramic') | null;
+  /**
+   * Recommended usage contexts
+   */
+  suitableFor?: ('hero-banner' | 'article-feature' | 'gallery' | 'thumbnail' | 'social' | 'print')[] | null;
   folder?: (number | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
@@ -2058,6 +2115,16 @@ export interface MediaSelect<T extends boolean = true> {
   sourceUrl?: T;
   originalS3Key?: T;
   imgixUrl?: T;
+  sourceProperty?: T;
+  sourceSegmentType?: T;
+  sourceSegmentTitle?: T;
+  sourceDayIndex?: T;
+  scene?: T;
+  mood?: T;
+  timeOfDay?: T;
+  setting?: T;
+  composition?: T;
+  suitableFor?: T;
   folder?: T;
   updatedAt?: T;
   createdAt?: T;

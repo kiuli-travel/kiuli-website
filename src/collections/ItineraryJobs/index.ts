@@ -231,6 +231,54 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
                     date: { pickerAppearance: 'dayAndTime' },
                   },
                 },
+                // === SOURCE CONTEXT (preserved from scrape) ===
+                {
+                  name: 'propertyName',
+                  type: 'text',
+                  admin: {
+                    description: 'Property/lodge name from segment',
+                  },
+                },
+                {
+                  name: 'segmentType',
+                  type: 'select',
+                  options: [
+                    { label: 'Stay', value: 'stay' },
+                    { label: 'Activity', value: 'activity' },
+                    { label: 'Transfer', value: 'transfer' },
+                  ],
+                  admin: {
+                    description: 'Type of segment this image belongs to',
+                  },
+                },
+                {
+                  name: 'segmentTitle',
+                  type: 'text',
+                  admin: {
+                    description: 'Title of the segment',
+                  },
+                },
+                {
+                  name: 'dayIndex',
+                  type: 'number',
+                  admin: {
+                    description: 'Day number in itinerary (1-indexed)',
+                  },
+                },
+                {
+                  name: 'segmentIndex',
+                  type: 'number',
+                  admin: {
+                    description: 'Segment position within day (0-indexed)',
+                  },
+                },
+                {
+                  name: 'country',
+                  type: 'text',
+                  admin: {
+                    description: 'Country from segment/itinerary context',
+                  },
+                },
               ],
             },
             // V6: Labeling progress

@@ -14,10 +14,19 @@ const ITRVL_CDN_BASE = 'https://itrvl-production-media.imgix.net';
  * 2. If exists, return existing media ID
  * 3. Download from iTrvl CDN
  * 4. Upload to S3
- * 5. Create Media record via Payload
+ * 5. Create Media record via Payload (with context from imageStatus)
  * 6. Return media ID
+ *
+ * @param {string} sourceS3Key - Original S3 key from iTrvl CDN
+ * @param {string} itineraryId - Payload itinerary ID
+ * @param {Object} imageContext - Context from imageStatus (optional)
+ * @param {string} imageContext.propertyName - Property/lodge name
+ * @param {string} imageContext.segmentType - stay|activity|transfer
+ * @param {string} imageContext.segmentTitle - Segment title
+ * @param {number} imageContext.dayIndex - Day number in itinerary
+ * @param {string} imageContext.country - Country from segment
  */
-async function processImage(sourceS3Key, itineraryId) {
+async function processImage(sourceS3Key, itineraryId, imageContext = {}) {
   console.log(`[ProcessImage] Processing: ${sourceS3Key}`);
 
   // 1. Check for existing media with this sourceS3Key (global dedup)
@@ -54,8 +63,8 @@ async function processImage(sourceS3Key, itineraryId) {
   const s3Key = generateS3Key(sourceS3Key, itineraryId);
   await uploadToS3(buffer, s3Key, contentType);
 
-  // 4. Create Media record via Payload multipart upload
-  const mediaId = await createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType);
+  // 4. Create Media record via Payload multipart upload (with context)
+  const mediaId = await createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType, imageContext);
 
   console.log(`[ProcessImage] Created media: ${mediaId}`);
 
@@ -68,14 +77,16 @@ async function processImage(sourceS3Key, itineraryId) {
 /**
  * Create Media record in Payload with metadata only
  * Image is already uploaded to S3, so we just need the record
+ * Includes source context from imageStatus for enrichment
  */
-async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType) {
+async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType, imageContext = {}) {
   // Use full sourceS3Key as filename to ensure uniqueness
   // (sourceS3Key includes UUID prefix, e.g., "abc123_filename.jpg")
   const filename = sourceS3Key || 'image.jpg';
   const displayName = (sourceS3Key.split('/').pop() || 'image.jpg').replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
 
   // Create media record with JSON metadata (no file upload)
+  // Include source context from imageStatus for enrichment
   const mediaData = {
     alt: displayName,
     sourceS3Key: sourceS3Key,
@@ -88,7 +99,13 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
     sourceItinerary: itineraryId,
     processingStatus: 'complete',
     labelingStatus: 'pending',
-    usedInItineraries: [itineraryId]
+    usedInItineraries: [itineraryId],
+    // Source context from imageStatus (for AI enrichment)
+    sourceProperty: imageContext.propertyName || null,
+    sourceSegmentType: imageContext.segmentType || null,
+    sourceSegmentTitle: imageContext.segmentTitle || null,
+    sourceDayIndex: imageContext.dayIndex || null,
+    country: imageContext.country || null,
   };
 
   // POST to Payload

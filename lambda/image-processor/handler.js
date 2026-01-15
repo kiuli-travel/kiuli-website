@@ -62,8 +62,8 @@ exports.handler = async (event) => {
         // Update status to processing
         await updateImageStatus(jobId, sourceS3Key, 'processing', null, new Date().toISOString());
 
-        // Process image (includes dedup check)
-        const result = await processImage(sourceS3Key, itineraryId);
+        // Process image (includes dedup check) - pass context for Media enrichment
+        const result = await processImage(sourceS3Key, itineraryId, imageStatus);
 
         if (result.skipped) {
           skipped++;

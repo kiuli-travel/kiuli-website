@@ -201,8 +201,8 @@ async function updateItineraryMedia(itineraryId, mediaMapping) {
       images: allImages
     });
 
-    // TODO: Update segment images based on source mapping
-    // This requires knowing which segments reference which source keys
+    // Note: Segment-level image updates are handled by the finalizer Lambda
+    // which has access to the full ImageStatuses collection with context
 
     console.log(`[ImageProcessor] Updated itinerary with ${newMediaIds.length} new media IDs`);
 

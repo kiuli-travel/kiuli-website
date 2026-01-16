@@ -116,13 +116,26 @@ exports.handler = async (event) => {
     const segments = rawData.itinerary?.itineraries?.[0]?.segments || [];
     const itineraryCountries = rawData.itinerary?.itineraries?.[0]?.countries || [];
     const defaultCountry = itineraryCountries[0] || null;
+    const itineraryStartDate = rawData.itinerary?.itineraries?.[0]?.startDate || null;
+
+    // Parse itinerary start date for day calculation (midnight UTC)
+    let tripStart = null;
+    if (itineraryStartDate) {
+      tripStart = new Date(itineraryStartDate.slice(0, 10) + 'T00:00:00Z');
+    }
 
     segments.forEach((segment, segmentIndex) => {
       const segmentImages = segment.images || [];
       if (segmentImages.length === 0) return;
 
-      // Get segment day (may be null for some segment types)
-      const dayIndex = segment.day || segment.dayNumber || null;
+      // Calculate day index from segment startDate relative to itinerary start
+      let dayIndex = null;
+      if (segment.startDate && tripStart) {
+        const segDate = new Date(segment.startDate.slice(0, 10) + 'T00:00:00Z');
+        const diffMs = segDate.getTime() - tripStart.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        dayIndex = Math.max(1, diffDays + 1); // Day 1 = first day
+      }
 
       // Map segment type to our enum
       const segmentType = mapSegmentType(segment.type);

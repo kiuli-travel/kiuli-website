@@ -769,7 +769,7 @@ export interface Itinerary {
                   blockType: 'activity';
                 }
               | {
-                  type?: ('flight' | 'road' | 'boat') | null;
+                  type?: ('flight' | 'road' | 'boat' | 'entry' | 'exit' | 'point') | null;
                   title?: string | null;
                   from?: string | null;
                   to?: string | null;

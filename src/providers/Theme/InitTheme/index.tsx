@@ -5,7 +5,9 @@ import { defaultTheme, themeLocalStorageKey } from '../ThemeSelector/types'
 
 export const InitTheme: React.FC = () => {
   return (
-    // eslint-disable-next-line @next/next/no-before-interactive-script-outside-document
+    /* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document --
+       This rule is for Pages Router. In App Router, beforeInteractive is valid when
+       used in layout.tsx to prevent theme flash. See Next.js docs for Script component. */
     <Script
       dangerouslySetInnerHTML={{
         __html: `

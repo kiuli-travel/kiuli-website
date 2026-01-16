@@ -27,7 +27,7 @@ function extractCountries(segments) {
     if (segment.countryName) countries.add(segment.countryName);
   }
 
-  return Array.from(countries).filter(c => c && c !== 'Unknown');
+  return Array.from(countries).filter(c => c && !c.toLowerCase().includes('unknown'));
 }
 
 /**
@@ -62,22 +62,42 @@ function calculateNights(segments, rawItinerary) {
 }
 
 /**
- * Group segments by day
+ * Group segments by day using startDate calculation
+ * @param {Array} segments - Raw segments from iTrvl
+ * @param {string} itineraryStartDate - Trip start date (e.g., "2026-06-14")
  */
-function groupSegmentsByDay(segments) {
+function groupSegmentsByDay(segments, itineraryStartDate) {
   const dayMap = new Map();
 
-  for (const segment of segments) {
-    let dayNum = segment.day || segment.dayNumber || 1;
+  // Parse itinerary start date (midnight UTC to avoid timezone issues)
+  let tripStart = null;
+  if (itineraryStartDate) {
+    tripStart = new Date(itineraryStartDate.slice(0, 10) + 'T00:00:00Z');
+  }
 
-    if (!dayNum && segment.sequence) {
-      dayNum = Math.ceil(segment.sequence / 3);
+  for (const segment of segments) {
+    let dayNum = 1; // Default to day 1
+
+    // Calculate day number from startDate relative to trip start
+    if (segment.startDate && tripStart) {
+      const segDate = new Date(segment.startDate.slice(0, 10) + 'T00:00:00Z');
+      const diffMs = segDate.getTime() - tripStart.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      dayNum = Math.max(1, diffDays + 1); // Day 1 = first day, ensure at least 1
     }
 
     if (!dayMap.has(dayNum)) {
+      // Use segment startDate, or itinerary startDate for Day 1 as fallback
+      let dayDate = null;
+      if (segment.startDate) {
+        dayDate = segment.startDate.slice(0, 10);
+      } else if (dayNum === 1 && itineraryStartDate) {
+        dayDate = itineraryStartDate.slice(0, 10);
+      }
+
       dayMap.set(dayNum, {
         dayNumber: dayNum,
-        date: segment.startDate || null,
+        date: dayDate,
         title: null,
         location: null,
         segments: []
@@ -86,8 +106,9 @@ function groupSegmentsByDay(segments) {
 
     const day = dayMap.get(dayNum);
 
-    if (!day.title && (segment.type === 'stay' || segment.type === 'accommodation') && segment.name) {
-      day.title = segment.name;
+    // Set day title from stay segment (use title as fallback since name is often null)
+    if (!day.title && (segment.type === 'stay' || segment.type === 'accommodation')) {
+      day.title = segment.name || segment.title || null;
     }
 
     if (!day.location && (segment.location || segment.locationName)) {
@@ -141,9 +162,11 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
     blockType = 'stay';
   } else if (type === 'service' || type === 'activity') {
     blockType = 'activity';
-  } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat') {
+  } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat' || type === 'entry' || type === 'exit' || type === 'point') {
     blockType = 'transfer';
   } else {
+    // Log unknown segment types for debugging
+    console.log(`[Transform] Unknown segment type: ${type}, skipping`);
     return null;
   }
 
@@ -185,15 +208,29 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
   }
 
   if (blockType === 'transfer') {
+    // Map segment type to transfer type (including entry/exit/point)
     let transferType = 'road';
     if (type === 'flight') transferType = 'flight';
     if (type === 'boat') transferType = 'boat';
+    if (type === 'entry') transferType = 'entry';
+    if (type === 'exit') transferType = 'exit';
+    if (type === 'point') transferType = 'point';
+
+    // Build title for entry/exit/point segments
+    let title = segment.name || segment.title || segment.description || 'Transfer';
+    if (type === 'entry' || type === 'exit' || type === 'point') {
+      // These segments often have location info in travelHubCode or transitPointCode
+      const locationCode = segment.travelHubCode || segment.transitPointCode || '';
+      if (locationCode && !title.includes(locationCode)) {
+        title = `${title} (${locationCode})`.trim();
+      }
+    }
 
     return {
       blockType: 'transfer',
       type: transferType,
-      title: segment.name || segment.title || 'Transfer',
-      from: segment.startLocation?.name || segment.from || null,
+      title: title,
+      from: segment.startLocation?.name || segment.from || segment.location || null,
       to: segment.endLocation?.name || segment.to || null,
       descriptionOriginal: textToRichText(segment.description),
       descriptionEnhanced: null,
@@ -267,7 +304,7 @@ function generateFaqItems(segments, title, countries) {
  */
 function generateMetaFields(title, nights, countries) {
   const countryList = countries.length > 0 ? countries.join(' & ') : 'Africa';
-  const metaTitle = `${title} | ${nights}-Night Luxury Safari`.substring(0, 60);
+  const metaTitle = `${title} | ${nights}-Night Luxury Safari`.trim().substring(0, 60);
   const metaDescription = `Experience a ${nights}-night luxury safari through ${countryList}. Exclusive lodges, expert guides, and unforgettable wildlife encounters. Inquire with Kiuli today.`.substring(0, 160);
 
   return { metaTitle, metaDescription };
@@ -284,7 +321,7 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
                     rawData;
 
   const segments = itinerary.segments || [];
-  const title = itinerary.name || itinerary.itineraryName || 'Safari Itinerary';
+  const title = (itinerary.name || itinerary.itineraryName || 'Safari Itinerary').trim();
   const priceInCents = rawData.price || itinerary.sellFinance || 0;
   const itineraryId = itinerary.id || rawData.itineraryId;
 
@@ -298,7 +335,7 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
 
   console.log(`[Transform] Nights: ${nights}, Countries: ${countries.join(', ')}`);
 
-  const groupedDays = groupSegmentsByDay(segments);
+  const groupedDays = groupSegmentsByDay(segments, itinerary.startDate);
 
   const days = groupedDays.map(day => ({
     dayNumber: day.dayNumber,

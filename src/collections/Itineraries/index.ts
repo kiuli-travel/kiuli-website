@@ -380,6 +380,9 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                     { label: 'Flight', value: 'flight' },
                     { label: 'Road', value: 'road' },
                     { label: 'Boat', value: 'boat' },
+                    { label: 'Entry', value: 'entry' },
+                    { label: 'Exit', value: 'exit' },
+                    { label: 'Point', value: 'point' },
                   ],
                 },
                 {

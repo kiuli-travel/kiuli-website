@@ -74,9 +74,12 @@ exports.handler = async (event) => {
       });
     }
 
-    // 4. Get job for imageStatuses context lookup
-    const job = await payload.getJob(jobId);
-    const imageStatuses = job.imageStatuses || [];
+    // 4. Get image statuses from separate collection for context lookup
+    const imageStatusesResult = await payload.find('image-statuses', {
+      'where[job][equals]': jobId,
+      limit: '1000'
+    });
+    const imageStatuses = imageStatusesResult.docs || [];
 
     // 5. Process batch with concurrency limit
     let labeled = 0;
@@ -162,7 +165,7 @@ exports.handler = async (event) => {
 /**
  * Process labeling for a single media item
  * @param {object} media - Payload Media document
- * @param {array} imageStatuses - Job imageStatuses for context lookup
+ * @param {array} imageStatuses - ImageStatuses collection records for context lookup
  */
 async function processMediaLabeling(media, imageStatuses = []) {
   const mediaId = media.id;

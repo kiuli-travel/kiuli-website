@@ -74,6 +74,7 @@ export interface Config {
     users: User;
     itineraries: Itinerary;
     'itinerary-jobs': ItineraryJob;
+    'image-statuses': ImageStatus;
     notifications: Notification;
     redirects: Redirect;
     forms: Form;
@@ -99,6 +100,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     itineraries: ItinerariesSelect<false> | ItinerariesSelect<true>;
     'itinerary-jobs': ItineraryJobsSelect<false> | ItineraryJobsSelect<true>;
+    'image-statuses': ImageStatusesSelect<false> | ImageStatusesSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
@@ -1488,29 +1490,6 @@ export interface ItineraryJob {
    */
   failedImages?: number | null;
   /**
-   * Per-image processing status for granular tracking
-   */
-  imageStatuses?:
-    | {
-        /**
-         * Original S3 key from iTrvl CDN
-         */
-        sourceS3Key: string;
-        /**
-         * Payload Media ID if created
-         */
-        mediaId?: string | null;
-        status?: ('pending' | 'processing' | 'complete' | 'failed' | 'skipped') | null;
-        /**
-         * Error message if failed
-         */
-        error?: string | null;
-        startedAt?: string | null;
-        completedAt?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
    * Number of images that have been AI-labeled
    */
   imagesLabeled?: number | null;
@@ -1602,6 +1581,60 @@ export interface ItineraryJob {
    * When Phase 5 (finalization) completed
    */
   phase5CompletedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Per-image processing status for pipeline jobs
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "image-statuses".
+ */
+export interface ImageStatus {
+  id: number;
+  /**
+   * Parent itinerary job
+   */
+  job: number | ItineraryJob;
+  /**
+   * Original S3 key from iTrvl CDN
+   */
+  sourceS3Key: string;
+  /**
+   * Payload Media ID if created
+   */
+  mediaId?: string | null;
+  status?: ('pending' | 'processing' | 'complete' | 'failed' | 'skipped') | null;
+  /**
+   * Error message if failed
+   */
+  error?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  /**
+   * Property/lodge name from segment
+   */
+  propertyName?: string | null;
+  /**
+   * Type of segment this image belongs to
+   */
+  segmentType?: ('stay' | 'activity' | 'transfer') | null;
+  /**
+   * Title of the segment
+   */
+  segmentTitle?: string | null;
+  /**
+   * Day number in itinerary (1-indexed)
+   */
+  dayIndex?: number | null;
+  /**
+   * Segment position within day (0-indexed)
+   */
+  segmentIndex?: number | null;
+  /**
+   * Country from segment/itinerary context
+   */
+  country?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1857,6 +1890,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'itinerary-jobs';
         value: number | ItineraryJob;
+      } | null)
+    | ({
+        relationTo: 'image-statuses';
+        value: number | ImageStatus;
       } | null)
     | ({
         relationTo: 'notifications';
@@ -2417,17 +2454,6 @@ export interface ItineraryJobsSelect<T extends boolean = true> {
   processedImages?: T;
   skippedImages?: T;
   failedImages?: T;
-  imageStatuses?:
-    | T
-    | {
-        sourceS3Key?: T;
-        mediaId?: T;
-        status?: T;
-        error?: T;
-        startedAt?: T;
-        completedAt?: T;
-        id?: T;
-      };
   imagesLabeled?: T;
   imagesToLabel?: T;
   labelingStartedAt?: T;
@@ -2449,6 +2475,27 @@ export interface ItineraryJobsSelect<T extends boolean = true> {
   phase3CompletedAt?: T;
   phase4CompletedAt?: T;
   phase5CompletedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "image-statuses_select".
+ */
+export interface ImageStatusesSelect<T extends boolean = true> {
+  job?: T;
+  sourceS3Key?: T;
+  mediaId?: T;
+  status?: T;
+  error?: T;
+  startedAt?: T;
+  completedAt?: T;
+  propertyName?: T;
+  segmentType?: T;
+  segmentTitle?: T;
+  dayIndex?: T;
+  segmentIndex?: T;
+  country?: T;
   updatedAt?: T;
   createdAt?: T;
 }

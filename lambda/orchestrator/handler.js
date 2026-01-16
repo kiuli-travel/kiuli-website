@@ -225,7 +225,7 @@ exports.handler = async (event) => {
 
     console.log(`[Orchestrator] Itinerary saved: ${payloadItinerary.id}`);
 
-    // 7. Update job with image statuses and itinerary reference
+    // 7. Update job with itinerary reference and counters
     await payload.updateJob(jobId, {
       processedItinerary: payloadItinerary.id,
       payloadId: payloadItinerary.id,
@@ -233,9 +233,25 @@ exports.handler = async (event) => {
       processedImages: 0,
       failedImages: 0,
       skippedImages: 0,
-      imageStatuses: imageList,
       currentPhase: 'Phase 2: Processing Images'
     });
+
+    // 7b. Create ImageStatus records in separate collection
+    console.log(`[Orchestrator] Creating ${imageList.length} ImageStatus records...`);
+    for (const img of imageList) {
+      await payload.create('image-statuses', {
+        job: jobId,
+        sourceS3Key: img.sourceS3Key,
+        status: img.status,
+        propertyName: img.propertyName,
+        segmentType: img.segmentType,
+        segmentTitle: img.segmentTitle,
+        dayIndex: img.dayIndex,
+        segmentIndex: img.segmentIndex,
+        country: img.country,
+      });
+    }
+    console.log(`[Orchestrator] ImageStatus records created`);
 
     // Send notification
     await notifyJobStarted(jobId, transformedData.title);

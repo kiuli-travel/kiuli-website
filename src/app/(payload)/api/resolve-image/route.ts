@@ -21,13 +21,6 @@ function validateApiKey(request: NextRequest): boolean {
   return token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY
 }
 
-interface ImageStatus {
-  sourceS3Key: string
-  status: string
-  mediaId?: string | null
-  error?: string | null
-}
-
 export async function POST(request: NextRequest) {
   // Validate authentication
   if (!validateApiKey(request)) {
@@ -81,6 +74,7 @@ export async function POST(request: NextRequest) {
   const payload = await getPayload({ config })
 
   try {
+    // Verify job exists
     const job = await payload.findByID({
       collection: 'itinerary-jobs',
       id: jobId,
@@ -93,10 +87,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const imageStatuses = (job.imageStatuses as ImageStatus[]) || []
-    const imageIndex = imageStatuses.findIndex((img) => img.sourceS3Key === sourceS3Key)
+    // Find the ImageStatus record in the separate collection
+    const imageStatusResult = await payload.find({
+      collection: 'image-statuses',
+      where: {
+        and: [
+          { job: { equals: jobId } },
+          { sourceS3Key: { equals: sourceS3Key } },
+        ],
+      },
+      limit: 1,
+    })
 
-    if (imageIndex === -1) {
+    const imageStatus = imageStatusResult.docs[0]
+
+    if (!imageStatus) {
       return NextResponse.json(
         { success: false, error: 'Image not found in job' },
         { status: 404 }
@@ -118,40 +123,56 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      imageStatuses[imageIndex] = {
-        ...imageStatuses[imageIndex],
-        status: 'completed',
-        mediaId: String(media.id),
-        error: null,
-      }
+      await payload.update({
+        collection: 'image-statuses',
+        id: imageStatus.id,
+        data: {
+          status: 'complete',
+          mediaId: String(media.id),
+          error: null,
+          completedAt: new Date().toISOString(),
+        },
+      })
     } else if (action === 'skip') {
-      imageStatuses[imageIndex] = {
-        ...imageStatuses[imageIndex],
-        status: 'skipped',
-        error: null,
-      }
+      await payload.update({
+        collection: 'image-statuses',
+        id: imageStatus.id,
+        data: {
+          status: 'skipped',
+          error: null,
+          completedAt: new Date().toISOString(),
+        },
+      })
     } else if (action === 'remove') {
-      // Remove from tracking entirely
-      imageStatuses.splice(imageIndex, 1)
+      // Delete the ImageStatus record
+      await payload.delete({
+        collection: 'image-statuses',
+        id: imageStatus.id,
+      })
     }
 
-    // Recalculate counts
-    const processed = imageStatuses.filter((img) => img.status === 'completed').length
-    const skipped = imageStatuses.filter((img) => img.status === 'skipped').length
-    const failed = imageStatuses.filter((img) => img.status === 'failed').length
+    // Recalculate counts from the collection
+    const allStatusesResult = await payload.find({
+      collection: 'image-statuses',
+      where: { job: { equals: jobId } },
+      limit: 1000,
+    })
+    const allStatuses = allStatusesResult.docs
 
-    // Update job
+    const processed = allStatuses.filter((img) => img.status === 'complete').length
+    const skipped = allStatuses.filter((img) => img.status === 'skipped').length
+    const failed = allStatuses.filter((img) => img.status === 'failed').length
+
+    // Update job counters
     await payload.update({
       collection: 'itinerary-jobs',
       id: jobId,
       data: {
-        imageStatuses,
         processedImages: processed,
         skippedImages: skipped,
         failedImages: failed,
-        totalImages: imageStatuses.length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as Record<string, any>,
+        totalImages: allStatuses.length,
+      },
     })
 
     // Check if all images are now resolved (no more failed)
@@ -162,7 +183,7 @@ export async function POST(request: NextRequest) {
       action,
       sourceS3Key,
       imageStatuses: {
-        total: imageStatuses.length,
+        total: allStatuses.length,
         processed,
         skipped,
         failed,
@@ -197,6 +218,7 @@ async function handleFileUpload(request: NextRequest) {
   const payload = await getPayload({ config })
 
   try {
+    // Verify job exists
     const job = await payload.findByID({
       collection: 'itinerary-jobs',
       id: jobId,
@@ -209,10 +231,21 @@ async function handleFileUpload(request: NextRequest) {
       )
     }
 
-    const imageStatuses = (job.imageStatuses as ImageStatus[]) || []
-    const imageIndex = imageStatuses.findIndex((img) => img.sourceS3Key === sourceS3Key)
+    // Find the ImageStatus record in the separate collection
+    const imageStatusResult = await payload.find({
+      collection: 'image-statuses',
+      where: {
+        and: [
+          { job: { equals: jobId } },
+          { sourceS3Key: { equals: sourceS3Key } },
+        ],
+      },
+      limit: 1,
+    })
 
-    if (imageIndex === -1) {
+    const imageStatus = imageStatusResult.docs[0]
+
+    if (!imageStatus) {
       return NextResponse.json(
         { success: false, error: 'Image not found in job' },
         { status: 404 }
@@ -251,30 +284,39 @@ async function handleFileUpload(request: NextRequest) {
       },
     })
 
-    // Update image status
-    imageStatuses[imageIndex] = {
-      ...imageStatuses[imageIndex],
-      status: 'completed',
-      mediaId: String(media.id),
-      error: null,
-    }
+    // Update ImageStatus record in the collection
+    await payload.update({
+      collection: 'image-statuses',
+      id: imageStatus.id,
+      data: {
+        status: 'complete',
+        mediaId: String(media.id),
+        error: null,
+        completedAt: new Date().toISOString(),
+      },
+    })
 
-    // Recalculate counts
-    const processed = imageStatuses.filter((img) => img.status === 'completed').length
-    const skipped = imageStatuses.filter((img) => img.status === 'skipped').length
-    const failed = imageStatuses.filter((img) => img.status === 'failed').length
+    // Recalculate counts from the collection
+    const allStatusesResult = await payload.find({
+      collection: 'image-statuses',
+      where: { job: { equals: jobId } },
+      limit: 1000,
+    })
+    const allStatuses = allStatusesResult.docs
 
-    // Update job
+    const processed = allStatuses.filter((img) => img.status === 'complete').length
+    const skipped = allStatuses.filter((img) => img.status === 'skipped').length
+    const failed = allStatuses.filter((img) => img.status === 'failed').length
+
+    // Update job counters
     await payload.update({
       collection: 'itinerary-jobs',
       id: jobId,
       data: {
-        imageStatuses,
         processedImages: processed,
         skippedImages: skipped,
         failedImages: failed,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as Record<string, any>,
+      },
     })
 
     const allResolved = failed === 0
@@ -286,7 +328,7 @@ async function handleFileUpload(request: NextRequest) {
       mediaId: media.id,
       s3Url,
       imageStatuses: {
-        total: imageStatuses.length,
+        total: allStatuses.length,
         processed,
         skipped,
         failed,

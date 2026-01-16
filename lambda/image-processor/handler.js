@@ -26,17 +26,28 @@ exports.handler = async (event) => {
   console.log(`[ImageProcessor] Job: ${jobId}, Chunk: ${chunkIndex}`);
 
   try {
-    // 1. Get job with image statuses
+    // 1. Get job
     const job = await payload.getJob(jobId);
 
     if (!job) {
       throw new Error(`Job not found: ${jobId}`);
     }
 
-    const imageStatuses = job.imageStatuses || [];
-    const pendingImages = imageStatuses.filter(img => img.status === 'pending');
+    // 2. Query image statuses from separate collection
+    const allStatusesResult = await payload.find('image-statuses', {
+      'where[job][equals]': jobId,
+      limit: '1000'
+    });
+    const allStatuses = allStatusesResult.docs || [];
 
-    console.log(`[ImageProcessor] Total: ${imageStatuses.length}, Pending: ${pendingImages.length}`);
+    const pendingResult = await payload.find('image-statuses', {
+      'where[and][0][job][equals]': jobId,
+      'where[and][1][status][equals]': 'pending',
+      limit: '1000'
+    });
+    const pendingImages = pendingResult.docs || [];
+
+    console.log(`[ImageProcessor] Total: ${allStatuses.length}, Pending: ${pendingImages.length}`);
 
     if (pendingImages.length === 0) {
       // All images processed, move to labeling
@@ -91,12 +102,12 @@ exports.handler = async (event) => {
       processedImages: totalProcessed,
       skippedImages: totalSkipped,
       failedImages: totalFailed,
-      progress: Math.round(((totalProcessed + totalSkipped + totalFailed) / imageStatuses.length) * 100)
+      progress: Math.round(((totalProcessed + totalSkipped + totalFailed) / allStatuses.length) * 100)
     });
 
     // 5. Skip itinerary media update here - defer to finalizer
     // This avoids 413 errors when the images array grows large
-    // The finalizer will update itinerary.images from job.imageStatuses
+    // The finalizer will update itinerary.images from image-statuses collection
     console.log(`[ImageProcessor] Skipping itinerary media update (${Object.keys(mediaMapping).length} IDs), deferring to finalizer`);
 
     console.log(`[ImageProcessor] Chunk complete: ${processed} processed, ${skipped} skipped, ${failed} failed`);
@@ -147,27 +158,30 @@ exports.handler = async (event) => {
 };
 
 /**
- * Update single image status in job
+ * Update single image status in image-statuses collection
  */
 async function updateImageStatus(jobId, sourceS3Key, status, mediaId = null, startedAt = null, completedAt = null, error = null) {
-  const job = await payload.getJob(jobId);
-  const imageStatuses = job.imageStatuses || [];
-
-  const updated = imageStatuses.map(img => {
-    if (img.sourceS3Key === sourceS3Key) {
-      return {
-        ...img,
-        status,
-        mediaId: mediaId || img.mediaId,
-        startedAt: startedAt || img.startedAt,
-        completedAt: completedAt || img.completedAt,
-        error: error || img.error
-      };
-    }
-    return img;
+  // Find the ImageStatus record
+  const result = await payload.find('image-statuses', {
+    'where[and][0][job][equals]': jobId,
+    'where[and][1][sourceS3Key][equals]': sourceS3Key,
+    limit: '1'
   });
 
-  await payload.updateJob(jobId, { imageStatuses: updated });
+  const imageStatus = result.docs?.[0];
+  if (!imageStatus) {
+    console.error(`[ImageProcessor] ImageStatus not found: job=${jobId}, sourceS3Key=${sourceS3Key}`);
+    return;
+  }
+
+  // Update the record
+  const updateData = { status };
+  if (mediaId) updateData.mediaId = mediaId;
+  if (startedAt) updateData.startedAt = startedAt;
+  if (completedAt) updateData.completedAt = completedAt;
+  if (error) updateData.error = error;
+
+  await payload.update('image-statuses', imageStatus.id, updateData);
 }
 
 /**

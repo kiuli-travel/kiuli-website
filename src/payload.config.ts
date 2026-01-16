@@ -7,6 +7,7 @@ import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { Categories } from './collections/Categories'
+import { ImageStatuses } from './collections/ImageStatuses'
 import { Itineraries } from './collections/Itineraries'
 import { ItineraryJobs } from './collections/ItineraryJobs'
 import { Media } from './collections/Media'
@@ -69,7 +70,7 @@ export default buildConfig({
       connectionString: process.env.POSTGRES_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, Notifications],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [

@@ -3,6 +3,7 @@ import * as migration_20260111_214109_v4_pipeline_fields from './20260111_214109
 import * as migration_20260113_102418_itinerary_schema_v3 from './20260113_102418_itinerary_schema_v3';
 import * as migration_20260113_124555_v6_schema_updates from './20260113_124555_v6_schema_updates';
 import * as migration_20260114_181510_schema_valid_field from './20260114_181510_schema_valid_field';
+import * as migration_20260116_create_image_statuses from './20260116_create_image_statuses';
 
 export const migrations = [
   {
@@ -28,6 +29,11 @@ export const migrations = [
   {
     up: migration_20260114_181510_schema_valid_field.up,
     down: migration_20260114_181510_schema_valid_field.down,
-    name: '20260114_181510_schema_valid_field'
+    name: '20260114_181510_schema_valid_field',
+  },
+  {
+    up: migration_20260116_create_image_statuses.up,
+    down: migration_20260116_create_image_statuses.down,
+    name: '20260116_create_image_statuses'
   },
 ];

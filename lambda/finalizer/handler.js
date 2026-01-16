@@ -17,21 +17,22 @@ const payload = require('./shared/payload');
 const { notifyJobCompleted } = require('./shared/notifications');
 
 /**
- * Reconcile job counter fields with authoritative imageStatuses array
+ * Reconcile job counter fields with authoritative ImageStatuses collection
  *
  * Problem: Counter fields (processedImages, skippedImages, failedImages) are
  * updated incrementally per chunk in image-processor and can get out of sync.
  *
- * Solution: Recalculate from imageStatuses and update job before using counters.
+ * Solution: Recalculate from ImageStatuses collection and update job before using counters.
  *
  * @param {string|number} jobId - The job ID
+ * @param {array} imageStatuses - ImageStatuses from the collection
  * @returns {Object} The reconciled counts
  */
-async function reconcileJobCounters(jobId) {
+async function reconcileJobCounters(jobId, imageStatuses) {
   const job = await payload.getJob(jobId);
-  const statuses = job.imageStatuses || [];
+  const statuses = imageStatuses || [];
 
-  // Count by status from authoritative imageStatuses array
+  // Count by status from authoritative ImageStatuses collection
   const counts = {
     totalImages: statuses.length,
     processedImages: statuses.filter(s => s.status === 'complete').length,
@@ -66,13 +67,13 @@ async function reconcileJobCounters(jobId) {
  * Link images to segments by matching source s3Keys to processed mediaIds
  *
  * @param {Object} itinerary - The itinerary document from Payload
- * @param {Object} job - The job document with imageStatuses
+ * @param {array} imageStatuses - ImageStatuses from the collection
  * @returns {Object} Updated days array with populated segment.images
  */
-function linkImagesToSegments(itinerary, job) {
-  // Build lookup: sourceS3Key -> mediaId from job.imageStatuses
+function linkImagesToSegments(itinerary, imageStatuses) {
+  // Build lookup: sourceS3Key -> mediaId from ImageStatuses collection
   const mediaMapping = {};
-  for (const img of (job.imageStatuses || [])) {
+  for (const img of (imageStatuses || [])) {
     if ((img.status === 'complete' || img.status === 'skipped') && img.mediaId && img.sourceS3Key) {
       mediaMapping[img.sourceS3Key] = img.mediaId;
     }
@@ -208,17 +209,25 @@ exports.handler = async (event) => {
     const mediaRecords = mediaResult.docs || [];
     console.log(`[Finalizer] Found ${mediaRecords.length} media records`);
 
-    // 2. Get job and reconcile counters
+    // 2. Get job and image statuses from collection
     const job = await payload.getJob(jobId);
     if (!job) {
       throw new Error(`Job not found: ${jobId}`);
     }
 
-    // Reconcile counter fields with authoritative imageStatuses array
-    const reconciledCounts = await reconcileJobCounters(jobId);
+    // Query image statuses from separate collection
+    const imageStatusesResult = await payload.find('image-statuses', {
+      'where[job][equals]': jobId,
+      limit: '1000'
+    });
+    const imageStatuses = imageStatusesResult.docs || [];
+    console.log(`[Finalizer] Found ${imageStatuses.length} ImageStatus records`);
 
-    // Link images to segments using job.imageStatuses mapping
-    const updatedDays = linkImagesToSegments(itinerary, job);
+    // Reconcile counter fields with authoritative ImageStatuses collection
+    const reconciledCounts = await reconcileJobCounters(jobId, imageStatuses);
+
+    // Link images to segments using ImageStatuses mapping
+    const updatedDays = linkImagesToSegments(itinerary, imageStatuses);
 
     // 3. Select hero image (if not locked)
     let heroImageId = itinerary.heroImage;
@@ -304,8 +313,8 @@ exports.handler = async (event) => {
     const finalStatus = hasErrors ? 'needs_attention' : 'ready_for_review';
 
     // 6. Update itinerary with linked images and other fields
-    // Build flat images array from all media IDs in job.imageStatuses
-    const allMediaIds = (job.imageStatuses || [])
+    // Build flat images array from all media IDs in ImageStatuses collection
+    const allMediaIds = imageStatuses
       .filter(img => img.mediaId && (img.status === 'complete' || img.status === 'skipped'))
       .map(img => typeof img.mediaId === 'number' ? img.mediaId : parseInt(img.mediaId, 10));
 

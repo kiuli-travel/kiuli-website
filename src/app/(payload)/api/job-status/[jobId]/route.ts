@@ -119,6 +119,15 @@ export async function GET(
       notes: job.notes || null,
     })
   } catch (error) {
+    // Payload throws NotFound error when ID doesn't exist
+    if (error instanceof Error &&
+        (error.message.includes('not found') || error.message.includes('Not Found'))) {
+      return NextResponse.json(
+        { success: false, error: 'Job not found' },
+        { status: 404 }
+      )
+    }
+
     console.error('[job-status] Error fetching job:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch job status' },

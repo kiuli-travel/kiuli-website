@@ -1,16 +1,223 @@
+/* Kiuli Brand Fonts */
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Variable.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-VariableItalic.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Waterfall';
+  src: url('/fonts/Waterfall-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: optional;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  /* === RESETS === */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  img, picture, video, canvas, svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  input, textarea, select, button {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    color: inherit;
+  }
+
+  /* === BODY === */
+  body {
+    font-family: 'Satoshi', system-ui, sans-serif;
+    font-weight: 300;
+    line-height: 1.5;
+    color: #404040;
+    background-color: #F5F3EB;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* === SELECTION === */
+  ::selection {
+    background-color: #486A6A;
+    color: #FFFFFF;
+  }
+
+  ::-moz-selection {
+    background-color: #486A6A;
+    color: #FFFFFF;
+  }
+
+  /* === TRANSITIONS === */
+  a, button, input, textarea, select {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: ease;
+    transition-duration: 200ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    a, button, input, textarea, select {
+      transition-duration: 0ms;
+    }
+  }
+
+  /* === LINKS === */
+  a {
+    color: #DA7A5A;
+    text-decoration: none;
+    text-underline-offset: 3px;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  a:focus-visible {
+    outline: 2px solid #486A6A;
+    outline-offset: 2px;
+  }
+
+  /* === HEADINGS === */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'General Sans', system-ui, sans-serif;
     font-size: unset;
     font-weight: unset;
+  }
+
+  h1 {
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    line-height: 1.17;
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.22;
+    font-size: 1.75rem;
+  }
+
+  h3 {
+    font-weight: 600;
+    line-height: 1.33;
+    font-size: 1.25rem;
+  }
+
+  h4 {
+    font-weight: 500;
+    line-height: 1.40;
+    font-size: 1.125rem;
+  }
+
+  @media (min-width: 640px) {
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 2rem; }
+    h3 { font-size: 1.375rem; }
+  }
+
+  @media (min-width: 1024px) {
+    h1 { font-size: 3rem; }
+    h2 { font-size: 2.25rem; }
+    h3 { font-size: 1.5rem; }
+    h4 { font-size: 1.25rem; }
+  }
+
+  /* === FORMS === */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="date"],
+  textarea,
+  select {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #DADADA;
+    border-radius: 2px;
+    background-color: #FFFFFF;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: #486A6A;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid #486A6A;
+    outline-offset: 2px;
+  }
+
+  ::placeholder {
+    color: #404040;
+    opacity: 0.5;
+  }
+
+  button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  /* === UTILITIES === */
+  .accent-script {
+    font-family: 'Waterfall', cursive;
+    font-weight: 400;
+  }
+
+  .label-caps {
+    font-family: 'General Sans', system-ui, sans-serif;
+    font-weight: 500;
+    font-size: 0.75rem;
+    line-height: 1.33;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
   :root {
@@ -95,6 +302,13 @@
 
 html {
   opacity: 0;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 html[data-theme='dark'],

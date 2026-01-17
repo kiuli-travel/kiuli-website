@@ -35,7 +35,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'ui',
       admin: {
         components: {
-          Field: './components/EnhanceAll#EnhanceAll',
+          Field: '@/collections/Itineraries/components/EnhanceAll#EnhanceAll',
         },
       },
     },
@@ -44,7 +44,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'ui',
       admin: {
         components: {
-          Field: './components/ImageStatusGrid#ImageStatusGrid',
+          Field: '@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid',
         },
       },
     },
@@ -53,7 +53,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'ui',
       admin: {
         components: {
-          Field: './components/PublishChecklist#PublishChecklist',
+          Field: '@/collections/Itineraries/components/PublishChecklist#PublishChecklist',
         },
       },
     },
@@ -112,7 +112,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       admin: {
         description: 'Primary hero image for the itinerary page',
         components: {
-          Field: '/components/admin/ImageSelector',
+          Field: '@/components/admin/ImageSelector#ImageSelector',
         },
       },
     },
@@ -149,7 +149,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           type: 'ui',
           admin: {
             components: {
-              Field: './components/EnhanceButton#EnhanceOverviewButton',
+              Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceOverviewButton',
             },
           },
         },
@@ -308,7 +308,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   hasMany: true,
                   admin: {
                     components: {
-                      Field: '/components/admin/ImageSelector',
+                      Field: '@/components/admin/ImageSelector#ImageSelector',
                     },
                   },
                 },
@@ -359,7 +359,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   hasMany: true,
                   admin: {
                     components: {
-                      Field: '/components/admin/ImageSelector',
+                      Field: '@/components/admin/ImageSelector#ImageSelector',
                     },
                   },
                 },
@@ -476,7 +476,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'ui',
       admin: {
         components: {
-          Field: './components/EnhanceButton#EnhanceWhyKiuliButton',
+          Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceWhyKiuliButton',
         },
       },
     },
@@ -490,7 +490,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       admin: {
         description: 'All images associated with this itinerary',
         components: {
-          Field: '/components/admin/ImageSelector',
+          Field: '@/components/admin/ImageSelector#ImageSelector',
         },
       },
     },

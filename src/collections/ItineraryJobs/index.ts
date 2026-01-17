@@ -75,7 +75,7 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
               type: 'ui',
               admin: {
                 components: {
-                  Field: './components/ProcessButton#ProcessButton',
+                  Field: '@/collections/ItineraryJobs/components/ProcessButton#ProcessButton',
                 },
               },
             },
@@ -84,7 +84,7 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
               type: 'ui',
               admin: {
                 components: {
-                  Field: './components/JobControlPanel#JobControlPanel',
+                  Field: '@/collections/ItineraryJobs/components/JobControlPanel#JobControlPanel',
                 },
               },
             },

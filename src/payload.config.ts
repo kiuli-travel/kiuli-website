@@ -34,7 +34,7 @@ export default buildConfig({
       // Feel free to delete this at any time. Simply remove the line below.
       beforeDashboard: ['@/components/BeforeDashboard'],
       // Notification bell in admin nav
-      afterNavLinks: ['@/components/admin/NotificationBell'],
+      afterNavLinks: ['@/components/admin/NotificationBell#NotificationBell'],
     },
     importMap: {
       baseDir: path.resolve(dirname),

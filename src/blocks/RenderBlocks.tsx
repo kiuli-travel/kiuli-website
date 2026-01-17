@@ -8,13 +8,16 @@ import { ContentBlock } from '@/blocks/Content/Component'
 import { FormBlock } from '@/blocks/Form/Component'
 import { MediaBlock } from '@/blocks/MediaBlock/Component'
 
+// Block components mapped by blockType - each component accepts its specific block props
 const blockComponents = {
   archive: ArchiveBlock,
   content: ContentBlock,
   cta: CallToActionBlock,
   formBlock: FormBlock,
   mediaBlock: MediaBlock,
-}
+} as const
+
+type BlockType = keyof typeof blockComponents
 
 export const RenderBlocks: React.FC<{
   blocks: Page['layout'][0][]
@@ -30,12 +33,16 @@ export const RenderBlocks: React.FC<{
           const { blockType } = block
 
           if (blockType && blockType in blockComponents) {
-            const Block = blockComponents[blockType]
+            // Type assertion through unknown is required because TypeScript cannot narrow
+            // the union of block types to match the dynamically selected component.
+            // Each block component expects its specific block type props.
+            const Block = blockComponents[blockType as BlockType] as unknown as React.FC<
+              typeof block & { disableInnerContainer?: boolean }
+            >
 
             if (Block) {
               return (
                 <div className="my-16" key={index}>
-                  {/* @ts-expect-error there may be some mismatch between the expected types here */}
                   <Block {...block} disableInnerContainer />
                 </div>
               )

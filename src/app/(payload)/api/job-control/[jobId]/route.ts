@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayload } from 'payload'
+import { getPayload, Payload } from 'payload'
 import config from '@payload-config'
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
+import type { ItineraryJob } from '@/payload-types'
 
 // Initialize Lambda client
 const lambdaClient = new LambdaClient({
@@ -109,8 +110,7 @@ export async function POST(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleCancel(payload: any, job: any) {
+async function handleCancel(payload: Payload, job: ItineraryJob) {
   // Only allow cancel for pending or processing jobs
   if (!['pending', 'processing'].includes(job.status)) {
     return NextResponse.json(
@@ -147,8 +147,7 @@ async function handleCancel(payload: any, job: any) {
   })
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleRetry(payload: any, job: any) {
+async function handleRetry(payload: Payload, job: ItineraryJob) {
   // Only allow retry for failed jobs
   if (job.status !== 'failed') {
     return NextResponse.json(
@@ -214,8 +213,12 @@ interface ImageStatus {
   error?: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleRetryFailed(payload: any, job: any) {
+// Extended type for jobs that may still have legacy imageStatuses field
+interface ItineraryJobWithImageStatuses extends ItineraryJob {
+  imageStatuses?: ImageStatus[]
+}
+
+async function handleRetryFailed(payload: Payload, job: ItineraryJobWithImageStatuses) {
   // Only allow retry-failed for completed jobs with failed images
   if (job.status !== 'completed' && job.status !== 'failed') {
     return NextResponse.json(
@@ -224,7 +227,7 @@ async function handleRetryFailed(payload: any, job: any) {
     )
   }
 
-  const imageStatuses = (job.imageStatuses as ImageStatus[]) || []
+  const imageStatuses = job.imageStatuses || []
   const failedImages = imageStatuses.filter((img) => img.status === 'failed')
 
   if (failedImages.length === 0) {
@@ -245,12 +248,13 @@ async function handleRetryFailed(payload: any, job: any) {
   await payload.update({
     collection: 'itinerary-jobs',
     id: job.id,
+    // imageStatuses may still exist on some legacy jobs even though it's been moved to separate collection
     data: {
       status: 'processing',
       currentPhase: 'Phase 2: Retrying Failed Images',
       imageStatuses: updatedStatuses,
       failedImages: 0,
-    },
+    } as Record<string, unknown>,
   })
 
   // Trigger image processor for the failed images

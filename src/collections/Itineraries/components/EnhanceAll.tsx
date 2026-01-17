@@ -40,9 +40,22 @@ export const EnhanceAll: React.FC = () => {
         }),
       })
 
+      // Check response.ok BEFORE calling .json()
+      if (!response.ok) {
+        // Try to get JSON error message, fallback to status text
+        try {
+          const errorData = await response.json()
+          setMessage(errorData.error || `Enhancement failed (${response.status})`)
+        } catch {
+          setMessage(`Enhancement failed (${response.status}): ${response.statusText}`)
+        }
+        setMessageType('error')
+        return
+      }
+
       const result = await response.json()
 
-      if (response.ok && result.success) {
+      if (result.success) {
         setProgress({ enhanced: result.enhanced, total: result.enhanced })
         setMessage(
           `Successfully enhanced ${result.enhanced} item(s). Reload the page to see changes.`,
@@ -53,7 +66,9 @@ export const EnhanceAll: React.FC = () => {
         setMessageType('error')
       }
     } catch (error) {
-      setMessage(`Error: ${(error as Error).message}`)
+      // Network errors or unexpected failures
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setMessage(`Enhancement failed: ${errorMessage}`)
       setMessageType('error')
     } finally {
       setIsEnhancing(false)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import type { ItineraryJob } from '@/payload-types'
 
 /**
  * Validate authentication via Payload session OR API key
@@ -38,6 +39,16 @@ interface ImageStatus {
   completedAt?: string
 }
 
+// Extended interface for job with legacy/optional fields not in generated types
+interface ItineraryJobExtended extends ItineraryJob {
+  imageStatuses?: ImageStatus[]
+  phase1CompletedAt?: string | null
+  phase2CompletedAt?: string | null
+  phase3CompletedAt?: string | null
+  phase4CompletedAt?: string | null
+  notes?: string | null
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
@@ -58,8 +69,7 @@ export async function GET(
     const job = await payload.findByID({
       collection: 'itinerary-jobs',
       id: jobId,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    }) as Record<string, any>
+    }) as ItineraryJobExtended | null
 
     if (!job) {
       return NextResponse.json(
@@ -69,7 +79,7 @@ export async function GET(
     }
 
     // Extract failed images from imageStatuses
-    const imageStatuses = (job.imageStatuses as ImageStatus[]) || []
+    const imageStatuses = job.imageStatuses || []
     const failedItems = imageStatuses
       .filter((img) => img.status === 'failed')
       .map((img) => ({

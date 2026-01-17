@@ -1,8 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import type { Itinerary } from '@/payload-types'
 
 export const maxDuration = 60 // Allow up to 60s for AI enhancement
+
+// Lexical RichText types for internal processing
+interface RichTextNode {
+  text?: string
+  type?: string
+  children?: RichTextNode[]
+  [key: string]: unknown
+}
+
+interface RichTextInput {
+  root?: {
+    children?: RichTextNode[]
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+// Type for segment blocks with description fields
+interface SegmentBlock {
+  descriptionOriginal?: RichTextInput | null
+  descriptionEnhanced?: RichTextInput | null
+  [key: string]: unknown
+}
+
+// Type for day with segments
+interface Day {
+  segments?: SegmentBlock[]
+  [key: string]: unknown
+}
+
+// Type for FAQ items
+interface FaqItem {
+  question?: string
+  answerOriginal?: RichTextInput | null
+  answerEnhanced?: RichTextInput | null
+  [key: string]: unknown
+}
+
+// Type for overview with richtext fields
+interface Overview {
+  summaryOriginal?: RichTextInput | null
+  summaryEnhanced?: RichTextInput | null
+  [key: string]: unknown
+}
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
@@ -82,16 +127,6 @@ async function validateAuth(request: NextRequest): Promise<boolean> {
   return false
 }
 
-// Legacy function for backward compatibility - not used
-function validateApiKey(request: NextRequest): boolean {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false
-  }
-  const token = authHeader.slice(7)
-  return token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY
-}
-
 async function enhanceWithAI(content: string, promptType: keyof typeof ENHANCEMENT_PROMPTS, extra?: { question?: string }): Promise<string> {
   let prompt = ENHANCEMENT_PROMPTS[promptType].replace('{content}', content)
   if (extra?.question) {
@@ -123,12 +158,10 @@ async function enhanceWithAI(content: string, promptType: keyof typeof ENHANCEME
   return data.choices?.[0]?.message?.content?.trim() || content
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractPlainText(richText: any): string {
+function extractPlainText(richText: RichTextInput | null | undefined): string {
   if (!richText?.root?.children) return ''
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function getText(node: any): string {
+  function getText(node: RichTextNode): string {
     if (node.text) return node.text
     if (node.children) {
       return node.children.map(getText).join('')
@@ -139,8 +172,7 @@ function extractPlainText(richText: any): string {
   return richText.root.children.map(getText).join('\n').trim()
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function textToRichText(text: string): any {
+function textToRichText(text: string): RichTextInput {
   return {
     root: {
       type: 'root',
@@ -195,14 +227,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const payload = await getPayload({ config })
-
   try {
+    const payload = await getPayload({ config })
+
     const itinerary = await payload.findByID({
       collection: 'itineraries',
       id: itineraryId,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    }) as Record<string, any>
+    }) as Itinerary | null
 
     if (!itinerary) {
       return NextResponse.json(
@@ -211,8 +242,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let updateData: Record<string, any> = {}
+    // Update data structure for Payload - using Record for flexible updates
+    let updateData: Record<string, unknown> = {}
     let enhanced = 0
 
     if (target === 'segment') {
@@ -224,8 +255,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const days = (itinerary.days as any[]) || []
+      const days = (itinerary.days || []) as Day[]
       if (!days[dayIndex]?.segments?.[segmentIndex]) {
         return NextResponse.json(
           { success: false, error: 'Segment not found' },
@@ -249,9 +279,8 @@ export async function POST(request: NextRequest) {
       enhanced = 1
     } else if (target === 'overview') {
       // Enhance overview summary
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const overview = itinerary.overview as any
-      const originalText = extractPlainText(overview?.summaryOriginal)
+      const overview = itinerary.overview
+      const originalText = extractPlainText(overview?.summaryOriginal as RichTextInput | null | undefined)
 
       if (!originalText) {
         return NextResponse.json(
@@ -291,8 +320,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const faqs = (itinerary.faqItems as any[]) || []
+      const faqs: FaqItem[] = itinerary.faqItems || []
       if (!faqs[faqIndex]) {
         return NextResponse.json(
           { success: false, error: 'FAQ not found' },
@@ -312,16 +340,13 @@ export async function POST(request: NextRequest) {
 
       const enhancedText = await enhanceWithAI(originalAnswer, 'faq', { question: faq.question })
       faqs[faqIndex].answerEnhanced = textToRichText(enhancedText)
-      updateData = { faqs }
+      updateData = { faqItems: faqs }
       enhanced = 1
     } else if (target === 'all') {
-      // Enhance all content
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const days = JSON.parse(JSON.stringify((itinerary.days as any[]) || []))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const faqs = JSON.parse(JSON.stringify((itinerary.faqItems as any[]) || []))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const overview = JSON.parse(JSON.stringify(itinerary.overview as any || {}))
+      // Enhance all content - deep clone to avoid mutating original
+      const days: Day[] = JSON.parse(JSON.stringify(itinerary.days || []))
+      const faqs: FaqItem[] = JSON.parse(JSON.stringify(itinerary.faqItems || []))
+      const overview: Overview = JSON.parse(JSON.stringify(itinerary.overview || {}))
 
       // Enhance overview
       const overviewText = extractPlainText(overview?.summaryOriginal)
@@ -361,7 +386,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      updateData = { days, faqs, overview }
+      updateData = { days, faqItems: faqs, overview }
     }
 
     // Update itinerary

@@ -27,20 +27,22 @@ export const plugins: Plugin[] = [
   redirectsPlugin({
     collections: ['pages', 'posts'],
     overrides: {
-      // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
-      fields: ({ defaultFields }) => {
-        return defaultFields.map((field) => {
+      // Field override to add description to the 'from' field
+      // Type assertion required because Payload's field types don't preserve
+      // the exact type when spreading and modifying admin properties
+      fields: ({ defaultFields }) =>
+        defaultFields.map((field) => {
           if ('name' in field && field.name === 'from') {
             return {
               ...field,
               admin: {
+                ...('admin' in field ? field.admin : {}),
                 description: 'You will need to rebuild the website when changing this field.',
               },
-            }
+            } as typeof field
           }
           return field
-        })
-      },
+        }),
       hooks: {
         afterChange: [revalidateRedirects],
       },

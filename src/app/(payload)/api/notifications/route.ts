@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayload } from 'payload'
+import { getPayload, Where } from 'payload'
 import config from '@payload-config'
 
 /**
@@ -50,8 +50,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Build query
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: Record<string, any> = {}
+    const where: Where = {}
 
     if (unreadOnly) {
       where.read = { equals: false }

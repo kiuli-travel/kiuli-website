@@ -111,7 +111,9 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       relationTo: 'media',
       admin: {
         description: 'Primary hero image for the itinerary page',
-        // ImageSelector removed - was crashing page (designed as modal, not field component)
+        components: {
+          Field: '@/components/admin/ImageSelectorField#ImageSelectorField',
+        },
       },
     },
     {
@@ -304,7 +306,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'relationship',
                   relationTo: 'media',
                   hasMany: true,
-                  // ImageSelector removed - was crashing page
                 },
                 {
                   name: 'inclusions',
@@ -351,7 +352,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'relationship',
                   relationTo: 'media',
                   hasMany: true,
-                  // ImageSelector removed - was crashing page
                 },
               ],
             },
@@ -479,7 +479,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       hasMany: true,
       admin: {
         description: 'All images associated with this itinerary',
-        // ImageSelector removed - was crashing page
       },
     },
 

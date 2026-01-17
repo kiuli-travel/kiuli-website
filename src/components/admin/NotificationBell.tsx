@@ -137,31 +137,32 @@ export const NotificationBell: React.FC = () => {
   }
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', marginRight: '1rem' }}>
+    <div ref={dropdownRef} style={{ position: 'relative', padding: '0.5rem 1rem', marginTop: '0.5rem' }}>
       {/* Bell button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: 'relative',
-          background: 'transparent',
-          border: 'none',
+          background: '#f0f0f0',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
           cursor: 'pointer',
-          padding: '0.5rem',
-          fontSize: '1.25rem',
-          color: '#666',
+          padding: '0.5rem 1rem',
+          fontSize: '1rem',
+          color: '#333',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: '0.5rem',
+          width: '100%',
         }}
         title="Notifications"
       >
         {'\ud83d\udd14'}
+        <span>Notifications</span>
         {unreadCount > 0 && (
           <span
             style={{
-              position: 'absolute',
-              top: '0',
-              right: '0',
               backgroundColor: '#dc3545',
               color: '#fff',
               fontSize: '0.625rem',
@@ -173,6 +174,7 @@ export const NotificationBell: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               padding: '0 4px',
+              marginLeft: 'auto',
             }}
           >
             {unreadCount > 99 ? '99+' : unreadCount}

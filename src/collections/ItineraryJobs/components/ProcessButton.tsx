@@ -36,7 +36,7 @@ export const ProcessButton: React.FC = () => {
       if (response.ok) {
         if (result.success) {
           setMessage(
-            `Success! Processing completed in ${result.duration}s. Payload ID: ${result.payloadId}`,
+            `Success! Processing started. Job ID: ${result.jobId}. Check notifications for progress.`,
           )
         } else {
           setMessage(`Warning: Processing completed with errors. ${result.error || ''}`)

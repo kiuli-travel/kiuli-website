@@ -32,13 +32,17 @@ function extractCountries(segments) {
 
 /**
  * Extract highlights from segments
+ * Note: iTrvl data has name=null, property name is in title or supplierName
  */
 function extractHighlights(segments) {
   const highlights = [];
 
   for (const segment of segments) {
-    if ((segment.type === 'stay' || segment.type === 'accommodation') && segment.name) {
-      highlights.push(segment.name);
+    if (segment.type === 'stay' || segment.type === 'accommodation') {
+      const propertyName = segment.name || segment.title || segment.supplierName;
+      if (propertyName) {
+        highlights.push(propertyName);
+      }
     }
   }
 

@@ -55,6 +55,34 @@ Original Answer: {content}
 Respond with ONLY the enhanced answer:`,
 }
 
+/**
+ * Validate authentication via Payload session OR API key
+ */
+async function validateAuth(request: NextRequest): Promise<boolean> {
+  // First check for Bearer token (Lambda/external calls)
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    if (token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY) {
+      return true
+    }
+  }
+
+  // Then check for Payload session (admin UI)
+  try {
+    const payload = await getPayload({ config })
+    const { user } = await payload.auth({ headers: request.headers })
+    if (user) {
+      return true
+    }
+  } catch {
+    // Session check failed
+  }
+
+  return false
+}
+
+// Legacy function for backward compatibility - not used
 function validateApiKey(request: NextRequest): boolean {
   const authHeader = request.headers.get('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -133,8 +161,8 @@ function textToRichText(text: string): any {
 }
 
 export async function POST(request: NextRequest) {
-  // Validate authentication
-  if (!validateApiKey(request)) {
+  // Validate authentication (session or API key)
+  if (!(await validateAuth(request))) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized: Invalid or missing API key' },
       { status: 401 }

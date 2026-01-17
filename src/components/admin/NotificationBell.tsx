@@ -22,13 +22,20 @@ export const NotificationBell: React.FC = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications?limit=10&unread=false')
+      const response = await fetch('/api/notifications?limit=10&unread=false', {
+        credentials: 'include',  // Include session cookies
+      })
+      if (!response.ok) {
+        // Silently fail on auth errors - user may not be logged in
+        return
+      }
       const data = await response.json()
       if (data.success) {
         setNotifications(data.notifications || [])
         setUnreadCount(data.unreadCount || 0)
       }
     } catch (error) {
+      // Silently fail - notifications are non-critical
       console.error('Failed to fetch notifications:', error)
     }
   }
@@ -56,6 +63,7 @@ export const NotificationBell: React.FC = () => {
       await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'read',
           notificationIds: [notificationId],
@@ -73,6 +81,7 @@ export const NotificationBell: React.FC = () => {
       await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'read',
           markAll: true,

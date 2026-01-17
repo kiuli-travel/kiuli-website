@@ -33,6 +33,7 @@ export const JobControlPanel: React.FC = () => {
       const response = await fetch(`/api/job-control/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action }),
       })
 

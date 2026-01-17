@@ -48,7 +48,9 @@ export const ImageSelector: React.FC<ImageSelectorProps> = ({
         sort: '-createdAt',
       })
 
-      const response = await fetch(`/api/media?${params}`)
+      const response = await fetch(`/api/media?${params}`, {
+        credentials: 'include',
+      })
       const data = await response.json()
 
       if (data.docs) {

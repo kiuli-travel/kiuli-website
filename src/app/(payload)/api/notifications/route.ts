@@ -2,19 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
-function validateApiKey(request: NextRequest): boolean {
+/**
+ * Validate authentication via Payload session OR API key
+ * Returns true if authenticated, false otherwise
+ */
+async function validateAuth(request: NextRequest): Promise<boolean> {
+  // First check for Bearer token (Lambda/external calls)
   const authHeader = request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    if (token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY) {
+      return true
+    }
   }
-  const token = authHeader.slice(7)
-  return token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY
+
+  // Then check for Payload session (admin UI)
+  try {
+    const payload = await getPayload({ config })
+    const { user } = await payload.auth({ headers: request.headers })
+    if (user) {
+      return true
+    }
+  } catch {
+    // Session check failed, not authenticated
+  }
+
+  return false
 }
 
 // GET - List notifications
 export async function GET(request: NextRequest) {
-  // Validate authentication
-  if (!validateApiKey(request)) {
+  // Validate authentication (session or API key)
+  if (!(await validateAuth(request))) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized: Invalid or missing API key' },
       { status: 401 }
@@ -81,8 +100,8 @@ export async function GET(request: NextRequest) {
 
 // POST - Create or manage notifications
 export async function POST(request: NextRequest) {
-  // Validate authentication
-  if (!validateApiKey(request)) {
+  // Validate authentication (session or API key)
+  if (!(await validateAuth(request))) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized: Invalid or missing API key' },
       { status: 401 }

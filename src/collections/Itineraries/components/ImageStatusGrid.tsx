@@ -34,20 +34,36 @@ export const ImageStatusGrid: React.FC = () => {
       // First, find the job for this itinerary
       const jobsResponse = await fetch(
         `/api/itinerary-jobs?where[itineraryId][equals]=${encodeURIComponent(itineraryId)}&sort=-createdAt&limit=1`,
+        { credentials: 'include' }
       )
+      if (!jobsResponse.ok) {
+        setJobStatus(null)
+        return
+      }
       const jobsData = await jobsResponse.json()
 
       if (jobsData.docs && jobsData.docs.length > 0) {
         const job = jobsData.docs[0]
         // Fetch detailed status
-        const statusResponse = await fetch(`/api/job-status/${job.id}`)
+        const statusResponse = await fetch(`/api/job-status/${job.id}`, {
+          credentials: 'include',
+        })
+        if (!statusResponse.ok) {
+          setJobStatus(null)
+          return
+        }
         const statusData = await statusResponse.json()
+        // Ensure images object exists to prevent crashes
+        if (statusData && !statusData.images) {
+          statusData.images = { total: 0, processed: 0, skipped: 0, failed: 0, labeled: 0 }
+        }
         setJobStatus(statusData)
       } else {
         setJobStatus(null)
       }
     } catch (err) {
       console.error('Failed to fetch job status:', err)
+      setJobStatus(null)
     } finally {
       setIsLoading(false)
     }

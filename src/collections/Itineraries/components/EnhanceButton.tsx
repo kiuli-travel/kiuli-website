@@ -37,6 +37,7 @@ export const EnhanceButton: React.FC<EnhanceButtonProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           itineraryId: id,
           target,

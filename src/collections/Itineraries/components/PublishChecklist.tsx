@@ -134,6 +134,7 @@ export const PublishChecklist: React.FC = () => {
                   fontSize: '1rem',
                   width: '20px',
                   textAlign: 'center',
+                  color: passed ? '#155724' : '#721c24',
                 }}
               >
                 {passed ? '\u2713' : '\u2717'}

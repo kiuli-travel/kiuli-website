@@ -155,3 +155,28 @@ export const EnhanceButton: React.FC<EnhanceButtonProps> = ({
 // Pre-configured versions for different contexts
 export const EnhanceOverviewButton: React.FC = () => <EnhanceButton target="overview" />
 export const EnhanceWhyKiuliButton: React.FC = () => <EnhanceButton target="whyKiuli" />
+
+// Segment button extracts indices from field path
+interface EnhanceSegmentButtonProps {
+  path: string // Payload provides this automatically
+}
+
+export const EnhanceSegmentButton: React.FC<EnhanceSegmentButtonProps> = ({ path }) => {
+  // Parse path: "days.0.segments.1.enhanceUI"
+  const parts = path.split('.')
+  const daysIndex = parts.indexOf('days')
+  const segmentsIndex = parts.indexOf('segments')
+
+  if (daysIndex === -1 || segmentsIndex === -1) {
+    return <div style={{ color: 'red', fontSize: '0.875rem' }}>Invalid path: {path}</div>
+  }
+
+  const dayIndex = parseInt(parts[daysIndex + 1], 10)
+  const segmentIndex = parseInt(parts[segmentsIndex + 1], 10)
+
+  if (isNaN(dayIndex) || isNaN(segmentIndex)) {
+    return <div style={{ color: 'red', fontSize: '0.875rem' }}>Cannot parse indices from path: {path}</div>
+  }
+
+  return <EnhanceButton target="segment" dayIndex={dayIndex} segmentIndex={segmentIndex} />
+}

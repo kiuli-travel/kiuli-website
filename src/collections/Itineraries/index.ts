@@ -289,6 +289,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   },
                 },
                 {
+                  name: 'enhanceUI',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton',
+                    },
+                  },
+                },
+                {
                   name: 'nights',
                   type: 'number',
                   min: 1,
@@ -348,6 +357,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   },
                 },
                 {
+                  name: 'enhanceUI',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton',
+                    },
+                  },
+                },
+                {
                   name: 'images',
                   type: 'relationship',
                   relationTo: 'media',
@@ -399,6 +417,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'richText',
                   admin: {
                     description: 'AI-enhanced description (editable)',
+                  },
+                },
+                {
+                  name: 'enhanceUI',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton',
+                    },
                   },
                 },
                 {

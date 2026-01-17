@@ -190,11 +190,14 @@ export const NotificationBell: React.FC = () => {
             top: '100%',
             right: '0',
             width: '320px',
+            maxHeight: 'calc(100vh - 120px)',
             backgroundColor: '#fff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: 1000,
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           {/* Header */}
@@ -206,6 +209,7 @@ export const NotificationBell: React.FC = () => {
               justifyContent: 'space-between',
               alignItems: 'center',
               backgroundColor: '#f8f9fa',
+              flexShrink: 0,
             }}
           >
             <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>Notifications</span>
@@ -228,7 +232,7 @@ export const NotificationBell: React.FC = () => {
           </div>
 
           {/* Notifications list */}
-          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {notifications.length === 0 ? (
               <div
                 style={{
@@ -321,6 +325,7 @@ export const NotificationBell: React.FC = () => {
               borderTop: '1px solid #e0e0e0',
               backgroundColor: '#f8f9fa',
               textAlign: 'center',
+              flexShrink: 0,
             }}
           >
             <Link

@@ -61,7 +61,7 @@ export const JobControlPanel: React.FC = () => {
   }
 
   const canCancel = status === 'pending' || status === 'processing'
-  const canRetry = status === 'failed'
+  const canRetry = status === 'failed' || status === 'completed'
   const canRetryFailed = (status === 'completed' || status === 'failed') && failedImages > 0
 
   return (
@@ -93,7 +93,7 @@ export const JobControlPanel: React.FC = () => {
             onClick={() => handleAction('retry')}
             disabled={isLoading !== null}
           >
-            {isLoading === 'retry' ? 'Restarting...' : '\u21bb Retry Job'}
+            {isLoading === 'retry' ? 'Restarting...' : '\u21bb Re-run Job'}
           </Button>
         )}
 

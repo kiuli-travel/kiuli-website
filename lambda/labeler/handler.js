@@ -26,6 +26,12 @@ exports.handler = async (event) => {
   console.log(`[Labeler] Job: ${jobId}, Batch: ${batchIndex}`);
 
   try {
+    // 0. Get job for current progress
+    const job = await payload.getJob(jobId);
+    if (!job) {
+      throw new Error(`Job ${jobId} not found`);
+    }
+
     // 1. Update job phase
     if (batchIndex === 0) {
       await payload.updateJob(jobId, {

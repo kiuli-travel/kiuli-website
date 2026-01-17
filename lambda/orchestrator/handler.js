@@ -20,13 +20,14 @@ const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'eu-no
 
 /**
  * Map iTrvl segment type to Kiuli segment type enum
+ * Note: entry/exit/point are sub-types of transfer for Media sourceSegmentType
  */
 function mapSegmentType(type) {
   if (!type) return null;
   const t = type.toLowerCase();
   if (t === 'stay' || t === 'accommodation') return 'stay';
   if (t === 'service' || t === 'activity' || t === 'tour') return 'activity';
-  if (t === 'transfer' || t === 'flight' || t === 'transport' || t === 'road') return 'transfer';
+  if (t === 'transfer' || t === 'flight' || t === 'transport' || t === 'road' || t === 'boat' || t === 'entry' || t === 'exit' || t === 'point') return 'transfer';
   return null;
 }
 

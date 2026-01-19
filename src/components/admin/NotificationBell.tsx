@@ -18,9 +18,7 @@ export const NotificationBell: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
 
   const fetchNotifications = async () => {
     try {
@@ -138,40 +136,12 @@ export const NotificationBell: React.FC = () => {
     return date.toLocaleDateString()
   }
 
-  const handleToggle = () => {
-    if (!isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      // Position dropdown to the RIGHT of the button, extending into main content area
-      const dropdownWidth = 320
-      let left = rect.right + 8 // 8px gap from button's right edge
-
-      // If it would go off-screen to the right, position from right edge of viewport
-      if (left + dropdownWidth > window.innerWidth - 16) {
-        left = window.innerWidth - dropdownWidth - 16
-      }
-
-      // Calculate top - align with button top, or adjust if too low
-      let top = rect.top
-      const maxHeight = window.innerHeight - top - 16
-      if (maxHeight < 200) {
-        // Not enough room below, position so dropdown fits
-        top = window.innerHeight - 400 - 16
-        if (top < 16) top = 16
-      }
-
-      setDropdownPosition({
-        top: top,
-        left: left,
-      })
-    }
-    setIsOpen(!isOpen)
-  }
+  const handleToggle = () => setIsOpen(!isOpen)
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative', padding: '0.5rem 1rem', marginTop: '0.5rem' }}>
       {/* Bell button */}
       <button
-        ref={buttonRef}
         onClick={handleToggle}
         style={{
           position: 'relative',
@@ -214,19 +184,20 @@ export const NotificationBell: React.FC = () => {
         )}
       </button>
 
-      {/* Dropdown - uses position:fixed to escape sidebar overflow clipping */}
+      {/* Dropdown - positioned below button, constrained to sidebar width */}
       {isOpen && (
         <div
           style={{
-            position: 'fixed',
-            top: dropdownPosition.top,
-            left: dropdownPosition.left,
-            width: '320px',
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: '4px',
             maxHeight: '400px',
             backgroundColor: '#fff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 10000,
+            zIndex: 1000,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -314,9 +285,9 @@ export const NotificationBell: React.FC = () => {
                             fontSize: '0.875rem',
                             color: '#333',
                             fontWeight: notification.read ? 400 : 500,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word',
+                            lineHeight: '1.3',
                           }}
                         >
                           {notification.message}

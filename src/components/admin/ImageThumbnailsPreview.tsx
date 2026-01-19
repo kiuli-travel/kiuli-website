@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useField } from '@payloadcms/ui'
 import Image from 'next/image'
+import { ImageSelectionModal } from './ImageSelectionModal'
 
 interface MediaItem {
   id: number
@@ -17,8 +18,8 @@ interface ImageThumbnailsPreviewProps {
 }
 
 /**
- * Read-only thumbnail preview for hasMany relationship fields.
- * Shows thumbnails of selected images without replacing the relationship picker.
+ * Thumbnail preview with add/clear functionality for hasMany relationship fields.
+ * Shows thumbnails of selected images and provides a modal for adding from library.
  * Use as a UI field placed before the actual relationship field.
  */
 export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ path }) => {
@@ -30,10 +31,20 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
   const { value, setValue } = useField<number[] | null>({ path: imagesPath })
   const [images, setImages] = useState<MediaItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleClearAll = () => {
     setValue([])
     setImages([])
+  }
+
+  const handleAddImages = (selectedIds: number[]) => {
+    setValue(selectedIds)
+  }
+
+  const handleRemoveImage = (idToRemove: number) => {
+    const newValue = (value || []).filter(id => id !== idToRemove)
+    setValue(newValue)
   }
 
   // Fetch image data when value changes
@@ -73,11 +84,6 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
     fetchImages()
   }, [value])
 
-  // Don't render anything if no images
-  if (!value || value.length === 0) {
-    return null
-  }
-
   const getImageSrc = (image: MediaItem): string => {
     if (image.imgixUrl) {
       return `${image.imgixUrl}?w=100&h=100&fit=crop&auto=format`
@@ -88,39 +94,63 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
     return `/api/media/file/${image.filename}`
   }
 
+  const currentIds = value || []
+
   return (
     <div style={{ marginBottom: '0.5rem' }}>
+      {/* Header with count and actions */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '0.5rem',
+          gap: '8px',
         }}
       >
         <span style={{ fontSize: '0.75rem', color: '#666' }}>
           {images.length} image{images.length !== 1 ? 's' : ''} selected
         </span>
-        <button
-          type="button"
-          onClick={handleClearAll}
-          style={{
-            background: 'transparent',
-            border: '1px solid #dc3545',
-            borderRadius: '4px',
-            color: '#dc3545',
-            fontSize: '0.75rem',
-            padding: '2px 8px',
-            cursor: 'pointer',
-          }}
-        >
-          Clear All
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            style={{
+              background: '#007bff',
+              border: 'none',
+              borderRadius: '4px',
+              color: '#fff',
+              fontSize: '0.75rem',
+              padding: '4px 10px',
+              cursor: 'pointer',
+            }}
+          >
+            + Add Images
+          </button>
+          {currentIds.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              style={{
+                background: 'transparent',
+                border: '1px solid #dc3545',
+                borderRadius: '4px',
+                color: '#dc3545',
+                fontSize: '0.75rem',
+                padding: '2px 8px',
+                cursor: 'pointer',
+              }}
+            >
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Thumbnails */}
       {isLoading ? (
         <div style={{ color: '#999', fontSize: '0.875rem' }}>Loading thumbnails...</div>
-      ) : (
+      ) : images.length > 0 ? (
         <div
           style={{
             display: 'flex',
@@ -150,10 +180,50 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
                 sizes="60px"
                 unoptimized={!image.imgixUrl}
               />
+              {/* Remove button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRemoveImage(image.id)
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  right: '2px',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  backgroundColor: 'rgba(220, 53, 69, 0.9)',
+                  color: '#fff',
+                  fontSize: '12px',
+                  lineHeight: '1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="Remove image"
+              >
+                &times;
+              </button>
             </div>
           ))}
         </div>
+      ) : (
+        <div style={{ color: '#999', fontSize: '0.75rem', fontStyle: 'italic' }}>
+          No images selected. Click &quot;+ Add Images&quot; to browse the library.
+        </div>
       )}
+
+      {/* Selection Modal */}
+      <ImageSelectionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleAddImages}
+        currentlySelected={currentIds}
+      />
     </div>
   )
 }

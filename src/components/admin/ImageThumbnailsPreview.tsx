@@ -27,9 +27,14 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
   // Images field path: days.0.segments.0.images
   const imagesPath = path.replace(/\.imagePreviewUI$/, '.images')
 
-  const { value } = useField<number[] | null>({ path: imagesPath })
+  const { value, setValue } = useField<number[] | null>({ path: imagesPath })
   const [images, setImages] = useState<MediaItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
+
+  const handleClearAll = () => {
+    setValue([])
+    setImages([])
+  }
 
   // Fetch image data when value changes
   useEffect(() => {
@@ -87,12 +92,30 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
     <div style={{ marginBottom: '0.5rem' }}>
       <div
         style={{
-          fontSize: '0.75rem',
-          color: '#666',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           marginBottom: '0.5rem',
         }}
       >
-        {images.length} image{images.length !== 1 ? 's' : ''} selected
+        <span style={{ fontSize: '0.75rem', color: '#666' }}>
+          {images.length} image{images.length !== 1 ? 's' : ''} selected
+        </span>
+        <button
+          type="button"
+          onClick={handleClearAll}
+          style={{
+            background: 'transparent',
+            border: '1px solid #dc3545',
+            borderRadius: '4px',
+            color: '#dc3545',
+            fontSize: '0.75rem',
+            padding: '2px 8px',
+            cursor: 'pointer',
+          }}
+        >
+          Clear All
+        </button>
       </div>
 
       {isLoading ? (

@@ -18,7 +18,9 @@ export const NotificationBell: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   const fetchNotifications = async () => {
     try {
@@ -136,11 +138,30 @@ export const NotificationBell: React.FC = () => {
     return date.toLocaleDateString()
   }
 
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      // Position dropdown below button, aligned to left edge
+      // Ensure it doesn't go off-screen to the right
+      const dropdownWidth = 320
+      let left = rect.left
+      if (left + dropdownWidth > window.innerWidth - 16) {
+        left = window.innerWidth - dropdownWidth - 16
+      }
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: left,
+      })
+    }
+    setIsOpen(!isOpen)
+  }
+
   return (
     <div ref={dropdownRef} style={{ position: 'relative', padding: '0.5rem 1rem', marginTop: '0.5rem' }}>
       {/* Bell button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        ref={buttonRef}
+        onClick={handleToggle}
         style={{
           position: 'relative',
           background: '#f0f0f0',
@@ -182,19 +203,19 @@ export const NotificationBell: React.FC = () => {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown - uses position:fixed to escape sidebar overflow clipping */}
       {isOpen && (
         <div
           style={{
-            position: 'absolute',
-            top: '100%',
-            right: '0',
+            position: 'fixed',
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
             width: '320px',
-            maxHeight: '350px',
+            maxHeight: `calc(100vh - ${dropdownPosition.top + 16}px)`,
             backgroundColor: '#fff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 1000,
+            zIndex: 10000,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',

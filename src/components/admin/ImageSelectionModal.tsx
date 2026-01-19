@@ -331,6 +331,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   backgroundColor: '#fff',
+                  color: '#333',
                   minWidth: '140px',
                 }}
               >
@@ -351,6 +352,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   backgroundColor: '#fff',
+                  color: '#333',
                   minWidth: '140px',
                 }}
               >
@@ -371,6 +373,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   backgroundColor: '#fff',
+                  color: '#333',
                   minWidth: '180px',
                   maxWidth: '220px',
                 }}
@@ -391,6 +394,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   backgroundColor: '#f5f5f5',
+                  color: '#333',
                   cursor: 'pointer',
                   alignSelf: 'flex-end',
                 }}
@@ -607,6 +611,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
               border: '1px solid #ccc',
               borderRadius: '4px',
               backgroundColor: '#fff',
+              color: '#333',
               cursor: 'pointer',
               fontSize: '0.875rem',
             }}

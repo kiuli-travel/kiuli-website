@@ -63,10 +63,33 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [countryFilter, setCountryFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
+  const [propertyFilter, setPropertyFilter] = useState('')
+  const [properties, setProperties] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [totalDocs, setTotalDocs] = useState(0)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Fetch distinct sourceProperty values on mount
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        const res = await fetch('/api/media?limit=500&depth=0', {
+          credentials: 'include',
+        })
+        const data = await res.json()
+        const uniqueProperties = [...new Set(
+          data.docs
+            .map((m: MediaItem & { sourceProperty?: string }) => m.sourceProperty)
+            .filter((p: string | null | undefined) => p && p.trim() !== '')
+        )].sort() as string[]
+        setProperties(uniqueProperties)
+      } catch (err) {
+        console.error('Failed to fetch properties:', err)
+      }
+    }
+    fetchProperties()
+  }, [])
 
   // Reset selection when modal opens
   useEffect(() => {
@@ -99,9 +122,12 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
     if (typeFilter) {
       params.append('where[imageType][equals]', typeFilter)
     }
+    if (propertyFilter) {
+      params.append('where[sourceProperty][equals]', propertyFilter)
+    }
 
     return `/api/media?${params.toString()}`
-  }, [searchQuery, countryFilter, typeFilter])
+  }, [searchQuery, countryFilter, typeFilter, propertyFilter])
 
   // Fetch images
   const fetchImages = useCallback(async (pageNum: number, append: boolean = false) => {
@@ -132,7 +158,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
       setPage(1)
       fetchImages(1, false)
     }
-  }, [isOpen, countryFilter, typeFilter, fetchImages])
+  }, [isOpen, countryFilter, typeFilter, propertyFilter, fetchImages])
 
   // Debounced search
   useEffect(() => {
@@ -199,6 +225,7 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
     setSearchQuery('')
     setCountryFilter('')
     setTypeFilter('')
+    setPropertyFilter('')
   }
 
   // Get image src
@@ -292,40 +319,70 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
           />
 
           {/* Filters */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <select
-              value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                fontSize: '0.875rem',
-                backgroundColor: '#fff',
-              }}
-            >
-              {COUNTRY_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>Country</label>
+              <select
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  backgroundColor: '#fff',
+                  minWidth: '140px',
+                }}
+              >
+                {COUNTRY_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                fontSize: '0.875rem',
-                backgroundColor: '#fff',
-              }}
-            >
-              {IMAGE_TYPE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>Type</label>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  backgroundColor: '#fff',
+                  minWidth: '140px',
+                }}
+              >
+                {IMAGE_TYPE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
 
-            {(searchQuery || countryFilter || typeFilter) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#666', fontWeight: 500 }}>Lodge/Property</label>
+              <select
+                value={propertyFilter}
+                onChange={(e) => setPropertyFilter(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem',
+                  backgroundColor: '#fff',
+                  minWidth: '180px',
+                  maxWidth: '220px',
+                }}
+              >
+                <option value="">All Properties</option>
+                {properties.map(prop => (
+                  <option key={prop} value={prop}>{prop}</option>
+                ))}
+              </select>
+            </div>
+
+            {(searchQuery || countryFilter || typeFilter || propertyFilter) && (
               <button
                 onClick={clearFilters}
                 style={{
@@ -335,13 +392,14 @@ export const ImageSelectionModal: React.FC<ImageSelectionModalProps> = ({
                   fontSize: '0.875rem',
                   backgroundColor: '#f5f5f5',
                   cursor: 'pointer',
+                  alignSelf: 'flex-end',
                 }}
               >
                 Clear Filters
               </button>
             )}
 
-            <div style={{ marginLeft: 'auto', fontSize: '0.875rem', color: '#666' }}>
+            <div style={{ marginLeft: 'auto', fontSize: '0.875rem', color: '#666', alignSelf: 'flex-end' }}>
               {totalDocs} images found
             </div>
           </div>

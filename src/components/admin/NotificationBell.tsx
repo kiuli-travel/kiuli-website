@@ -141,15 +141,26 @@ export const NotificationBell: React.FC = () => {
   const handleToggle = () => {
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
-      // Position dropdown below button, aligned to left edge
-      // Ensure it doesn't go off-screen to the right
+      // Position dropdown to the RIGHT of the button, extending into main content area
       const dropdownWidth = 320
-      let left = rect.left
+      let left = rect.right + 8 // 8px gap from button's right edge
+
+      // If it would go off-screen to the right, position from right edge of viewport
       if (left + dropdownWidth > window.innerWidth - 16) {
         left = window.innerWidth - dropdownWidth - 16
       }
+
+      // Calculate top - align with button top, or adjust if too low
+      let top = rect.top
+      const maxHeight = window.innerHeight - top - 16
+      if (maxHeight < 200) {
+        // Not enough room below, position so dropdown fits
+        top = window.innerHeight - 400 - 16
+        if (top < 16) top = 16
+      }
+
       setDropdownPosition({
-        top: rect.bottom + 4,
+        top: top,
         left: left,
       })
     }
@@ -211,7 +222,7 @@ export const NotificationBell: React.FC = () => {
             top: dropdownPosition.top,
             left: dropdownPosition.left,
             width: '320px',
-            maxHeight: `calc(100vh - ${dropdownPosition.top + 16}px)`,
+            maxHeight: '400px',
             backgroundColor: '#fff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',

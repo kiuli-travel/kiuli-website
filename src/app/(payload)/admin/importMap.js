@@ -25,6 +25,7 @@ import { PublishChecklist as PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44 }
 import { ImageSelectorField as ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e } from '@/components/admin/ImageSelectorField'
 import { EnhanceOverviewButton as EnhanceOverviewButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
 import { EnhanceSegmentButton as EnhanceSegmentButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
+import { ImageThumbnailsPreview as ImageThumbnailsPreview_4de4e0e6b22a238573dce8aa53b47d99 } from '@/components/admin/ImageThumbnailsPreview'
 import { EnhanceWhyKiuliButton as EnhanceWhyKiuliButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
 import { ProcessButton as ProcessButton_6f8f56340afe606e50afe37e4a9f28d1 } from '@/collections/ItineraryJobs/components/ProcessButton'
 import { JobControlPanel as JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2 } from '@/collections/ItineraryJobs/components/JobControlPanel'
@@ -66,6 +67,7 @@ export const importMap = {
   "@/components/admin/ImageSelectorField#ImageSelectorField": ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e,
   "@/collections/Itineraries/components/EnhanceButton#EnhanceOverviewButton": EnhanceOverviewButton_4402482392cbdf4b96f22257e980d1a3,
   "@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton": EnhanceSegmentButton_4402482392cbdf4b96f22257e980d1a3,
+  "@/components/admin/ImageThumbnailsPreview#ImageThumbnailsPreview": ImageThumbnailsPreview_4de4e0e6b22a238573dce8aa53b47d99,
   "@/collections/Itineraries/components/EnhanceButton#EnhanceWhyKiuliButton": EnhanceWhyKiuliButton_4402482392cbdf4b96f22257e980d1a3,
   "@/collections/ItineraryJobs/components/ProcessButton#ProcessButton": ProcessButton_6f8f56340afe606e50afe37e4a9f28d1,
   "@/collections/ItineraryJobs/components/JobControlPanel#JobControlPanel": JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2,

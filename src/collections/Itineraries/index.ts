@@ -311,6 +311,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                 },
                 {
+                  name: 'imagePreviewUI',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/ImageThumbnailsPreview#ImageThumbnailsPreview',
+                    },
+                  },
+                },
+                {
                   name: 'images',
                   type: 'relationship',
                   relationTo: 'media',
@@ -362,6 +371,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   admin: {
                     components: {
                       Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton',
+                    },
+                  },
+                },
+                {
+                  name: 'imagePreviewUI',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/ImageThumbnailsPreview#ImageThumbnailsPreview',
                     },
                   },
                 },

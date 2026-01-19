@@ -190,7 +190,7 @@ export const NotificationBell: React.FC = () => {
             top: '100%',
             right: '0',
             width: '320px',
-            maxHeight: 'calc(100vh - 120px)',
+            maxHeight: '350px',
             backgroundColor: '#fff',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',

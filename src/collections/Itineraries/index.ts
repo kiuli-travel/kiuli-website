@@ -515,6 +515,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'group',
       admin: {
         description: 'Gated publishing checklist - all must be true to publish',
+        condition: () => false, // Hide raw fields - use publishChecklistUI component instead
       },
       fields: [
         {

@@ -148,10 +148,10 @@ async function handleCancel(payload: Payload, job: ItineraryJob) {
 }
 
 async function handleRetry(payload: Payload, job: ItineraryJob) {
-  // Only allow retry for failed jobs
-  if (job.status !== 'failed') {
+  // Allow retry for failed or completed jobs
+  if (job.status !== 'failed' && job.status !== 'completed') {
     return NextResponse.json(
-      { success: false, error: `Cannot retry job with status: ${job.status}. Only failed jobs can be retried.` },
+      { success: false, error: `Cannot re-run job with status: ${job.status}. Only failed or completed jobs can be re-run.` },
       { status: 400 }
     )
   }
@@ -162,7 +162,7 @@ async function handleRetry(payload: Payload, job: ItineraryJob) {
     id: job.id,
     data: {
       status: 'pending',
-      currentPhase: 'Queued (Retry)',
+      currentPhase: 'Queued (Re-run)',
       progress: 0,
       errorMessage: null,
       errorPhase: null,
@@ -192,16 +192,16 @@ async function handleRetry(payload: Payload, job: ItineraryJob) {
       })
     )
   } catch (err) {
-    console.error('[job-control] Failed to trigger retry:', err)
+    console.error('[job-control] Failed to trigger re-run:', err)
     return NextResponse.json(
-      { success: false, error: 'Failed to trigger retry' },
+      { success: false, error: 'Failed to trigger re-run' },
       { status: 500 }
     )
   }
 
   return NextResponse.json({
     success: true,
-    message: 'Job retry started',
+    message: 'Job re-run started',
     jobId: job.id,
   })
 }

@@ -50,8 +50,10 @@ export const EnhanceButton: React.FC<EnhanceButtonProps> = ({
       const result = await response.json()
 
       if (response.ok && result.success) {
-        setMessage(`Enhanced ${result.enhanced} item(s). Reload to see changes.`)
+        setMessage(`Enhanced ${result.enhanced} item(s). Refreshing...`)
         setMessageType('success')
+        // Auto-refresh to show enhanced content
+        setTimeout(() => window.location.reload(), 1500)
       } else {
         setMessage(result.error || 'Enhancement failed')
         setMessageType('error')

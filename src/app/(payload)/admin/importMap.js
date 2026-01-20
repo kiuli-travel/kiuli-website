@@ -19,6 +19,7 @@ import { HorizontalRuleFeatureClient as HorizontalRuleFeatureClient_e70f5e05f09f
 import { BlocksFeatureClient as BlocksFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { FolderTableCell as FolderTableCell_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
 import { FolderField as FolderField_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
+import { ItinerarySideNav as ItinerarySideNav_f9754fff542dddc3bf4141c51aa09f44 } from '@/collections/Itineraries/components/ItinerarySideNav'
 import { EnhanceAll as EnhanceAll_ec0338562096863f7044cdfe701843c8 } from '@/collections/Itineraries/components/EnhanceAll'
 import { ImageStatusGrid as ImageStatusGrid_5c2c9d3ed51992d83368a5f5852adff8 } from '@/collections/Itineraries/components/ImageStatusGrid'
 import { PublishChecklist as PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44 } from '@/collections/Itineraries/components/PublishChecklist'
@@ -61,6 +62,7 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#BlocksFeatureClient": BlocksFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/ui/rsc#FolderTableCell": FolderTableCell_ab83ff7e88da8d3530831f296ec4756a,
   "@payloadcms/ui/rsc#FolderField": FolderField_ab83ff7e88da8d3530831f296ec4756a,
+  "@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav": ItinerarySideNav_f9754fff542dddc3bf4141c51aa09f44,
   "@/collections/Itineraries/components/EnhanceAll#EnhanceAll": EnhanceAll_ec0338562096863f7044cdfe701843c8,
   "@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid": ImageStatusGrid_5c2c9d3ed51992d83368a5f5852adff8,
   "@/collections/Itineraries/components/PublishChecklist#PublishChecklist": PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44,

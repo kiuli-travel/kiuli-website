@@ -31,6 +31,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   fields: [
     // === ADMIN UI COMPONENTS ===
     {
+      name: 'sideNavUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav',
+        },
+      },
+    },
+    {
       name: 'enhanceAllUI',
       type: 'ui',
       admin: {

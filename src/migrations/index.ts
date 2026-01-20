@@ -9,6 +9,7 @@ import * as migration_20260120_add_reviewed_to_faqs from './20260120_add_reviewe
 import * as migration_20260120_add_version_to_jobs from './20260120_add_version_to_jobs';
 import * as migration_20260120_create_voice_configuration from './20260120_create_voice_configuration';
 import * as migration_20260120_create_destinations from './20260120_create_destinations';
+import * as migration_20260120_create_trip_types from './20260120_create_trip_types';
 
 export const migrations = [
   {
@@ -65,5 +66,10 @@ export const migrations = [
     up: migration_20260120_create_destinations.up,
     down: migration_20260120_create_destinations.down,
     name: '20260120_create_destinations'
+  },
+  {
+    up: migration_20260120_create_trip_types.up,
+    down: migration_20260120_create_trip_types.down,
+    name: '20260120_create_trip_types'
   },
 ];

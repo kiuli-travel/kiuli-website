@@ -15,6 +15,7 @@ import { Media } from './collections/Media'
 import { Notifications } from './collections/Notifications'
 import { Pages } from './collections/Pages'
 import { Posts } from './collections/Posts'
+import { TripTypes } from './collections/TripTypes'
 import { Users } from './collections/Users'
 import { VoiceConfiguration } from './collections/VoiceConfiguration'
 import { Footer } from './Footer/config'
@@ -72,7 +73,7 @@ export default buildConfig({
       connectionString: process.env.POSTGRES_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [

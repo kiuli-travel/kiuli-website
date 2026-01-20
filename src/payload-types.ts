@@ -78,6 +78,7 @@ export interface Config {
     notifications: Notification;
     'voice-configuration': VoiceConfiguration;
     destinations: Destination;
+    'trip-types': TripType;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -106,6 +107,7 @@ export interface Config {
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     'voice-configuration': VoiceConfigurationSelect<false> | VoiceConfigurationSelect<true>;
     destinations: DestinationsSelect<false> | DestinationsSelect<true>;
+    'trip-types': TripTypesSelect<false> | TripTypesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -1846,6 +1848,71 @@ export interface Destination {
   createdAt: string;
 }
 /**
+ * Safari categories for filtering and recommendations
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trip-types".
+ */
+export interface TripType {
+  id: number;
+  /**
+   * Display name (e.g., "Great Migration", "Gorilla Trekking")
+   */
+  name: string;
+  /**
+   * URL slug (e.g., "great-migration", "gorilla-trekking")
+   */
+  slug: string;
+  /**
+   * SEO-optimized description for trip type landing page
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Brief description for cards and listings (max 200 chars)
+   */
+  shortDescription?: string | null;
+  /**
+   * Hero image for trip type landing page
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * Icon identifier for UI (e.g., "binoculars", "gorilla", "heart")
+   */
+  icon?: string | null;
+  /**
+   * SEO meta title (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO meta description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * Display order in listings (lower numbers first)
+   */
+  sortOrder?: number | null;
+  /**
+   * Show in featured trip types on homepage
+   */
+  featured?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -2078,6 +2145,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'destinations';
         value: number | Destination;
+      } | null)
+    | ({
+        relationTo: 'trip-types';
+        value: number | TripType;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -2754,6 +2825,24 @@ export interface DestinationsSelect<T extends boolean = true> {
         id?: T;
       };
   bestTimeToVisit?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trip-types_select".
+ */
+export interface TripTypesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  description?: T;
+  shortDescription?: T;
+  heroImage?: T;
+  icon?: T;
+  metaTitle?: T;
+  metaDescription?: T;
+  sortOrder?: T;
+  featured?: T;
   updatedAt?: T;
   createdAt?: T;
 }

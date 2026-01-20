@@ -9,6 +9,19 @@ interface ChecklistItem {
   description: string
 }
 
+interface Segment {
+  blockType: string
+  reviewed?: boolean
+}
+
+interface Day {
+  segments?: Segment[]
+}
+
+interface FaqItem {
+  reviewed?: boolean
+}
+
 const CHECKLIST_ITEMS: ChecklistItem[] = [
   {
     key: 'allImagesProcessed',
@@ -61,7 +74,33 @@ export const PublishChecklist: React.FC = () => {
     severity: string
   }>
 
-  const allPassed = CHECKLIST_ITEMS.every((item) => publishChecklist[item.key] === true)
+  // Calculate content reviewed status
+  const days = (getDataByPath('days') || []) as Day[]
+  const faqItems = (getDataByPath('faqItems') || []) as FaqItem[]
+
+  let totalSegments = 0
+  let reviewedSegments = 0
+
+  days.forEach((day) => {
+    const segments = day.segments || []
+    segments.forEach((segment) => {
+      totalSegments++
+      if (segment.reviewed) reviewedSegments++
+    })
+  })
+
+  const totalFaqs = faqItems.length
+  const reviewedFaqs = faqItems.filter((f) => f.reviewed).length
+
+  const allContentReviewed =
+    totalSegments > 0 || totalFaqs > 0
+      ? reviewedSegments === totalSegments && reviewedFaqs === totalFaqs
+      : true // No content to review = passes
+
+  const contentReviewLabel = `Content Reviewed (${reviewedSegments}/${totalSegments} segments, ${reviewedFaqs}/${totalFaqs} FAQs)`
+
+  const allStaticPassed = CHECKLIST_ITEMS.every((item) => publishChecklist[item.key] === true)
+  const allPassed = allStaticPassed && allContentReviewed
 
   return (
     <div
@@ -114,6 +153,7 @@ export const PublishChecklist: React.FC = () => {
       </h4>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {/* Static checklist items */}
         {CHECKLIST_ITEMS.map((item) => {
           const passed = publishChecklist[item.key] === true
           return (
@@ -162,6 +202,50 @@ export const PublishChecklist: React.FC = () => {
             </div>
           )
         })}
+
+        {/* Dynamic content reviewed check */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem',
+            backgroundColor: allContentReviewed ? '#d4edda' : '#f8d7da',
+            borderRadius: '4px',
+            border: `1px solid ${allContentReviewed ? '#c3e6cb' : '#f5c6cb'}`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: '1rem',
+              width: '20px',
+              textAlign: 'center',
+              color: allContentReviewed ? '#155724' : '#721c24',
+            }}
+          >
+            {allContentReviewed ? '\u2713' : '\u2717'}
+          </span>
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: allContentReviewed ? '#155724' : '#721c24',
+              }}
+            >
+              {contentReviewLabel}
+            </div>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                color: allContentReviewed ? '#155724' : '#721c24',
+                opacity: 0.8,
+              }}
+            >
+              All segments and FAQs must be marked as reviewed
+            </div>
+          </div>
+        </div>
       </div>
 
       {publishBlockers.length > 0 && (

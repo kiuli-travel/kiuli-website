@@ -16,6 +16,7 @@ import * as migration_20260120_add_segments_twofield_pattern from './20260120_ad
 import * as migration_20260120_add_faq_twofield_pattern from './20260120_add_faq_twofield_pattern';
 import * as migration_20260120_add_relationship_fields from './20260120_add_relationship_fields';
 import * as migration_20260120_seed_segment_description_voice from './20260120_seed_segment_description_voice';
+import * as migration_20260120_seed_faq_answer_voice from './20260120_seed_faq_answer_voice';
 
 export const migrations = [
   {
@@ -107,5 +108,10 @@ export const migrations = [
     up: migration_20260120_seed_segment_description_voice.up,
     down: migration_20260120_seed_segment_description_voice.down,
     name: '20260120_seed_segment_description_voice'
+  },
+  {
+    up: migration_20260120_seed_faq_answer_voice.up,
+    down: migration_20260120_seed_faq_answer_voice.down,
+    name: '20260120_seed_faq_answer_voice'
   },
 ];

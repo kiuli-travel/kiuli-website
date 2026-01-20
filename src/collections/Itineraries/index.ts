@@ -279,24 +279,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
               },
               fields: [
                 {
-                  name: 'reviewUI',
-                  type: 'ui',
-                  admin: {
-                    components: {
-                      Field: '@/collections/Itineraries/components/ReviewToggle#ReviewToggle',
-                    },
-                  },
-                },
-                {
-                  name: 'reviewed',
-                  type: 'checkbox',
-                  defaultValue: false,
-                  admin: {
-                    description: 'Mark as reviewed after checking AI-enhanced content',
-                    condition: () => false, // Hide raw checkbox - use reviewUI instead
-                  },
-                },
-                {
                   name: 'accommodationName',
                   type: 'text',
                   required: true,
@@ -374,24 +356,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
               },
               fields: [
                 {
-                  name: 'reviewUI',
-                  type: 'ui',
-                  admin: {
-                    components: {
-                      Field: '@/collections/Itineraries/components/ReviewToggle#ReviewToggle',
-                    },
-                  },
-                },
-                {
-                  name: 'reviewed',
-                  type: 'checkbox',
-                  defaultValue: false,
-                  admin: {
-                    description: 'Mark as reviewed after checking AI-enhanced content',
-                    condition: () => false, // Hide raw checkbox - use reviewUI instead
-                  },
-                },
-                {
                   name: 'title',
                   type: 'text',
                   required: true,
@@ -444,24 +408,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                 plural: 'Transfers',
               },
               fields: [
-                {
-                  name: 'reviewUI',
-                  type: 'ui',
-                  admin: {
-                    components: {
-                      Field: '@/collections/Itineraries/components/ReviewToggle#ReviewToggle',
-                    },
-                  },
-                },
-                {
-                  name: 'reviewed',
-                  type: 'checkbox',
-                  defaultValue: false,
-                  admin: {
-                    description: 'Mark as reviewed after checking AI-enhanced content',
-                    condition: () => false, // Hide raw checkbox - use reviewUI instead
-                  },
-                },
                 {
                   name: 'type',
                   type: 'select',

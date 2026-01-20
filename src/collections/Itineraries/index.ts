@@ -838,10 +838,38 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           required: true,
         },
         {
+          name: 'questionItrvl',
+          type: 'text',
+          admin: {
+            readOnly: true,
+            description: 'Original question from iTrvl (read-only)',
+          },
+        },
+        {
+          name: 'questionEnhanced',
+          type: 'text',
+          admin: {
+            description: 'Enhanced question (editable)',
+          },
+        },
+        {
+          name: 'questionReviewed',
+          type: 'checkbox',
+          defaultValue: false,
+        },
+        {
           name: 'answerOriginal',
           type: 'richText',
           admin: {
             description: 'Original answer from scrape',
+          },
+        },
+        {
+          name: 'answerItrvl',
+          type: 'richText',
+          admin: {
+            readOnly: true,
+            description: 'Original answer from iTrvl (read-only)',
           },
         },
         {
@@ -850,6 +878,11 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           admin: {
             description: 'AI-enhanced answer (editable)',
           },
+        },
+        {
+          name: 'answerReviewed',
+          type: 'checkbox',
+          defaultValue: false,
         },
       ],
     },

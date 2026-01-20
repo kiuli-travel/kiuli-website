@@ -765,6 +765,15 @@ export interface Itinerary {
          * Day title, e.g., "Arrival in Nairobi"
          */
         title?: string | null;
+        /**
+         * Original day title from iTrvl (read-only)
+         */
+        titleItrvl?: string | null;
+        /**
+         * Enhanced day title (editable)
+         */
+        titleEnhanced?: string | null;
+        titleReviewed?: boolean | null;
         location?: string | null;
         segments?:
           | (
@@ -775,9 +784,36 @@ export interface Itinerary {
                   reviewed?: boolean | null;
                   accommodationName: string;
                   /**
+                   * Original accommodation name from iTrvl (read-only)
+                   */
+                  accommodationNameItrvl?: string | null;
+                  /**
+                   * Enhanced accommodation name (editable)
+                   */
+                  accommodationNameEnhanced?: string | null;
+                  accommodationNameReviewed?: boolean | null;
+                  /**
                    * Original description from scrape
                    */
                   descriptionOriginal?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
+                   * Original description from iTrvl (read-only)
+                   */
+                  descriptionItrvl?: {
                     root: {
                       type: string;
                       children: {
@@ -810,10 +846,15 @@ export interface Itinerary {
                     };
                     [k: string]: unknown;
                   } | null;
+                  descriptionReviewed?: boolean | null;
                   nights?: number | null;
                   location?: string | null;
                   country?: string | null;
                   images?: (number | Media)[] | null;
+                  /**
+                   * Images have been reviewed
+                   */
+                  imagesReviewed?: boolean | null;
                   /**
                    * What is included at this property
                    */
@@ -832,6 +873,43 @@ export interface Itinerary {
                     };
                     [k: string]: unknown;
                   } | null;
+                  /**
+                   * Original inclusions from iTrvl (read-only)
+                   */
+                  inclusionsItrvl?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
+                   * Enhanced inclusions (editable)
+                   */
+                  inclusionsEnhanced?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  inclusionsReviewed?: boolean | null;
                   roomType?: string | null;
                   id?: string | null;
                   blockName?: string | null;
@@ -844,9 +922,36 @@ export interface Itinerary {
                   reviewed?: boolean | null;
                   title: string;
                   /**
+                   * Original title from iTrvl (read-only)
+                   */
+                  titleItrvl?: string | null;
+                  /**
+                   * Enhanced title (editable)
+                   */
+                  titleEnhanced?: string | null;
+                  titleReviewed?: boolean | null;
+                  /**
                    * Original description from scrape
                    */
                   descriptionOriginal?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
+                   * Original description from iTrvl (read-only)
+                   */
+                  descriptionItrvl?: {
                     root: {
                       type: string;
                       children: {
@@ -879,7 +984,12 @@ export interface Itinerary {
                     };
                     [k: string]: unknown;
                   } | null;
+                  descriptionReviewed?: boolean | null;
                   images?: (number | Media)[] | null;
+                  /**
+                   * Images have been reviewed
+                   */
+                  imagesReviewed?: boolean | null;
                   id?: string | null;
                   blockName?: string | null;
                   blockType: 'activity';
@@ -891,6 +1001,15 @@ export interface Itinerary {
                   reviewed?: boolean | null;
                   type?: ('flight' | 'road' | 'boat' | 'entry' | 'exit' | 'point') | null;
                   title?: string | null;
+                  /**
+                   * Original title from iTrvl (read-only)
+                   */
+                  titleItrvl?: string | null;
+                  /**
+                   * Enhanced title (editable)
+                   */
+                  titleEnhanced?: string | null;
+                  titleReviewed?: boolean | null;
                   from?: string | null;
                   to?: string | null;
                   /**
@@ -912,6 +1031,24 @@ export interface Itinerary {
                     [k: string]: unknown;
                   } | null;
                   /**
+                   * Original description from iTrvl (read-only)
+                   */
+                  descriptionItrvl?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
                    * AI-enhanced description (editable)
                    */
                   descriptionEnhanced?: {
@@ -929,6 +1066,7 @@ export interface Itinerary {
                     };
                     [k: string]: unknown;
                   } | null;
+                  descriptionReviewed?: boolean | null;
                   departureTime?: string | null;
                   arrivalTime?: string | null;
                   id?: string | null;
@@ -2730,6 +2868,9 @@ export interface ItinerariesSelect<T extends boolean = true> {
         dayNumber?: T;
         date?: T;
         title?: T;
+        titleItrvl?: T;
+        titleEnhanced?: T;
+        titleReviewed?: T;
         location?: T;
         segments?:
           | T
@@ -2739,13 +2880,22 @@ export interface ItinerariesSelect<T extends boolean = true> {
                 | {
                     reviewed?: T;
                     accommodationName?: T;
+                    accommodationNameItrvl?: T;
+                    accommodationNameEnhanced?: T;
+                    accommodationNameReviewed?: T;
                     descriptionOriginal?: T;
+                    descriptionItrvl?: T;
                     descriptionEnhanced?: T;
+                    descriptionReviewed?: T;
                     nights?: T;
                     location?: T;
                     country?: T;
                     images?: T;
+                    imagesReviewed?: T;
                     inclusions?: T;
+                    inclusionsItrvl?: T;
+                    inclusionsEnhanced?: T;
+                    inclusionsReviewed?: T;
                     roomType?: T;
                     id?: T;
                     blockName?: T;
@@ -2755,9 +2905,15 @@ export interface ItinerariesSelect<T extends boolean = true> {
                 | {
                     reviewed?: T;
                     title?: T;
+                    titleItrvl?: T;
+                    titleEnhanced?: T;
+                    titleReviewed?: T;
                     descriptionOriginal?: T;
+                    descriptionItrvl?: T;
                     descriptionEnhanced?: T;
+                    descriptionReviewed?: T;
                     images?: T;
+                    imagesReviewed?: T;
                     id?: T;
                     blockName?: T;
                   };
@@ -2767,10 +2923,15 @@ export interface ItinerariesSelect<T extends boolean = true> {
                     reviewed?: T;
                     type?: T;
                     title?: T;
+                    titleItrvl?: T;
+                    titleEnhanced?: T;
+                    titleReviewed?: T;
                     from?: T;
                     to?: T;
                     descriptionOriginal?: T;
+                    descriptionItrvl?: T;
                     descriptionEnhanced?: T;
+                    descriptionReviewed?: T;
                     departureTime?: T;
                     arrivalTime?: T;
                     id?: T;

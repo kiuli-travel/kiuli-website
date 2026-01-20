@@ -75,7 +75,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     },
     // Title two-field pattern (V7)
     {
-      name: 'title_itrvl',
+      name: 'titleItrvl',
       type: 'text',
       admin: {
         readOnly: true,
@@ -83,14 +83,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'title_enhanced',
+      name: 'titleEnhanced',
       type: 'text',
       admin: {
         description: 'Enhanced title (editable)',
       },
     },
     {
-      name: 'title_reviewed',
+      name: 'titleReviewed',
       type: 'checkbox',
       defaultValue: false,
       admin: {
@@ -130,7 +130,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     },
     // MetaTitle two-field pattern (V7)
     {
-      name: 'metaTitle_itrvl',
+      name: 'metaTitleItrvl',
       type: 'text',
       maxLength: 60,
       admin: {
@@ -139,7 +139,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'metaTitle_enhanced',
+      name: 'metaTitleEnhanced',
       type: 'text',
       maxLength: 60,
       admin: {
@@ -147,7 +147,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'metaTitle_reviewed',
+      name: 'metaTitleReviewed',
       type: 'checkbox',
       defaultValue: false,
       admin: {
@@ -164,7 +164,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     },
     // MetaDescription two-field pattern (V7)
     {
-      name: 'metaDescription_itrvl',
+      name: 'metaDescriptionItrvl',
       type: 'textarea',
       maxLength: 160,
       admin: {
@@ -173,7 +173,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'metaDescription_enhanced',
+      name: 'metaDescriptionEnhanced',
       type: 'textarea',
       maxLength: 160,
       admin: {
@@ -181,7 +181,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'metaDescription_reviewed',
+      name: 'metaDescriptionReviewed',
       type: 'checkbox',
       defaultValue: false,
       admin: {
@@ -210,7 +210,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'heroImage_reviewed',
+      name: 'heroImageReviewed',
       type: 'checkbox',
       defaultValue: false,
       admin: {
@@ -674,7 +674,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     },
     // V7 two-field pattern
     {
-      name: 'whyKiuli_itrvl',
+      name: 'whyKiuliItrvl',
       type: 'richText',
       admin: {
         readOnly: true,
@@ -682,14 +682,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'whyKiuli_enhanced',
-      type: 'richText',
-      admin: {
-        description: 'Enhanced Why Kiuli text (editable)',
-      },
-    },
-    {
-      name: 'whyKiuli_reviewed',
+      name: 'whyKiuliReviewed',
       type: 'checkbox',
       defaultValue: false,
       admin: {

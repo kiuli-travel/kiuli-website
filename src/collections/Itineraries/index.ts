@@ -73,6 +73,30 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'text',
       required: true,
     },
+    // Title two-field pattern (V7)
+    {
+      name: 'title_itrvl',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'Original title from iTrvl (read-only)',
+      },
+    },
+    {
+      name: 'title_enhanced',
+      type: 'text',
+      admin: {
+        description: 'Enhanced title (editable)',
+      },
+    },
+    {
+      name: 'title_reviewed',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Title has been reviewed',
+      },
+    },
     {
       name: 'slug',
       type: 'text',
@@ -104,12 +128,64 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
         description: 'SEO title (max 60 chars). Auto-generated if blank.',
       },
     },
+    // MetaTitle two-field pattern (V7)
+    {
+      name: 'metaTitle_itrvl',
+      type: 'text',
+      maxLength: 60,
+      admin: {
+        readOnly: true,
+        description: 'Original meta title from iTrvl (read-only)',
+      },
+    },
+    {
+      name: 'metaTitle_enhanced',
+      type: 'text',
+      maxLength: 60,
+      admin: {
+        description: 'Enhanced meta title (editable)',
+      },
+    },
+    {
+      name: 'metaTitle_reviewed',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Meta title has been reviewed',
+      },
+    },
     {
       name: 'metaDescription',
       type: 'textarea',
       maxLength: 160,
       admin: {
         description: 'SEO description (max 160 chars). Auto-generated if blank.',
+      },
+    },
+    // MetaDescription two-field pattern (V7)
+    {
+      name: 'metaDescription_itrvl',
+      type: 'textarea',
+      maxLength: 160,
+      admin: {
+        readOnly: true,
+        description: 'Original meta description from iTrvl (read-only)',
+      },
+    },
+    {
+      name: 'metaDescription_enhanced',
+      type: 'textarea',
+      maxLength: 160,
+      admin: {
+        description: 'Enhanced meta description (editable)',
+      },
+    },
+    {
+      name: 'metaDescription_reviewed',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Meta description has been reviewed',
       },
     },
 
@@ -131,6 +207,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       defaultValue: false,
       admin: {
         description: 'Lock hero image to prevent auto-replacement on re-scrape',
+      },
+    },
+    {
+      name: 'heroImage_reviewed',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Hero image selection has been reviewed',
       },
     },
 
@@ -573,18 +657,43 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     },
 
     // === WHY KIULI ===
+    // Legacy fields (kept for backward compatibility)
     {
       name: 'whyKiuliOriginal',
       type: 'richText',
       admin: {
-        description: 'Original "Why Kiuli" content',
+        description: 'Original "Why Kiuli" content (legacy)',
       },
     },
     {
       name: 'whyKiuliEnhanced',
       type: 'richText',
       admin: {
-        description: 'AI-enhanced "Why Kiuli" content (editable)',
+        description: 'AI-enhanced "Why Kiuli" content (legacy)',
+      },
+    },
+    // V7 two-field pattern
+    {
+      name: 'whyKiuli_itrvl',
+      type: 'richText',
+      admin: {
+        readOnly: true,
+        description: 'Original Why Kiuli text from iTrvl (read-only)',
+      },
+    },
+    {
+      name: 'whyKiuli_enhanced',
+      type: 'richText',
+      admin: {
+        description: 'Enhanced Why Kiuli text (editable)',
+      },
+    },
+    {
+      name: 'whyKiuli_reviewed',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Why Kiuli content has been reviewed',
       },
     },
     {

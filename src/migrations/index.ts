@@ -10,6 +10,7 @@ import * as migration_20260120_add_version_to_jobs from './20260120_add_version_
 import * as migration_20260120_create_voice_configuration from './20260120_create_voice_configuration';
 import * as migration_20260120_create_destinations from './20260120_create_destinations';
 import * as migration_20260120_create_trip_types from './20260120_create_trip_types';
+import * as migration_20260120_add_root_twofield_pattern from './20260120_add_root_twofield_pattern';
 
 export const migrations = [
   {
@@ -71,5 +72,10 @@ export const migrations = [
     up: migration_20260120_create_trip_types.up,
     down: migration_20260120_create_trip_types.down,
     name: '20260120_create_trip_types'
+  },
+  {
+    up: migration_20260120_add_root_twofield_pattern.up,
+    down: migration_20260120_add_root_twofield_pattern.down,
+    name: '20260120_add_root_twofield_pattern'
   },
 ];

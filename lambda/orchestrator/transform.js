@@ -404,6 +404,78 @@ function generateMetaFields(title, nights, countries) {
 }
 
 /**
+ * Generate investmentLevel.includes by aggregating inclusions from all stay segments
+ * Creates a summary of what's included across all accommodations
+ *
+ * @param {Array} segments - Raw segments from iTrvl
+ * @param {number} nights - Total nights
+ * @returns {string} Summary text of inclusions
+ */
+function generateInvestmentIncludes(segments, nights) {
+  const stays = segments.filter(s => s.type === 'stay' || s.type === 'accommodation');
+
+  // Collect unique inclusions from all stays
+  const allInclusions = new Set();
+  const accommodationNames = [];
+
+  for (const stay of stays) {
+    if (stay.name || stay.title) {
+      accommodationNames.push(stay.name || stay.title);
+    }
+
+    // Get inclusions from clientIncludeExclude or other fields
+    const inclusionsText = stay.clientIncludeExclude || stay.inclusions || stay.included || '';
+    if (inclusionsText) {
+      // Parse common inclusion items
+      const text = inclusionsText.toLowerCase();
+      if (text.includes('meal') || text.includes('breakfast') || text.includes('dinner') || text.includes('full board')) {
+        allInclusions.add('all meals');
+      }
+      if (text.includes('drink') || text.includes('beverage') || text.includes('wine') || text.includes('beer')) {
+        allInclusions.add('premium beverages');
+      }
+      if (text.includes('game drive') || text.includes('safari')) {
+        allInclusions.add('daily game drives');
+      }
+      if (text.includes('transfer') || text.includes('transport')) {
+        allInclusions.add('all transfers');
+      }
+      if (text.includes('park fee') || text.includes('conservation')) {
+        allInclusions.add('park fees');
+      }
+      if (text.includes('laundry')) {
+        allInclusions.add('laundry service');
+      }
+      if (text.includes('wifi') || text.includes('wi-fi')) {
+        allInclusions.add('WiFi');
+      }
+    }
+  }
+
+  // Build summary text
+  const parts = [];
+
+  // Accommodation summary
+  if (accommodationNames.length > 0) {
+    const uniqueNames = [...new Set(accommodationNames)];
+    parts.push(`${nights} nights at ${uniqueNames.slice(0, 3).join(', ')}${uniqueNames.length > 3 ? ' and more' : ''}`);
+  }
+
+  // Inclusions summary
+  if (allInclusions.size > 0) {
+    const inclusionsList = Array.from(allInclusions).slice(0, 5);
+    parts.push(inclusionsList.join(', '));
+  }
+
+  // Default inclusions if none found
+  if (parts.length === 0) {
+    return `Luxury accommodation for ${nights} nights with full board, game activities, and expert guiding throughout your safari experience.`;
+  }
+
+  return parts.join('. ') + '.';
+}
+
+/**
  * Main transform function
  */
 async function transform(rawData, mediaMapping = {}, itrvlUrl) {
@@ -442,6 +514,7 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
 
   const faqItems = generateFaqItems(segments, title, countries);
   const { metaTitle, metaDescription } = generateMetaFields(title, nights, countries);
+  const investmentIncludes = generateInvestmentIncludes(segments, nights);
 
   const transformed = {
     // Basic
@@ -466,6 +539,8 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     investmentLevel: {
       fromPrice: Math.round(priceInCents / 100),
       currency: 'USD',
+      includesOriginal: textToRichText(investmentIncludes),
+      includesEnhanced: null,
     },
 
     // Structured days

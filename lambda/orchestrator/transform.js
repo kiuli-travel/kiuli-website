@@ -260,7 +260,8 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
       location: segment.location || segment.locationName || null,
       country: segment.country || segment.countryName || null,
       images: imageIds,
-      inclusions: textToRichText(segment.inclusions || segment.included),
+      // clientIncludeExclude is the primary iTrvl field for inclusions
+      inclusions: textToRichText(segment.clientIncludeExclude || segment.inclusions || segment.included),
       roomType: segment.roomType || null,
     };
   }

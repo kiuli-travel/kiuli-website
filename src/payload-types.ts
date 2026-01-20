@@ -1089,9 +1089,36 @@ export interface Itinerary {
         reviewed?: boolean | null;
         question: string;
         /**
+         * Original question from iTrvl (read-only)
+         */
+        questionItrvl?: string | null;
+        /**
+         * Enhanced question (editable)
+         */
+        questionEnhanced?: string | null;
+        questionReviewed?: boolean | null;
+        /**
          * Original answer from scrape
          */
         answerOriginal?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        /**
+         * Original answer from iTrvl (read-only)
+         */
+        answerItrvl?: {
           root: {
             type: string;
             children: {
@@ -1124,6 +1151,7 @@ export interface Itinerary {
           };
           [k: string]: unknown;
         } | null;
+        answerReviewed?: boolean | null;
         id?: string | null;
       }[]
     | null;
@@ -2945,8 +2973,13 @@ export interface ItinerariesSelect<T extends boolean = true> {
     | {
         reviewed?: T;
         question?: T;
+        questionItrvl?: T;
+        questionEnhanced?: T;
+        questionReviewed?: T;
         answerOriginal?: T;
+        answerItrvl?: T;
         answerEnhanced?: T;
+        answerReviewed?: T;
         id?: T;
       };
   whyKiuliOriginal?: T;

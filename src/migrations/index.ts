@@ -14,6 +14,7 @@ import * as migration_20260120_add_root_twofield_pattern from './20260120_add_ro
 import * as migration_20260120_add_overview_investment_twofield from './20260120_add_overview_investment_twofield';
 import * as migration_20260120_add_segments_twofield_pattern from './20260120_add_segments_twofield_pattern';
 import * as migration_20260120_add_faq_twofield_pattern from './20260120_add_faq_twofield_pattern';
+import * as migration_20260120_add_relationship_fields from './20260120_add_relationship_fields';
 
 export const migrations = [
   {
@@ -95,5 +96,10 @@ export const migrations = [
     up: migration_20260120_add_faq_twofield_pattern.up,
     down: migration_20260120_add_faq_twofield_pattern.down,
     name: '20260120_add_faq_twofield_pattern'
+  },
+  {
+    up: migration_20260120_add_relationship_fields.up,
+    down: migration_20260120_add_relationship_fields.down,
+    name: '20260120_add_relationship_fields'
   },
 ];

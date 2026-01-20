@@ -218,6 +218,26 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
 
+    // === CATEGORIZATION ===
+    {
+      name: 'destinations',
+      type: 'relationship',
+      relationTo: 'destinations',
+      hasMany: true,
+      admin: {
+        description: 'Countries, regions, and parks featured in this itinerary',
+      },
+    },
+    {
+      name: 'tripTypes',
+      type: 'relationship',
+      relationTo: 'trip-types',
+      hasMany: true,
+      admin: {
+        description: 'Safari categories (e.g., Great Migration, Gorilla Trekking)',
+      },
+    },
+
     // === OVERVIEW ===
     {
       name: 'overview',

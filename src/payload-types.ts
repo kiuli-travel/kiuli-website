@@ -77,6 +77,7 @@ export interface Config {
     'image-statuses': ImageStatus;
     notifications: Notification;
     'voice-configuration': VoiceConfiguration;
+    destinations: Destination;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -104,6 +105,7 @@ export interface Config {
     'image-statuses': ImageStatusesSelect<false> | ImageStatusesSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     'voice-configuration': VoiceConfigurationSelect<false> | VoiceConfigurationSelect<true>;
+    destinations: DestinationsSelect<false> | DestinationsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -1774,6 +1776,76 @@ export interface VoiceConfiguration {
   createdAt: string;
 }
 /**
+ * Countries, regions, and parks for itinerary cross-linking
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "destinations".
+ */
+export interface Destination {
+  id: number;
+  /**
+   * Display name (e.g., "Masai Mara", "Kenya", "Serengeti National Park")
+   */
+  name: string;
+  /**
+   * URL slug (e.g., "masai-mara", "kenya")
+   */
+  slug: string;
+  /**
+   * Destination type for filtering and hierarchy
+   */
+  type: 'country' | 'region' | 'park';
+  /**
+   * Parent country (for regions and parks)
+   */
+  country?: (number | null) | Destination;
+  /**
+   * SEO-optimized description for destination landing page
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Hero image for destination landing page
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * SEO meta title (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO meta description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * Key highlights of this destination
+   */
+  highlights?:
+    | {
+        highlight: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Best time to visit information
+   */
+  bestTimeToVisit?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -2002,6 +2074,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'voice-configuration';
         value: number | VoiceConfiguration;
+      } | null)
+    | ({
+        relationTo: 'destinations';
+        value: number | Destination;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -2655,6 +2731,29 @@ export interface VoiceConfigurationSelect<T extends boolean = true> {
         reason?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "destinations_select".
+ */
+export interface DestinationsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  type?: T;
+  country?: T;
+  description?: T;
+  heroImage?: T;
+  metaTitle?: T;
+  metaDescription?: T;
+  highlights?:
+    | T
+    | {
+        highlight?: T;
+        id?: T;
+      };
+  bestTimeToVisit?: T;
   updatedAt?: T;
   createdAt?: T;
 }

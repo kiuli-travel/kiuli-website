@@ -8,6 +8,7 @@ import * as migration_20260120_add_reviewed_to_segments from './20260120_add_rev
 import * as migration_20260120_add_reviewed_to_faqs from './20260120_add_reviewed_to_faqs';
 import * as migration_20260120_add_version_to_jobs from './20260120_add_version_to_jobs';
 import * as migration_20260120_create_voice_configuration from './20260120_create_voice_configuration';
+import * as migration_20260120_create_destinations from './20260120_create_destinations';
 
 export const migrations = [
   {
@@ -59,5 +60,10 @@ export const migrations = [
     up: migration_20260120_create_voice_configuration.up,
     down: migration_20260120_create_voice_configuration.down,
     name: '20260120_create_voice_configuration'
+  },
+  {
+    up: migration_20260120_create_destinations.up,
+    down: migration_20260120_create_destinations.down,
+    name: '20260120_create_destinations'
   },
 ];

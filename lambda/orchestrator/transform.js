@@ -250,29 +250,49 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
   }
 
   if (blockType === 'stay') {
+    const accommodationName = segment.name || segment.title || 'Accommodation';
+    const inclusionsText = segment.clientIncludeExclude || segment.inclusions || segment.included;
+
     return {
       blockType: 'stay',
-      accommodationName: segment.name || segment.title || 'Accommodation',
-      // V6: Use descriptionOriginal for scraped content
-      descriptionOriginal: textToRichText(segment.description),
+      // V7 two-field pattern for accommodationName
+      accommodationName: accommodationName,
+      accommodationNameItrvl: accommodationName,
+      accommodationNameEnhanced: null,
+      accommodationNameReviewed: false,
+      // V7 two-field pattern for description
+      descriptionItrvl: textToRichText(segment.description),
       descriptionEnhanced: null,
+      descriptionReviewed: false,
       nights: segment.nights || 1,
       location: segment.location || segment.locationName || null,
       country: segment.country || segment.countryName || null,
       images: imageIds,
-      // clientIncludeExclude is the primary iTrvl field for inclusions
-      inclusions: textToRichText(segment.clientIncludeExclude || segment.inclusions || segment.included),
+      imagesReviewed: false,
+      // V7 two-field pattern for inclusions
+      inclusionsItrvl: textToRichText(inclusionsText),
+      inclusionsEnhanced: null,
+      inclusionsReviewed: false,
       roomType: segment.roomType || null,
     };
   }
 
   if (blockType === 'activity') {
+    const activityTitle = segment.name || segment.title || 'Activity';
+
     return {
       blockType: 'activity',
-      title: segment.name || segment.title || 'Activity',
-      descriptionOriginal: textToRichText(segment.description),
+      // V7 two-field pattern for title
+      title: activityTitle,
+      titleItrvl: activityTitle,
+      titleEnhanced: null,
+      titleReviewed: false,
+      // V7 two-field pattern for description
+      descriptionItrvl: textToRichText(segment.description),
       descriptionEnhanced: null,
+      descriptionReviewed: false,
       images: imageIds,
+      imagesReviewed: false,
     };
   }
 
@@ -322,11 +342,17 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
     return {
       blockType: 'transfer',
       type: transferType,
+      // V7 two-field pattern for title
       title: title,
+      titleItrvl: title,
+      titleEnhanced: null,
+      titleReviewed: false,
       from: segment.startLocation?.name || segment.from || segment.location || null,
       to: toDestination,
-      descriptionOriginal: textToRichText(segment.description),
+      // V7 two-field pattern for description
+      descriptionItrvl: textToRichText(segment.description),
       descriptionEnhanced: null,
+      descriptionReviewed: false,
       departureTime: segment.departureTime || null,
       arrivalTime: segment.arrivalTime || null,
     };
@@ -346,11 +372,12 @@ function generateFaqItems(segments, title, countries) {
     if (stay.name) {
       faqItems.push({
         question: `What is included at ${stay.name}?`,
-        answerOriginal: textToRichText(
+        answerItrvl: textToRichText(
           stay.inclusions || stay.description ||
           `${stay.name} offers luxury accommodation with full board and activities as specified in the itinerary.`
         ),
         answerEnhanced: null,
+        answerReviewed: false,
       });
     }
   }
@@ -359,34 +386,38 @@ function generateFaqItems(segments, title, countries) {
 
   faqItems.push({
     question: `What is the best time to visit ${countryList}?`,
-    answerOriginal: textToRichText(
+    answerItrvl: textToRichText(
       `${countryList} offers excellent wildlife viewing year-round. Our travel designers can advise on the optimal timing based on your specific interests.`
     ),
     answerEnhanced: null,
+        answerReviewed: false,
   });
 
   faqItems.push({
     question: 'What level of fitness is required for this safari?',
-    answerOriginal: textToRichText(
+    answerItrvl: textToRichText(
       'This safari is suitable for most fitness levels. Game drives involve sitting in comfortable vehicles, and bush walks can be adjusted to your pace.'
     ),
     answerEnhanced: null,
+        answerReviewed: false,
   });
 
   faqItems.push({
     question: 'Is this safari suitable for children?',
-    answerOriginal: textToRichText(
+    answerItrvl: textToRichText(
       'Family safaris are a specialty. Some lodges have age restrictions for certain activities, but we can customize the itinerary for travelers of all ages.'
     ),
     answerEnhanced: null,
+        answerReviewed: false,
   });
 
   faqItems.push({
     question: 'What should I pack for this safari?',
-    answerOriginal: textToRichText(
+    answerItrvl: textToRichText(
       'We recommend neutral-colored clothing, comfortable walking shoes, sun protection, binoculars, and a camera. A detailed packing list will be provided upon booking.'
     ),
     answerEnhanced: null,
+        answerReviewed: false,
   });
 
   return faqItems;
@@ -505,7 +536,10 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
   const days = groupedDays.map(day => ({
     dayNumber: day.dayNumber,
     date: day.date,
-    title: day.title,
+    // V7 two-field pattern for day title
+    titleItrvl: day.title,
+    titleEnhanced: null,
+    titleReviewed: false,
     location: day.location,
     segments: day.segments
       .map(s => mapSegmentToBlock(s, mediaMapping))
@@ -517,19 +551,29 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
   const investmentIncludes = generateInvestmentIncludes(segments, nights);
 
   const transformed = {
-    // Basic
+    // Basic - V7 two-field pattern
     title,
+    titleItrvl: title,
+    titleEnhanced: null,
+    titleReviewed: false,
     slug,
     itineraryId,
 
-    // SEO
+    // SEO - V7 two-field pattern
     metaTitle,
+    metaTitleItrvl: metaTitle,
+    metaTitleEnhanced: null,
+    metaTitleReviewed: false,
     metaDescription,
+    metaDescriptionItrvl: metaDescription,
+    metaDescriptionEnhanced: null,
+    metaDescriptionReviewed: false,
 
-    // Overview with V6 *Original fields
+    // Overview with V7 *Itrvl fields
     overview: {
-      summaryOriginal: textToRichText(itinerary.summary || itinerary.description || `A ${nights}-night luxury safari through ${countries.join(' and ')}.`),
+      summaryItrvl: textToRichText(itinerary.summary || itinerary.description || `A ${nights}-night luxury safari through ${countries.join(' and ')}.`),
       summaryEnhanced: null,
+      summaryReviewed: false,
       nights,
       countries: countries.map(c => ({ country: c })),
       highlights: highlights.map(h => ({ highlight: h })),
@@ -539,8 +583,9 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     investmentLevel: {
       fromPrice: Math.round(priceInCents / 100),
       currency: 'USD',
-      includesOriginal: textToRichText(investmentIncludes),
+      includesItrvl: textToRichText(investmentIncludes),
       includesEnhanced: null,
+      includesReviewed: false,
     },
 
     // Structured days
@@ -550,8 +595,9 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     faqItems,
 
     // Why Kiuli (V6 format)
-    whyKiuliOriginal: textToRichText('Kiuli delivers exceptional safari experiences with expert local knowledge, exclusive access, and personalized service that turns your African dream into reality.'),
+    whyKiuliItrvl: textToRichText('Kiuli delivers exceptional safari experiences with expert local knowledge, exclusive access, and personalized service that turns your African dream into reality.'),
     whyKiuliEnhanced: null,
+    whyKiuliReviewed: false,
 
     // Images (populated after image processing)
     images: Object.values(mediaMapping),

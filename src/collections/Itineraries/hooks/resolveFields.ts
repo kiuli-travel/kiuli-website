@@ -1,4 +1,4 @@
-import type { CollectionBeforeReadHook } from 'payload';
+import type { CollectionAfterReadHook } from 'payload';
 
 /**
  * Resolve two-field pairs to single fields for front-end consumption.
@@ -7,8 +7,11 @@ import type { CollectionBeforeReadHook } from 'payload';
  *
  * The front-end should NEVER see *Itrvl, *Enhanced, or *Reviewed fields.
  * This hook transforms the internal editorial structure into clean output.
+ *
+ * NOTE: Using afterRead hook (not beforeRead) because Payload re-applies
+ * schema fields after beforeRead, which would re-add our filtered fields.
  */
-export const resolveFields: CollectionBeforeReadHook = async ({ doc }) => {
+export const resolveFields: CollectionAfterReadHook = async ({ doc }) => {
   if (!doc) return doc;
 
   // Helper to resolve a field pair

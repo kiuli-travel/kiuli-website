@@ -27,7 +27,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     delete: authenticated,
   },
   hooks: {
-    beforeRead: [resolveFields],
+    afterRead: [resolveFields],
   },
   versions: {
     drafts: true,

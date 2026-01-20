@@ -661,6 +661,10 @@ export interface Itinerary {
         segments?:
           | (
               | {
+                  /**
+                   * Mark as reviewed after checking AI-enhanced content
+                   */
+                  reviewed?: boolean | null;
                   accommodationName: string;
                   /**
                    * Original description from scrape
@@ -726,6 +730,10 @@ export interface Itinerary {
                   blockType: 'stay';
                 }
               | {
+                  /**
+                   * Mark as reviewed after checking AI-enhanced content
+                   */
+                  reviewed?: boolean | null;
                   title: string;
                   /**
                    * Original description from scrape
@@ -769,6 +777,10 @@ export interface Itinerary {
                   blockType: 'activity';
                 }
               | {
+                  /**
+                   * Mark as reviewed after checking AI-enhanced content
+                   */
+                  reviewed?: boolean | null;
                   type?: ('flight' | 'road' | 'boat' | 'entry' | 'exit' | 'point') | null;
                   title?: string | null;
                   from?: string | null;
@@ -2347,6 +2359,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
               stay?:
                 | T
                 | {
+                    reviewed?: T;
                     accommodationName?: T;
                     descriptionOriginal?: T;
                     descriptionEnhanced?: T;
@@ -2362,6 +2375,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
               activity?:
                 | T
                 | {
+                    reviewed?: T;
                     title?: T;
                     descriptionOriginal?: T;
                     descriptionEnhanced?: T;
@@ -2372,6 +2386,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
               transfer?:
                 | T
                 | {
+                    reviewed?: T;
                     type?: T;
                     title?: T;
                     from?: T;

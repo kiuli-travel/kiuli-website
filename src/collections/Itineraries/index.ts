@@ -469,11 +469,21 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   required: true,
                 },
                 {
+                  name: 'accommodationNameEditor',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/StayFieldEditors#AccommodationNameEditor',
+                    },
+                  },
+                },
+                {
                   name: 'accommodationNameItrvl',
                   type: 'text',
                   admin: {
                     readOnly: true,
                     description: 'Original accommodation name from iTrvl (read-only)',
+                    condition: () => false, // Hidden - use accommodationNameEditor UI
                   },
                 },
                 {
@@ -481,18 +491,32 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                   admin: {
                     description: 'Enhanced accommodation name (editable)',
+                    condition: () => false, // Hidden - use accommodationNameEditor UI
                   },
                 },
                 {
                   name: 'accommodationNameReviewed',
                   type: 'checkbox',
                   defaultValue: false,
+                  admin: {
+                    condition: () => false, // Hidden - use accommodationNameEditor UI
+                  },
+                },
+                {
+                  name: 'descriptionEditor',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/StayFieldEditors#StayDescriptionEditor',
+                    },
+                  },
                 },
                 {
                   name: 'descriptionOriginal',
                   type: 'richText',
                   admin: {
                     description: 'Original description from scrape',
+                    condition: () => false, // Hidden - legacy field
                   },
                 },
                 {
@@ -501,6 +525,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   admin: {
                     readOnly: true,
                     description: 'Original description from iTrvl (read-only)',
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
@@ -508,20 +533,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'richText',
                   admin: {
                     description: 'AI-enhanced description (editable)',
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
                   name: 'descriptionReviewed',
                   type: 'checkbox',
                   defaultValue: false,
-                },
-                {
-                  name: 'enhanceUI',
-                  type: 'ui',
                   admin: {
-                    components: {
-                      Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton',
-                    },
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
@@ -561,10 +581,20 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   },
                 },
                 {
+                  name: 'inclusionsEditor',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/StayFieldEditors#InclusionsEditor',
+                    },
+                  },
+                },
+                {
                   name: 'inclusions',
                   type: 'richText',
                   admin: {
                     description: 'What is included at this property',
+                    condition: () => false, // Hidden - legacy field
                   },
                 },
                 {
@@ -573,6 +603,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   admin: {
                     readOnly: true,
                     description: 'Original inclusions from iTrvl (read-only)',
+                    condition: () => false, // Hidden - use inclusionsEditor UI
                   },
                 },
                 {
@@ -580,12 +611,16 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'richText',
                   admin: {
                     description: 'Enhanced inclusions (editable)',
+                    condition: () => false, // Hidden - use inclusionsEditor UI
                   },
                 },
                 {
                   name: 'inclusionsReviewed',
                   type: 'checkbox',
                   defaultValue: false,
+                  admin: {
+                    condition: () => false, // Hidden - use inclusionsEditor UI
+                  },
                 },
                 {
                   name: 'roomType',

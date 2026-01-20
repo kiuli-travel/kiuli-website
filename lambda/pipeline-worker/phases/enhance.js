@@ -1,68 +1,27 @@
 /**
- * Phase 4: Content Enhancement using OpenRouter
+ * Phase 4: Content Enhancement (V7: Passthrough Mode)
+ *
+ * V7 NOTE: Automatic AI enhancement has been removed.
+ * Enhancement is now manual-only via the admin UI FieldPairEditor component.
+ *
+ * This phase now simply passes through the raw data without AI processing.
+ * The *_itrvl fields will be populated by the ingester, and *_enhanced fields
+ * will remain null until manually enhanced by editors.
  */
 
-const { completeText } = require('../services/openrouter');
-
-const ENHANCEMENT_PROMPT = `You are a luxury travel content writer for high-net-worth safari travelers.
-
-Enhance the following safari segment description:
-- Expand by 100-200% with vivid sensory details
-- Preserve ALL factual information exactly
-- Add luxury keywords: exclusive, bespoke, curated, intimate, authentic
-- Maintain elegant, sophisticated tone
-- DO NOT add fictional details or pricing
-
-Original:
-{description}
-
-Respond with ONLY the enhanced text, no explanation or preamble:`;
-
-const CONCURRENCY = 5;
-
 async function enhance(rawData) {
-  console.log('[Enhance] Starting content enhancement');
+  console.log('[Enhance] V7 Passthrough Mode - skipping automatic AI enhancement');
 
+  // Deep clone the data without modification
   const enhancedData = JSON.parse(JSON.stringify(rawData.itinerary));
 
-  // Find all segments with descriptions
+  // Count segments for logging
   const segments = [];
   findSegmentsWithDescriptions(enhancedData, segments);
 
-  console.log(`[Enhance] Found ${segments.length} segments to enhance`);
+  console.log(`[Enhance] Found ${segments.length} segments (passthrough, no enhancement)`);
+  console.log('[Enhance] Enhancement will be done manually via admin UI');
 
-  // Process in batches to respect rate limits
-  for (let i = 0; i < segments.length; i += CONCURRENCY) {
-    const batch = segments.slice(i, i + CONCURRENCY);
-
-    await Promise.all(batch.map(async (segment) => {
-      if (!segment.description || segment.description.length < 50) {
-        return;
-      }
-
-      try {
-        const prompt = ENHANCEMENT_PROMPT.replace('{description}', segment.description);
-        const enhanced = await completeText(prompt);
-
-        if (enhanced && enhanced.length > segment.description.length) {
-          segment.enhancedDescription = enhanced.trim();
-          console.log(`[Enhance] Enhanced: ${segment.title || segment.name || 'segment'}`);
-        } else {
-          segment.enhancedDescription = segment.description;
-        }
-      } catch (error) {
-        console.error(`[Enhance] Failed: ${error.message}`);
-        segment.enhancedDescription = segment.description;
-      }
-    }));
-
-    // Small delay between batches
-    if (i + CONCURRENCY < segments.length) {
-      await new Promise(r => setTimeout(r, 1000));
-    }
-  }
-
-  console.log('[Enhance] Enhancement complete');
   return enhancedData;
 }
 

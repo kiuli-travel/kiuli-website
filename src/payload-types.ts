@@ -76,6 +76,7 @@ export interface Config {
     'itinerary-jobs': ItineraryJob;
     'image-statuses': ImageStatus;
     notifications: Notification;
+    'voice-configuration': VoiceConfiguration;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -102,6 +103,7 @@ export interface Config {
     'itinerary-jobs': ItineraryJobsSelect<false> | ItineraryJobsSelect<true>;
     'image-statuses': ImageStatusesSelect<false> | ImageStatusesSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
+    'voice-configuration': VoiceConfigurationSelect<false> | VoiceConfigurationSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -1705,6 +1707,73 @@ export interface Notification {
   createdAt: string;
 }
 /**
+ * Kiuli Voice settings for AI content enhancement
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "voice-configuration".
+ */
+export interface VoiceConfiguration {
+  id: number;
+  /**
+   * Configuration identifier (e.g., segment-description)
+   */
+  name: string;
+  /**
+   * What this configuration controls
+   */
+  description?: string | null;
+  /**
+   * The system prompt for AI enhancement
+   */
+  systemPrompt: string;
+  /**
+   * Template for user prompt. Use {{content}} for the text to enhance, {{propertyName}}, {{location}}, {{country}} for context.
+   */
+  userPromptTemplate: string;
+  /**
+   * Maximum word count for enhanced output
+   */
+  maxWords?: number | null;
+  /**
+   * AI creativity level (0 = conservative, 1 = creative)
+   */
+  temperature?: number | null;
+  /**
+   * Before/after examples to guide the AI
+   */
+  examples?:
+    | {
+        /**
+         * Original text
+         */
+        before: string;
+        /**
+         * Enhanced text
+         */
+        after: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Words and phrases to avoid in enhanced content
+   */
+  antiPatterns?:
+    | {
+        /**
+         * Word or phrase to avoid
+         */
+        pattern: string;
+        /**
+         * Why this should be avoided
+         */
+        reason?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -1929,6 +1998,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'notifications';
         value: number | Notification;
+      } | null)
+    | ({
+        relationTo: 'voice-configuration';
+        value: number | VoiceConfiguration;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -2554,6 +2627,34 @@ export interface NotificationsSelect<T extends boolean = true> {
   itinerary?: T;
   read?: T;
   readAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "voice-configuration_select".
+ */
+export interface VoiceConfigurationSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  systemPrompt?: T;
+  userPromptTemplate?: T;
+  maxWords?: T;
+  temperature?: T;
+  examples?:
+    | T
+    | {
+        before?: T;
+        after?: T;
+        id?: T;
+      };
+  antiPatterns?:
+    | T
+    | {
+        pattern?: T;
+        reason?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

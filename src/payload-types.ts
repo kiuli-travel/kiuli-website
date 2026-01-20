@@ -600,6 +600,14 @@ export interface Itinerary {
    * Hero image selection has been reviewed
    */
   heroImageReviewed?: boolean | null;
+  /**
+   * Countries, regions, and parks featured in this itinerary
+   */
+  destinations?: (number | Destination)[] | null;
+  /**
+   * Safari categories (e.g., Great Migration, Gorilla Trekking)
+   */
+  tripTypes?: (number | TripType)[] | null;
   overview?: {
     /**
      * Original summary from scrape (legacy)
@@ -1332,6 +1340,141 @@ export interface Itinerary {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * Countries, regions, and parks for itinerary cross-linking
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "destinations".
+ */
+export interface Destination {
+  id: number;
+  /**
+   * Display name (e.g., "Masai Mara", "Kenya", "Serengeti National Park")
+   */
+  name: string;
+  /**
+   * URL slug (e.g., "masai-mara", "kenya")
+   */
+  slug: string;
+  /**
+   * Destination type for filtering and hierarchy
+   */
+  type: 'country' | 'region' | 'park';
+  /**
+   * Parent country (for regions and parks)
+   */
+  country?: (number | null) | Destination;
+  /**
+   * SEO-optimized description for destination landing page
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Hero image for destination landing page
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * SEO meta title (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO meta description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * Key highlights of this destination
+   */
+  highlights?:
+    | {
+        highlight: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Best time to visit information
+   */
+  bestTimeToVisit?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Safari categories for filtering and recommendations
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trip-types".
+ */
+export interface TripType {
+  id: number;
+  /**
+   * Display name (e.g., "Great Migration", "Gorilla Trekking")
+   */
+  name: string;
+  /**
+   * URL slug (e.g., "great-migration", "gorilla-trekking")
+   */
+  slug: string;
+  /**
+   * SEO-optimized description for trip type landing page
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Brief description for cards and listings (max 200 chars)
+   */
+  shortDescription?: string | null;
+  /**
+   * Hero image for trip type landing page
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * Icon identifier for UI (e.g., "binoculars", "gorilla", "heart")
+   */
+  icon?: string | null;
+  /**
+   * SEO meta title (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO meta description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * Display order in listings (lower numbers first)
+   */
+  sortOrder?: number | null;
+  /**
+   * Show in featured trip types on homepage
+   */
+  featured?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2068,141 +2211,6 @@ export interface VoiceConfiguration {
   createdAt: string;
 }
 /**
- * Countries, regions, and parks for itinerary cross-linking
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "destinations".
- */
-export interface Destination {
-  id: number;
-  /**
-   * Display name (e.g., "Masai Mara", "Kenya", "Serengeti National Park")
-   */
-  name: string;
-  /**
-   * URL slug (e.g., "masai-mara", "kenya")
-   */
-  slug: string;
-  /**
-   * Destination type for filtering and hierarchy
-   */
-  type: 'country' | 'region' | 'park';
-  /**
-   * Parent country (for regions and parks)
-   */
-  country?: (number | null) | Destination;
-  /**
-   * SEO-optimized description for destination landing page
-   */
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Hero image for destination landing page
-   */
-  heroImage?: (number | null) | Media;
-  /**
-   * SEO meta title (max 60 chars)
-   */
-  metaTitle?: string | null;
-  /**
-   * SEO meta description (max 160 chars)
-   */
-  metaDescription?: string | null;
-  /**
-   * Key highlights of this destination
-   */
-  highlights?:
-    | {
-        highlight: string;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Best time to visit information
-   */
-  bestTimeToVisit?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Safari categories for filtering and recommendations
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "trip-types".
- */
-export interface TripType {
-  id: number;
-  /**
-   * Display name (e.g., "Great Migration", "Gorilla Trekking")
-   */
-  name: string;
-  /**
-   * URL slug (e.g., "great-migration", "gorilla-trekking")
-   */
-  slug: string;
-  /**
-   * SEO-optimized description for trip type landing page
-   */
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Brief description for cards and listings (max 200 chars)
-   */
-  shortDescription?: string | null;
-  /**
-   * Hero image for trip type landing page
-   */
-  heroImage?: (number | null) | Media;
-  /**
-   * Icon identifier for UI (e.g., "binoculars", "gorilla", "heart")
-   */
-  icon?: string | null;
-  /**
-   * SEO meta title (max 60 chars)
-   */
-  metaTitle?: string | null;
-  /**
-   * SEO meta description (max 160 chars)
-   */
-  metaDescription?: string | null;
-  /**
-   * Display order in listings (lower numbers first)
-   */
-  sortOrder?: number | null;
-  /**
-   * Show in featured trip types on homepage
-   */
-  featured?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -2858,6 +2866,8 @@ export interface ItinerariesSelect<T extends boolean = true> {
   heroImage?: T;
   heroImageLocked?: T;
   heroImageReviewed?: T;
+  destinations?: T;
+  tripTypes?: T;
   overview?:
     | T
     | {

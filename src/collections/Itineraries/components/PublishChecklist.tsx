@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useDocumentInfo, useForm } from '@payloadcms/ui'
 
 interface ChecklistItem {
@@ -12,17 +12,35 @@ interface ChecklistItem {
 interface Segment {
   blockType: string
   reviewed?: boolean
+  // V7 per-field review flags
+  descriptionReviewed?: boolean
+  accommodationNameReviewed?: boolean
+  inclusionsReviewed?: boolean
+  titleReviewed?: boolean
+  imagesReviewed?: boolean
 }
 
 interface Day {
+  dayNumber?: number
+  titleReviewed?: boolean
   segments?: Segment[]
 }
 
 interface FaqItem {
   reviewed?: boolean
+  questionReviewed?: boolean
+  answerReviewed?: boolean
 }
 
-const CHECKLIST_ITEMS: ChecklistItem[] = [
+interface Overview {
+  summaryReviewed?: boolean
+}
+
+interface InvestmentLevel {
+  includesReviewed?: boolean
+}
+
+const STATIC_CHECKLIST_ITEMS: ChecklistItem[] = [
   {
     key: 'allImagesProcessed',
     label: 'Images Processed',
@@ -34,32 +52,149 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
     description: 'No images in failed state',
   },
   {
-    key: 'heroImageSelected',
-    label: 'Hero Image',
-    description: 'Hero image has been selected',
-  },
-  {
-    key: 'contentEnhanced',
-    label: 'Content Enhanced',
-    description: 'Content has been enhanced or reviewed',
-  },
-  {
     key: 'schemaGenerated',
     label: 'Schema Generated',
     description: 'JSON-LD schema has been generated',
   },
-  {
-    key: 'metaFieldsFilled',
-    label: 'Meta Fields',
-    description: 'Meta title and description are set',
-  },
 ]
+
+interface ReviewItem {
+  name: string
+  reviewed: boolean
+  category: 'core' | 'day' | 'segment' | 'faq'
+}
 
 export const PublishChecklist: React.FC = () => {
   const { getDataByPath } = useForm()
   const { id } = useDocumentInfo()
 
-  // Only show for saved documents
+  const publishChecklist = (getDataByPath('publishChecklist') || {}) as Record<string, boolean>
+  const publishBlockers = (getDataByPath('publishBlockers') || []) as Array<{
+    reason: string
+    severity: string
+  }>
+
+  // Build review items for V7 per-field tracking
+  const reviewItems = useMemo<ReviewItem[]>(() => {
+    // If no ID, return empty array (hooks must be called unconditionally)
+    if (!id) return []
+    const items: ReviewItem[] = []
+
+    // Core fields
+    const coreFields = [
+      { name: 'Title', path: 'titleReviewed' },
+      { name: 'Meta Title', path: 'metaTitleReviewed' },
+      { name: 'Meta Description', path: 'metaDescriptionReviewed' },
+      { name: 'Hero Image', path: 'heroImageReviewed' },
+      { name: 'Why Kiuli', path: 'whyKiuliReviewed' },
+    ]
+
+    coreFields.forEach(({ name, path }) => {
+      const value = getDataByPath(path)
+      items.push({
+        name,
+        reviewed: Boolean(value),
+        category: 'core',
+      })
+    })
+
+    // Overview summary
+    const overview = getDataByPath('overview') as Overview | undefined
+    if (overview) {
+      items.push({
+        name: 'Overview Summary',
+        reviewed: Boolean(overview.summaryReviewed),
+        category: 'core',
+      })
+    }
+
+    // Investment includes
+    const investmentLevel = getDataByPath('investmentLevel') as InvestmentLevel | undefined
+    if (investmentLevel) {
+      items.push({
+        name: 'Investment Includes',
+        reviewed: Boolean(investmentLevel.includesReviewed),
+        category: 'core',
+      })
+    }
+
+    // Days and segments
+    const days = (getDataByPath('days') || []) as Day[]
+    days.forEach((day, dayIndex) => {
+      const dayNum = day.dayNumber || dayIndex + 1
+
+      // Day title
+      items.push({
+        name: `Day ${dayNum} Title`,
+        reviewed: Boolean(day.titleReviewed),
+        category: 'day',
+      })
+
+      // Segments
+      const segments = day.segments || []
+      segments.forEach((segment, segIndex) => {
+        const segNum = segIndex + 1
+        const blockType = segment.blockType || 'segment'
+        const blockLabel = blockType.charAt(0).toUpperCase() + blockType.slice(1)
+
+        // All segments have description
+        items.push({
+          name: `Day ${dayNum} ${blockLabel} ${segNum} Description`,
+          reviewed: Boolean(segment.descriptionReviewed),
+          category: 'segment',
+        })
+
+        // Stay-specific fields
+        if (blockType === 'stay') {
+          items.push({
+            name: `Day ${dayNum} ${blockLabel} ${segNum} Name`,
+            reviewed: Boolean(segment.accommodationNameReviewed),
+            category: 'segment',
+          })
+          items.push({
+            name: `Day ${dayNum} ${blockLabel} ${segNum} Inclusions`,
+            reviewed: Boolean(segment.inclusionsReviewed),
+            category: 'segment',
+          })
+        }
+
+        // Activity and Transfer have title
+        if (blockType === 'activity' || blockType === 'transfer') {
+          items.push({
+            name: `Day ${dayNum} ${blockLabel} ${segNum} Title`,
+            reviewed: Boolean(segment.titleReviewed),
+            category: 'segment',
+          })
+        }
+
+        // Images reviewed (all segment types)
+        if (segment.imagesReviewed !== undefined) {
+          items.push({
+            name: `Day ${dayNum} ${blockLabel} ${segNum} Images`,
+            reviewed: Boolean(segment.imagesReviewed),
+            category: 'segment',
+          })
+        }
+      })
+    })
+
+    // FAQ items
+    const faqItems = (getDataByPath('faqItems') || []) as FaqItem[]
+    faqItems.forEach((faq, faqIndex) => {
+      const faqNum = faqIndex + 1
+      // FAQ is reviewed only if both question AND answer are reviewed
+      const faqReviewed = Boolean(faq.questionReviewed) && Boolean(faq.answerReviewed)
+      items.push({
+        name: `FAQ ${faqNum}`,
+        reviewed: faqReviewed,
+        category: 'faq',
+      })
+    })
+
+    return items
+  }, [getDataByPath, id])
+
+  // Only show for saved documents (after all hooks are called)
   if (!id) {
     return (
       <div style={{ padding: '1rem', color: '#666', fontSize: '0.875rem' }}>
@@ -68,39 +203,72 @@ export const PublishChecklist: React.FC = () => {
     )
   }
 
-  const publishChecklist = (getDataByPath('publishChecklist') || {}) as Record<string, boolean>
-  const publishBlockers = (getDataByPath('publishBlockers') || []) as Array<{
-    reason: string
-    severity: string
-  }>
+  // Calculate stats
+  const totalReviewItems = reviewItems.length
+  const reviewedCount = reviewItems.filter((i) => i.reviewed).length
+  const reviewPercentage = totalReviewItems > 0 ? Math.round((reviewedCount / totalReviewItems) * 100) : 100
 
-  // Calculate content reviewed status
-  const days = (getDataByPath('days') || []) as Day[]
-  const faqItems = (getDataByPath('faqItems') || []) as FaqItem[]
+  // Group by category
+  const coreItems = reviewItems.filter((i) => i.category === 'core')
+  const dayItems = reviewItems.filter((i) => i.category === 'day')
+  const segmentItems = reviewItems.filter((i) => i.category === 'segment')
+  const faqItemsReview = reviewItems.filter((i) => i.category === 'faq')
 
-  let totalSegments = 0
-  let reviewedSegments = 0
+  // Check static items
+  const allStaticPassed = STATIC_CHECKLIST_ITEMS.every((item) => publishChecklist[item.key] === true)
+  const allReviewed = reviewedCount === totalReviewItems
+  const allPassed = allStaticPassed && allReviewed
 
-  days.forEach((day) => {
-    const segments = day.segments || []
-    segments.forEach((segment) => {
-      totalSegments++
-      if (segment.reviewed) reviewedSegments++
-    })
-  })
+  const renderReviewSection = (title: string, items: ReviewItem[]) => {
+    if (items.length === 0) return null
+    const sectionReviewed = items.filter((i) => i.reviewed).length
+    const sectionTotal = items.length
 
-  const totalFaqs = faqItems.length
-  const reviewedFaqs = faqItems.filter((f) => f.reviewed).length
-
-  const allContentReviewed =
-    totalSegments > 0 || totalFaqs > 0
-      ? reviewedSegments === totalSegments && reviewedFaqs === totalFaqs
-      : true // No content to review = passes
-
-  const contentReviewLabel = `Content Reviewed (${reviewedSegments}/${totalSegments} segments, ${reviewedFaqs}/${totalFaqs} FAQs)`
-
-  const allStaticPassed = CHECKLIST_ITEMS.every((item) => publishChecklist[item.key] === true)
-  const allPassed = allStaticPassed && allContentReviewed
+    return (
+      <div style={{ marginBottom: '0.75rem' }}>
+        <div
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#666',
+            marginBottom: '0.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
+          <span>{title}</span>
+          <span
+            style={{
+              color: sectionReviewed === sectionTotal ? '#155724' : '#856404',
+            }}
+          >
+            {sectionReviewed}/{sectionTotal}
+          </span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {items.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.25rem 0.5rem',
+                backgroundColor: item.reviewed ? '#d4edda' : '#f8d7da',
+                borderRadius: '3px',
+                fontSize: '0.75rem',
+              }}
+            >
+              <span style={{ color: item.reviewed ? '#155724' : '#721c24' }}>
+                {item.reviewed ? '✓' : '○'}
+              </span>
+              <span style={{ color: item.reviewed ? '#155724' : '#721c24' }}>{item.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -113,7 +281,7 @@ export const PublishChecklist: React.FC = () => {
     >
       <h4
         style={{
-          margin: '0 0 1rem 0',
+          margin: '0 0 0.75rem 0',
           fontSize: '1rem',
           fontWeight: 600,
           color: '#333',
@@ -152,99 +320,112 @@ export const PublishChecklist: React.FC = () => {
         )}
       </h4>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {/* Static checklist items */}
-        {CHECKLIST_ITEMS.map((item) => {
-          const passed = publishChecklist[item.key] === true
-          return (
-            <div
-              key={item.key}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem',
-                backgroundColor: passed ? '#d4edda' : '#f8d7da',
-                borderRadius: '4px',
-                border: `1px solid ${passed ? '#c3e6cb' : '#f5c6cb'}`,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '1rem',
-                  width: '20px',
-                  textAlign: 'center',
-                  color: passed ? '#155724' : '#721c24',
-                }}
-              >
-                {passed ? '\u2713' : '\u2717'}
-              </span>
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    color: passed ? '#155724' : '#721c24',
-                  }}
-                >
-                  {item.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: '0.75rem',
-                    color: passed ? '#155724' : '#721c24',
-                    opacity: 0.8,
-                  }}
-                >
-                  {item.description}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-
-        {/* Dynamic content reviewed check */}
+      {/* Progress bar */}
+      <div
+        style={{
+          height: '8px',
+          backgroundColor: '#e0e0e0',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          marginBottom: '0.75rem',
+        }}
+      >
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem',
-            backgroundColor: allContentReviewed ? '#d4edda' : '#f8d7da',
-            borderRadius: '4px',
-            border: `1px solid ${allContentReviewed ? '#c3e6cb' : '#f5c6cb'}`,
+            height: '100%',
+            width: `${reviewPercentage}%`,
+            backgroundColor: allReviewed ? '#28a745' : '#486A6A',
+            transition: 'width 0.3s ease',
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          fontSize: '0.875rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span>Content Review Progress</span>
+        <span
+          style={{
+            fontWeight: 600,
+            color: allReviewed ? '#155724' : '#856404',
           }}
         >
-          <span
-            style={{
-              fontSize: '1rem',
-              width: '20px',
-              textAlign: 'center',
-              color: allContentReviewed ? '#155724' : '#721c24',
-            }}
-          >
-            {allContentReviewed ? '\u2713' : '\u2717'}
-          </span>
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: allContentReviewed ? '#155724' : '#721c24',
-              }}
-            >
-              {contentReviewLabel}
-            </div>
-            <div
-              style={{
-                fontSize: '0.75rem',
-                color: allContentReviewed ? '#155724' : '#721c24',
-                opacity: 0.8,
-              }}
-            >
-              All segments and FAQs must be marked as reviewed
-            </div>
-          </div>
+          {reviewedCount}/{totalReviewItems} ({reviewPercentage}%)
+        </span>
+      </div>
+
+      {/* Review sections */}
+      {renderReviewSection('Core Fields', coreItems)}
+      {renderReviewSection('Day Titles', dayItems)}
+      {renderReviewSection('Segments', segmentItems)}
+      {renderReviewSection('FAQs', faqItemsReview)}
+
+      {/* Static checklist items */}
+      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e0e0e0' }}>
+        <div
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: '#666',
+            marginBottom: '0.5rem',
+          }}
+        >
+          Pipeline Checks
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {STATIC_CHECKLIST_ITEMS.map((item) => {
+            const passed = publishChecklist[item.key] === true
+            return (
+              <div
+                key={item.key}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem',
+                  backgroundColor: passed ? '#d4edda' : '#f8d7da',
+                  borderRadius: '4px',
+                  border: `1px solid ${passed ? '#c3e6cb' : '#f5c6cb'}`,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '1rem',
+                    width: '20px',
+                    textAlign: 'center',
+                    color: passed ? '#155724' : '#721c24',
+                  }}
+                >
+                  {passed ? '✓' : '✗'}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: passed ? '#155724' : '#721c24',
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.75rem',
+                      color: passed ? '#155724' : '#721c24',
+                      opacity: 0.8,
+                    }}
+                  >
+                    {item.description}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -272,13 +453,28 @@ export const PublishChecklist: React.FC = () => {
                 color: blocker.severity === 'error' ? '#721c24' : '#856404',
               }}
             >
-              {blocker.severity === 'error' ? '\u26a0' : '\u2139'} {blocker.reason}
+              {blocker.severity === 'error' ? '⚠' : 'ℹ'} {blocker.reason}
             </div>
           ))}
         </div>
       )}
 
-      {!allPassed && (
+      {allReviewed ? (
+        <div
+          style={{
+            marginTop: '1rem',
+            padding: '0.75rem',
+            backgroundColor: '#d4edda',
+            borderRadius: '4px',
+            fontSize: '0.875rem',
+            color: '#155724',
+            border: '1px solid #28a745',
+          }}
+        >
+          ✓ All content reviewed!{' '}
+          {allStaticPassed ? 'Ready to publish.' : 'Complete pipeline checks to publish.'}
+        </div>
+      ) : (
         <div
           style={{
             marginTop: '1rem',
@@ -289,8 +485,8 @@ export const PublishChecklist: React.FC = () => {
             color: '#856404',
           }}
         >
-          <strong>Note:</strong> Resolve all items above before publishing. The publish button will
-          be enabled once all checklist items pass.
+          ⚠ {totalReviewItems - reviewedCount} item{totalReviewItems - reviewedCount !== 1 ? 's' : ''}{' '}
+          need review before publishing.
         </div>
       )}
     </div>

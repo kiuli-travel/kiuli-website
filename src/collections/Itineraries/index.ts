@@ -390,6 +390,26 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           },
         },
         {
+          name: 'titleItrvl',
+          type: 'text',
+          admin: {
+            readOnly: true,
+            description: 'Original day title from iTrvl (read-only)',
+          },
+        },
+        {
+          name: 'titleEnhanced',
+          type: 'text',
+          admin: {
+            description: 'Enhanced day title (editable)',
+          },
+        },
+        {
+          name: 'titleReviewed',
+          type: 'checkbox',
+          defaultValue: false,
+        },
+        {
           name: 'location',
           type: 'text',
         },
@@ -429,10 +449,38 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   required: true,
                 },
                 {
+                  name: 'accommodationNameItrvl',
+                  type: 'text',
+                  admin: {
+                    readOnly: true,
+                    description: 'Original accommodation name from iTrvl (read-only)',
+                  },
+                },
+                {
+                  name: 'accommodationNameEnhanced',
+                  type: 'text',
+                  admin: {
+                    description: 'Enhanced accommodation name (editable)',
+                  },
+                },
+                {
+                  name: 'accommodationNameReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
+                },
+                {
                   name: 'descriptionOriginal',
                   type: 'richText',
                   admin: {
                     description: 'Original description from scrape',
+                  },
+                },
+                {
+                  name: 'descriptionItrvl',
+                  type: 'richText',
+                  admin: {
+                    readOnly: true,
+                    description: 'Original description from iTrvl (read-only)',
                   },
                 },
                 {
@@ -441,6 +489,11 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   admin: {
                     description: 'AI-enhanced description (editable)',
                   },
+                },
+                {
+                  name: 'descriptionReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
                 },
                 {
                   name: 'enhanceUI',
@@ -480,11 +533,39 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   hasMany: true,
                 },
                 {
+                  name: 'imagesReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  admin: {
+                    description: 'Images have been reviewed',
+                  },
+                },
+                {
                   name: 'inclusions',
                   type: 'richText',
                   admin: {
                     description: 'What is included at this property',
                   },
+                },
+                {
+                  name: 'inclusionsItrvl',
+                  type: 'richText',
+                  admin: {
+                    readOnly: true,
+                    description: 'Original inclusions from iTrvl (read-only)',
+                  },
+                },
+                {
+                  name: 'inclusionsEnhanced',
+                  type: 'richText',
+                  admin: {
+                    description: 'Enhanced inclusions (editable)',
+                  },
+                },
+                {
+                  name: 'inclusionsReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
                 },
                 {
                   name: 'roomType',
@@ -524,10 +605,38 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   required: true,
                 },
                 {
+                  name: 'titleItrvl',
+                  type: 'text',
+                  admin: {
+                    readOnly: true,
+                    description: 'Original title from iTrvl (read-only)',
+                  },
+                },
+                {
+                  name: 'titleEnhanced',
+                  type: 'text',
+                  admin: {
+                    description: 'Enhanced title (editable)',
+                  },
+                },
+                {
+                  name: 'titleReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
+                },
+                {
                   name: 'descriptionOriginal',
                   type: 'richText',
                   admin: {
                     description: 'Original description from scrape',
+                  },
+                },
+                {
+                  name: 'descriptionItrvl',
+                  type: 'richText',
+                  admin: {
+                    readOnly: true,
+                    description: 'Original description from iTrvl (read-only)',
                   },
                 },
                 {
@@ -536,6 +645,11 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   admin: {
                     description: 'AI-enhanced description (editable)',
                   },
+                },
+                {
+                  name: 'descriptionReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
                 },
                 {
                   name: 'enhanceUI',
@@ -560,6 +674,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'relationship',
                   relationTo: 'media',
                   hasMany: true,
+                },
+                {
+                  name: 'imagesReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  admin: {
+                    description: 'Images have been reviewed',
+                  },
                 },
               ],
             },
@@ -606,6 +728,26 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                 },
                 {
+                  name: 'titleItrvl',
+                  type: 'text',
+                  admin: {
+                    readOnly: true,
+                    description: 'Original title from iTrvl (read-only)',
+                  },
+                },
+                {
+                  name: 'titleEnhanced',
+                  type: 'text',
+                  admin: {
+                    description: 'Enhanced title (editable)',
+                  },
+                },
+                {
+                  name: 'titleReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
+                },
+                {
                   name: 'from',
                   type: 'text',
                 },
@@ -621,11 +763,24 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   },
                 },
                 {
+                  name: 'descriptionItrvl',
+                  type: 'richText',
+                  admin: {
+                    readOnly: true,
+                    description: 'Original description from iTrvl (read-only)',
+                  },
+                },
+                {
                   name: 'descriptionEnhanced',
                   type: 'richText',
                   admin: {
                     description: 'AI-enhanced description (editable)',
                   },
+                },
+                {
+                  name: 'descriptionReviewed',
+                  type: 'checkbox',
+                  defaultValue: false,
                 },
                 {
                   name: 'enhanceUI',

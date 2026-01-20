@@ -602,7 +602,7 @@ export interface Itinerary {
   heroImageReviewed?: boolean | null;
   overview?: {
     /**
-     * Original summary from scrape
+     * Original summary from scrape (legacy)
      */
     summaryOriginal?: {
       root: {
@@ -638,6 +638,28 @@ export interface Itinerary {
       [k: string]: unknown;
     } | null;
     /**
+     * Original summary from iTrvl (read-only)
+     */
+    summaryItrvl?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * Summary has been reviewed
+     */
+    summaryReviewed?: boolean | null;
+    /**
      * Total number of nights
      */
     nights?: number | null;
@@ -671,7 +693,7 @@ export interface Itinerary {
     toPrice?: number | null;
     currency?: string | null;
     /**
-     * What the price includes
+     * What the price includes (legacy)
      */
     includes?: {
       root: {
@@ -688,6 +710,46 @@ export interface Itinerary {
       };
       [k: string]: unknown;
     } | null;
+    /**
+     * Original includes from iTrvl (read-only)
+     */
+    includesItrvl?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * Enhanced includes text (editable)
+     */
+    includesEnhanced?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * Includes text has been reviewed
+     */
+    includesReviewed?: boolean | null;
   };
   /**
    * Day-by-day itinerary
@@ -2635,6 +2697,8 @@ export interface ItinerariesSelect<T extends boolean = true> {
     | {
         summaryOriginal?: T;
         summaryEnhanced?: T;
+        summaryItrvl?: T;
+        summaryReviewed?: T;
         nights?: T;
         countries?:
           | T
@@ -2656,6 +2720,9 @@ export interface ItinerariesSelect<T extends boolean = true> {
         toPrice?: T;
         currency?: T;
         includes?: T;
+        includesItrvl?: T;
+        includesEnhanced?: T;
+        includesReviewed?: T;
       };
   days?:
     | T

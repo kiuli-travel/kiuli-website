@@ -295,12 +295,36 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
       }
     }
 
+    // Extract 'to' destination from multiple sources
+    let toDestination = segment.endLocation?.name || segment.to || null;
+
+    // If no direct 'to', try to parse from title
+    if (!toDestination && title) {
+      // Common patterns: "Transfer to X", "Flight to X", "Drive to X"
+      const toMatch = title.match(/(?:transfer|flight|drive|road)\s+to\s+([^,\-]+)/i);
+      if (toMatch) {
+        toDestination = toMatch[1].trim();
+      }
+      // Also try "X to Y" pattern
+      if (!toDestination) {
+        const fromToMatch = title.match(/\bto\s+([^,\-]+)$/i);
+        if (fromToMatch) {
+          toDestination = fromToMatch[1].trim();
+        }
+      }
+    }
+
+    // If still no 'to', check transitPointCode or travelHubCode for exit segments
+    if (!toDestination && type === 'exit') {
+      toDestination = segment.travelHubCode || segment.transitPointCode || null;
+    }
+
     return {
       blockType: 'transfer',
       type: transferType,
       title: title,
       from: segment.startLocation?.name || segment.from || segment.location || null,
-      to: segment.endLocation?.name || segment.to || null,
+      to: toDestination,
       descriptionOriginal: textToRichText(segment.description),
       descriptionEnhanced: null,
       departureTime: segment.departureTime || null,

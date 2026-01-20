@@ -268,12 +268,33 @@ function mapSegmentToBlock(segment, mediaMapping) {
     if (type === 'flight') transferType = 'flight';
     if (type === 'boat') transferType = 'boat';
 
+    const title = segment.name || segment.title || 'Transfer';
+
+    // Extract 'to' destination from multiple sources
+    let toDestination = segment.endLocation?.name || segment.to || null;
+
+    // If no direct 'to', try to parse from title
+    if (!toDestination && title) {
+      // Common patterns: "Transfer to X", "Flight to X", "Drive to X"
+      const toMatch = title.match(/(?:transfer|flight|drive|road)\s+to\s+([^,\-]+)/i);
+      if (toMatch) {
+        toDestination = toMatch[1].trim();
+      }
+      // Also try "X to Y" pattern
+      if (!toDestination) {
+        const fromToMatch = title.match(/\bto\s+([^,\-]+)$/i);
+        if (fromToMatch) {
+          toDestination = fromToMatch[1].trim();
+        }
+      }
+    }
+
     return {
       blockType: 'transfer',
       type: transferType,
-      title: segment.name || segment.title || 'Transfer',
+      title: title,
       from: segment.startLocation?.name || segment.from || null,
-      to: segment.endLocation?.name || segment.to || null,
+      to: toDestination,
       description: segment.enhancedDescription || segment.description || null,
       departureTime: segment.departureTime || null,
       arrivalTime: segment.arrivalTime || null,

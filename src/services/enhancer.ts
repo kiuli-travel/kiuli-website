@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getPayload } from 'payload';
 import config from '@payload-config';
 
@@ -17,6 +16,17 @@ interface EnhanceResult {
   enhanced: string;
   tokensUsed: number;
   configUsed: string;
+}
+
+interface OpenRouterResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+  usage?: {
+    total_tokens: number;
+  };
 }
 
 /**
@@ -93,11 +103,7 @@ function buildUserPrompt(
 }
 
 /**
- * Main enhancement function
- *
- * @param content - The original content to enhance
- * @param configName - The voice configuration name (e.g., "segment-description")
- * @param context - Additional context for the prompt (e.g., { segmentType: "stay", location: "Masai Mara" })
+ * Main enhancement function using OpenRouter
  */
 export async function enhanceContent(
   content: string,
@@ -105,9 +111,9 @@ export async function enhanceContent(
   context: Record<string, string> = {}
 ): Promise<EnhanceResult> {
   // Validate API key
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY environment variable not set');
+    throw new Error('OPENROUTER_API_KEY environment variable not set');
   }
 
   // 1. Fetch voice configuration
@@ -122,27 +128,39 @@ export async function enhanceContent(
     voiceConfig.maxWords
   );
 
-  // 3. Initialize Gemini
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    systemInstruction: systemPrompt,
-  });
-
-  // 4. Call Gemini AI
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-    generationConfig: {
-      temperature: voiceConfig.temperature,
-      maxOutputTokens: voiceConfig.maxWords ? voiceConfig.maxWords * 4 : 1000,
+  // 3. Call OpenRouter API with Claude
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://kiuli.com',
+      'X-Title': 'Kiuli Enhancement Service',
     },
+    body: JSON.stringify({
+      model: 'anthropic/claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      max_tokens: voiceConfig.maxWords ? voiceConfig.maxWords * 4 : 1000,
+      temperature: voiceConfig.temperature,
+    }),
   });
 
-  const response = result.response;
-  const enhanced = response.text().trim();
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+  }
 
-  // Calculate approximate tokens used (rough estimate)
-  const tokensUsed = Math.ceil((userPrompt.length + enhanced.length) / 4);
+  const data = (await response.json()) as OpenRouterResponse;
+
+  const enhanced = data.choices[0]?.message?.content?.trim();
+  if (!enhanced) {
+    throw new Error('No content in OpenRouter response');
+  }
+
+  const tokensUsed = data.usage?.total_tokens || 0;
 
   return {
     enhanced,

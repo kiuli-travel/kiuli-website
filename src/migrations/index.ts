@@ -5,6 +5,7 @@ import * as migration_20260113_124555_v6_schema_updates from './20260113_124555_
 import * as migration_20260114_181510_schema_valid_field from './20260114_181510_schema_valid_field';
 import * as migration_20260116_create_image_statuses from './20260116_create_image_statuses';
 import * as migration_20260120_add_reviewed_to_segments from './20260120_add_reviewed_to_segments';
+import * as migration_20260120_add_reviewed_to_faqs from './20260120_add_reviewed_to_faqs';
 
 export const migrations = [
   {
@@ -41,5 +42,10 @@ export const migrations = [
     up: migration_20260120_add_reviewed_to_segments.up,
     down: migration_20260120_add_reviewed_to_segments.down,
     name: '20260120_add_reviewed_to_segments'
+  },
+  {
+    up: migration_20260120_add_reviewed_to_faqs.up,
+    down: migration_20260120_add_reviewed_to_faqs.down,
+    name: '20260120_add_reviewed_to_faqs'
   },
 ];

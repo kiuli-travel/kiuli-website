@@ -533,6 +533,24 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
       fields: [
         {
+          name: 'reviewUI',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/collections/Itineraries/components/ReviewToggle#ReviewToggle',
+            },
+          },
+        },
+        {
+          name: 'reviewed',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Mark as reviewed after checking AI-generated content',
+            condition: () => false, // Hide raw checkbox - use reviewUI instead
+          },
+        },
+        {
           name: 'question',
           type: 'text',
           required: true,

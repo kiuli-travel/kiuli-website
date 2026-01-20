@@ -129,12 +129,7 @@ function groupSegmentsByDay(segments) {
 
     const day = dayMap.get(dayNum);
 
-    // Set day title from accommodation
-    if (!day.title && (segment.type === 'stay' || segment.type === 'accommodation') && segment.name) {
-      day.title = segment.name;
-    }
-
-    // Set location
+    // Collect location from any segment
     if (!day.location && (segment.location || segment.locationName)) {
       day.location = segment.location || segment.locationName;
     }
@@ -142,8 +137,75 @@ function groupSegmentsByDay(segments) {
     day.segments.push(segment);
   }
 
-  // Sort by day number and convert to array
-  return Array.from(dayMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
+  // Second pass: Generate titles for all days
+  const dayArray = Array.from(dayMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
+
+  for (const day of dayArray) {
+    day.title = generateDayTitle(day);
+  }
+
+  return dayArray;
+}
+
+/**
+ * Generate a title for a day based on its segments
+ * Priority:
+ * 1. If day has stay segment → use accommodation name
+ * 2. If day has activity only → use location + first activity
+ * 3. Fallback → "Day {n} - {location}" or "Day {n}"
+ *
+ * @param {Object} day - Day object with dayNumber, location, segments
+ * @returns {string} Generated title
+ */
+function generateDayTitle(day) {
+  const { dayNumber, location, segments } = day;
+
+  // Check for stay segment first
+  const staySegment = segments.find(s =>
+    s.type === 'stay' || s.type === 'accommodation'
+  );
+
+  if (staySegment) {
+    const accommodationName = staySegment.name || staySegment.title || staySegment.supplierName;
+    if (accommodationName) {
+      return accommodationName;
+    }
+  }
+
+  // Check for activity segments
+  const activitySegment = segments.find(s =>
+    s.type === 'service' || s.type === 'activity'
+  );
+
+  if (activitySegment) {
+    const activityName = activitySegment.name || activitySegment.title;
+    if (activityName && location) {
+      return `${location} - ${activityName}`;
+    }
+    if (activityName) {
+      return activityName;
+    }
+  }
+
+  // Check for significant transfer (entry/exit points often have meaningful names)
+  const transferSegment = segments.find(s =>
+    s.type === 'entry' || s.type === 'exit' || s.type === 'flight'
+  );
+
+  if (transferSegment) {
+    const transferTitle = transferSegment.name || transferSegment.title;
+    if (transferTitle && !transferTitle.toLowerCase().includes('transfer')) {
+      return transferTitle;
+    }
+  }
+
+  // Fallback: Use location if available
+  if (location) {
+    return `Day ${dayNumber} - ${location}`;
+  }
+
+  // Final fallback
+  return `Day ${dayNumber}`;
 }
 
 /**

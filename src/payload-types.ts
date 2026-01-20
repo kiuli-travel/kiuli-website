@@ -537,6 +537,18 @@ export interface Itinerary {
   id: number;
   title: string;
   /**
+   * Original title from iTrvl (read-only)
+   */
+  titleItrvl?: string | null;
+  /**
+   * Enhanced title (editable)
+   */
+  titleEnhanced?: string | null;
+  /**
+   * Title has been reviewed
+   */
+  titleReviewed?: boolean | null;
+  /**
    * URL-friendly identifier (auto-generated from title)
    */
   slug: string;
@@ -549,9 +561,33 @@ export interface Itinerary {
    */
   metaTitle?: string | null;
   /**
+   * Original meta title from iTrvl (read-only)
+   */
+  metaTitleItrvl?: string | null;
+  /**
+   * Enhanced meta title (editable)
+   */
+  metaTitleEnhanced?: string | null;
+  /**
+   * Meta title has been reviewed
+   */
+  metaTitleReviewed?: boolean | null;
+  /**
    * SEO description (max 160 chars). Auto-generated if blank.
    */
   metaDescription?: string | null;
+  /**
+   * Original meta description from iTrvl (read-only)
+   */
+  metaDescriptionItrvl?: string | null;
+  /**
+   * Enhanced meta description (editable)
+   */
+  metaDescriptionEnhanced?: string | null;
+  /**
+   * Meta description has been reviewed
+   */
+  metaDescriptionReviewed?: boolean | null;
   /**
    * Primary hero image for the itinerary page
    */
@@ -560,6 +596,10 @@ export interface Itinerary {
    * Lock hero image to prevent auto-replacement on re-scrape
    */
   heroImageLocked?: boolean | null;
+  /**
+   * Hero image selection has been reviewed
+   */
+  heroImageReviewed?: boolean | null;
   overview?: {
     /**
      * Original summary from scrape
@@ -888,7 +928,7 @@ export interface Itinerary {
       }[]
     | null;
   /**
-   * Original "Why Kiuli" content
+   * Original "Why Kiuli" content (legacy)
    */
   whyKiuliOriginal?: {
     root: {
@@ -906,7 +946,7 @@ export interface Itinerary {
     [k: string]: unknown;
   } | null;
   /**
-   * AI-enhanced "Why Kiuli" content (editable)
+   * AI-enhanced "Why Kiuli" content (legacy)
    */
   whyKiuliEnhanced?: {
     root: {
@@ -923,6 +963,28 @@ export interface Itinerary {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Original Why Kiuli text from iTrvl (read-only)
+   */
+  whyKiuliItrvl?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Why Kiuli content has been reviewed
+   */
+  whyKiuliReviewed?: boolean | null;
   /**
    * All images associated with this itinerary
    */
@@ -2552,12 +2614,22 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface ItinerariesSelect<T extends boolean = true> {
   title?: T;
+  titleItrvl?: T;
+  titleEnhanced?: T;
+  titleReviewed?: T;
   slug?: T;
   itineraryId?: T;
   metaTitle?: T;
+  metaTitleItrvl?: T;
+  metaTitleEnhanced?: T;
+  metaTitleReviewed?: T;
   metaDescription?: T;
+  metaDescriptionItrvl?: T;
+  metaDescriptionEnhanced?: T;
+  metaDescriptionReviewed?: T;
   heroImage?: T;
   heroImageLocked?: T;
+  heroImageReviewed?: T;
   overview?:
     | T
     | {
@@ -2651,6 +2723,8 @@ export interface ItinerariesSelect<T extends boolean = true> {
       };
   whyKiuliOriginal?: T;
   whyKiuliEnhanced?: T;
+  whyKiuliItrvl?: T;
+  whyKiuliReviewed?: T;
   images?: T;
   publishChecklist?:
     | T

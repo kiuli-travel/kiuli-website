@@ -11,6 +11,7 @@ import * as migration_20260120_create_voice_configuration from './20260120_creat
 import * as migration_20260120_create_destinations from './20260120_create_destinations';
 import * as migration_20260120_create_trip_types from './20260120_create_trip_types';
 import * as migration_20260120_add_root_twofield_pattern from './20260120_add_root_twofield_pattern';
+import * as migration_20260120_add_overview_investment_twofield from './20260120_add_overview_investment_twofield';
 
 export const migrations = [
   {
@@ -77,5 +78,10 @@ export const migrations = [
     up: migration_20260120_add_root_twofield_pattern.up,
     down: migration_20260120_add_root_twofield_pattern.down,
     name: '20260120_add_root_twofield_pattern'
+  },
+  {
+    up: migration_20260120_add_overview_investment_twofield.up,
+    down: migration_20260120_add_overview_investment_twofield.down,
+    name: '20260120_add_overview_investment_twofield'
   },
 ];

@@ -223,11 +223,12 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       name: 'overview',
       type: 'group',
       fields: [
+        // Legacy field (kept for backward compatibility)
         {
           name: 'summaryOriginal',
           type: 'richText',
           admin: {
-            description: 'Original summary from scrape',
+            description: 'Original summary from scrape (legacy)',
           },
         },
         {
@@ -235,6 +236,23 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           type: 'richText',
           admin: {
             description: 'AI-enhanced summary (editable)',
+          },
+        },
+        // V7 two-field pattern
+        {
+          name: 'summaryItrvl',
+          type: 'richText',
+          admin: {
+            readOnly: true,
+            description: 'Original summary from iTrvl (read-only)',
+          },
+        },
+        {
+          name: 'summaryReviewed',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Summary has been reviewed',
           },
         },
         {
@@ -309,11 +327,36 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           type: 'text',
           defaultValue: 'USD',
         },
+        // Legacy field (kept for backward compatibility)
         {
           name: 'includes',
           type: 'richText',
           admin: {
-            description: 'What the price includes',
+            description: 'What the price includes (legacy)',
+          },
+        },
+        // V7 two-field pattern
+        {
+          name: 'includesItrvl',
+          type: 'richText',
+          admin: {
+            readOnly: true,
+            description: 'Original includes from iTrvl (read-only)',
+          },
+        },
+        {
+          name: 'includesEnhanced',
+          type: 'richText',
+          admin: {
+            description: 'Enhanced includes text (editable)',
+          },
+        },
+        {
+          name: 'includesReviewed',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'Includes text has been reviewed',
           },
         },
       ],

@@ -14,6 +14,12 @@ export const JobControlPanel: React.FC = () => {
 
   const status = getDataByPath('status') as string
   const failedImages = (getDataByPath('failedImages') || 0) as number
+  const version = (getDataByPath('version') || 1) as number
+  const previousVersions = (getDataByPath('previousVersions') || []) as Array<{
+    version: number
+    completedAt: string
+    status: string
+  }>
 
   const handleAction = async (action: JobAction) => {
     if (!id) return
@@ -74,7 +80,46 @@ export const JobControlPanel: React.FC = () => {
         marginTop: '1rem',
       }}
     >
-      <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem', fontWeight: 600 }}>Job Control</h4>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '0.75rem',
+        }}
+      >
+        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Job Control</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span
+            style={{
+              backgroundColor: '#e9ecef',
+              color: '#495057',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: 500,
+            }}
+          >
+            v{version}
+          </span>
+          {previousVersions.length > 0 && (
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: '#6c757d',
+              }}
+              title={previousVersions
+                .map(
+                  (pv) =>
+                    `v${pv.version}: ${pv.status} (${new Date(pv.completedAt).toLocaleDateString()})`
+                )
+                .join('\n')}
+            >
+              ({previousVersions.length} previous run{previousVersions.length !== 1 ? 's' : ''})
+            </span>
+          )}
+        </div>
+      </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {canCancel && (

@@ -837,6 +837,10 @@ export interface Itinerary {
    */
   faqItems?:
     | {
+        /**
+         * Mark as reviewed after checking AI-generated content
+         */
+        reviewed?: boolean | null;
         question: string;
         /**
          * Original answer from scrape
@@ -1473,6 +1477,21 @@ export interface ItineraryJob {
    * iTrvl access key (auto-extracted from URL)
    */
   accessKey?: string | null;
+  /**
+   * Pipeline run version number
+   */
+  version?: number | null;
+  /**
+   * History of previous pipeline runs
+   */
+  previousVersions?:
+    | {
+        version?: number | null;
+        completedAt?: string | null;
+        status?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   /**
    * Current status of the itinerary processing job
    */
@@ -2404,6 +2423,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
   faqItems?:
     | T
     | {
+        reviewed?: T;
         question?: T;
         answerOriginal?: T;
         answerEnhanced?: T;
@@ -2462,6 +2482,15 @@ export interface ItineraryJobsSelect<T extends boolean = true> {
   itrvlUrl?: T;
   itineraryId?: T;
   accessKey?: T;
+  version?: T;
+  previousVersions?:
+    | T
+    | {
+        version?: T;
+        completedAt?: T;
+        status?: T;
+        id?: T;
+      };
   status?: T;
   currentPhase?: T;
   progress?: T;

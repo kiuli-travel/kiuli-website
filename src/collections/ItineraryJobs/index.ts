@@ -89,6 +89,40 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
               },
             },
             {
+              name: 'version',
+              type: 'number',
+              defaultValue: 1,
+              admin: {
+                description: 'Pipeline run version number',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'previousVersions',
+              type: 'array',
+              admin: {
+                description: 'History of previous pipeline runs',
+                readOnly: true,
+              },
+              fields: [
+                {
+                  name: 'version',
+                  type: 'number',
+                },
+                {
+                  name: 'completedAt',
+                  type: 'date',
+                  admin: {
+                    date: { pickerAppearance: 'dayAndTime' },
+                  },
+                },
+                {
+                  name: 'status',
+                  type: 'text',
+                },
+              ],
+            },
+            {
               name: 'status',
               type: 'select',
               required: true,

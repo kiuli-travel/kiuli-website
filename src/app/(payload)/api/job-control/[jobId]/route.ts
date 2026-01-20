@@ -156,7 +156,18 @@ async function handleRetry(payload: Payload, job: ItineraryJob) {
     )
   }
 
-  // Reset job state
+  // Save current run to history and increment version
+  const currentVersion = job.version || 1
+  const previousVersions = job.previousVersions || []
+
+  // Add current run to history
+  const previousRun = {
+    version: currentVersion,
+    completedAt: job.completedAt || job.failedAt || new Date().toISOString(),
+    status: job.status,
+  }
+
+  // Reset job state with incremented version
   await payload.update({
     collection: 'itinerary-jobs',
     id: job.id,
@@ -170,6 +181,10 @@ async function handleRetry(payload: Payload, job: ItineraryJob) {
       skippedImages: 0,
       failedImages: 0,
       startedAt: new Date().toISOString(),
+      completedAt: null,
+      failedAt: null,
+      version: currentVersion + 1,
+      previousVersions: [...previousVersions, previousRun],
     },
   })
 

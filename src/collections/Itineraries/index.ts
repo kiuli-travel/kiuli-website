@@ -660,11 +660,21 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   required: true,
                 },
                 {
+                  name: 'titleEditor',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/ActivityFieldEditors#ActivityTitleEditor',
+                    },
+                  },
+                },
+                {
                   name: 'titleItrvl',
                   type: 'text',
                   admin: {
                     readOnly: true,
                     description: 'Original title from iTrvl (read-only)',
+                    condition: () => false, // Hidden - use titleEditor UI
                   },
                 },
                 {
@@ -672,18 +682,32 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                   admin: {
                     description: 'Enhanced title (editable)',
+                    condition: () => false, // Hidden - use titleEditor UI
                   },
                 },
                 {
                   name: 'titleReviewed',
                   type: 'checkbox',
                   defaultValue: false,
+                  admin: {
+                    condition: () => false, // Hidden - use titleEditor UI
+                  },
+                },
+                {
+                  name: 'descriptionEditor',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/ActivityFieldEditors#ActivityDescriptionEditor',
+                    },
+                  },
                 },
                 {
                   name: 'descriptionOriginal',
                   type: 'richText',
                   admin: {
                     description: 'Original description from scrape',
+                    condition: () => false, // Hidden - legacy field
                   },
                 },
                 {
@@ -692,6 +716,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   admin: {
                     readOnly: true,
                     description: 'Original description from iTrvl (read-only)',
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
@@ -699,20 +724,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'richText',
                   admin: {
                     description: 'AI-enhanced description (editable)',
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
                   name: 'descriptionReviewed',
                   type: 'checkbox',
                   defaultValue: false,
-                },
-                {
-                  name: 'enhanceUI',
-                  type: 'ui',
                   admin: {
-                    components: {
-                      Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton',
-                    },
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
@@ -783,11 +803,21 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                 },
                 {
+                  name: 'titleEditor',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/TransferFieldEditors#TransferTitleEditor',
+                    },
+                  },
+                },
+                {
                   name: 'titleItrvl',
                   type: 'text',
                   admin: {
                     readOnly: true,
                     description: 'Original title from iTrvl (read-only)',
+                    condition: () => false, // Hidden - use titleEditor UI
                   },
                 },
                 {
@@ -795,12 +825,16 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                   admin: {
                     description: 'Enhanced title (editable)',
+                    condition: () => false, // Hidden - use titleEditor UI
                   },
                 },
                 {
                   name: 'titleReviewed',
                   type: 'checkbox',
                   defaultValue: false,
+                  admin: {
+                    condition: () => false, // Hidden - use titleEditor UI
+                  },
                 },
                 {
                   name: 'from',
@@ -811,10 +845,20 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                 },
                 {
+                  name: 'descriptionEditor',
+                  type: 'ui',
+                  admin: {
+                    components: {
+                      Field: '@/components/admin/TransferFieldEditors#TransferDescriptionEditor',
+                    },
+                  },
+                },
+                {
                   name: 'descriptionOriginal',
                   type: 'richText',
                   admin: {
                     description: 'Original description from scrape',
+                    condition: () => false, // Hidden - legacy field
                   },
                 },
                 {
@@ -823,6 +867,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   admin: {
                     readOnly: true,
                     description: 'Original description from iTrvl (read-only)',
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
@@ -830,20 +875,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'richText',
                   admin: {
                     description: 'AI-enhanced description (editable)',
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {
                   name: 'descriptionReviewed',
                   type: 'checkbox',
                   defaultValue: false,
-                },
-                {
-                  name: 'enhanceUI',
-                  type: 'ui',
                   admin: {
-                    components: {
-                      Field: '@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton',
-                    },
+                    condition: () => false, // Hidden - use descriptionEditor UI
                   },
                 },
                 {

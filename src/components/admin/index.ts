@@ -4,3 +4,11 @@ export {
   StayDescriptionEditor,
   InclusionsEditor,
 } from './StayFieldEditors';
+export {
+  ActivityTitleEditor,
+  ActivityDescriptionEditor,
+} from './ActivityFieldEditors';
+export {
+  TransferTitleEditor,
+  TransferDescriptionEditor,
+} from './TransferFieldEditors';

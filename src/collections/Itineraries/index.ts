@@ -933,11 +933,21 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           required: true,
         },
         {
+          name: 'questionEditor',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/FAQFieldEditors#FAQQuestionEditor',
+            },
+          },
+        },
+        {
           name: 'questionItrvl',
           type: 'text',
           admin: {
             readOnly: true,
             description: 'Original question from iTrvl (read-only)',
+            condition: () => false, // Hidden - use questionEditor UI
           },
         },
         {
@@ -945,18 +955,32 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           type: 'text',
           admin: {
             description: 'Enhanced question (editable)',
+            condition: () => false, // Hidden - use questionEditor UI
           },
         },
         {
           name: 'questionReviewed',
           type: 'checkbox',
           defaultValue: false,
+          admin: {
+            condition: () => false, // Hidden - use questionEditor UI
+          },
+        },
+        {
+          name: 'answerEditor',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/FAQFieldEditors#FAQAnswerEditor',
+            },
+          },
         },
         {
           name: 'answerOriginal',
           type: 'richText',
           admin: {
             description: 'Original answer from scrape',
+            condition: () => false, // Hidden - legacy field
           },
         },
         {
@@ -965,6 +989,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           admin: {
             readOnly: true,
             description: 'Original answer from iTrvl (read-only)',
+            condition: () => false, // Hidden - use answerEditor UI
           },
         },
         {
@@ -972,12 +997,16 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           type: 'richText',
           admin: {
             description: 'AI-enhanced answer (editable)',
+            condition: () => false, // Hidden - use answerEditor UI
           },
         },
         {
           name: 'answerReviewed',
           type: 'checkbox',
           defaultValue: false,
+          admin: {
+            condition: () => false, // Hidden - use answerEditor UI
+          },
         },
       ],
     },

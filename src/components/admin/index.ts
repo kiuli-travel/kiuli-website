@@ -12,3 +12,7 @@ export {
   TransferTitleEditor,
   TransferDescriptionEditor,
 } from './TransferFieldEditors';
+export {
+  FAQQuestionEditor,
+  FAQAnswerEditor,
+} from './FAQFieldEditors';

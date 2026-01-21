@@ -1,5 +1,6 @@
 import type { CollectionConfig, AccessArgs } from 'payload'
 import { authenticated } from '../../access/authenticated'
+import { beforeDelete } from './hooks/beforeDelete'
 
 // Allow authenticated users OR API key access for updates
 const authenticatedOrApiKey = ({ req }: AccessArgs) => {
@@ -510,7 +511,7 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
         if (operation === 'create' && data.itrvlUrl) {
           try {
             const url = new URL(data.itrvlUrl)
-            const pathParts = url.pathname.split('/').filter(part => part.length > 0)
+            const pathParts = url.pathname.split('/').filter((part) => part.length > 0)
             const portalIndex = pathParts.indexOf('portal')
 
             if (portalIndex !== -1 && pathParts.length >= portalIndex + 3) {
@@ -526,6 +527,7 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
         return data
       },
     ],
+    beforeDelete: [beforeDelete],
   },
   timestamps: true,
 }

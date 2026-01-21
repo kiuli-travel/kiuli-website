@@ -27,27 +27,43 @@ function generateSlug(title) {
  * Select the best hero image from media mapping
  */
 function selectHeroImage(mediaMapping, mediaRecords) {
+  console.log(`[Transform] selectHeroImage called with ${Object.keys(mediaMapping || {}).length} mappings, ${(mediaRecords || []).length} records`);
+
+  // Fallback: use first image from mediaMapping if no mediaRecords
   if (!mediaRecords || mediaRecords.length === 0) {
-    const ids = Object.values(mediaMapping);
-    return ids.length > 0 ? ids[0] : null;
+    const ids = Object.values(mediaMapping || {});
+    const heroId = ids.length > 0 ? ids[0] : null;
+    console.log(`[Transform] No mediaRecords, using first from mapping: ${heroId}`);
+    return heroId;
   }
 
   // Priority: hero > high-quality wildlife/landscape > any wildlife/landscape > first
   const heroImage = mediaRecords.find(m => m.labels?.isHero === true);
-  if (heroImage) return heroImage.payloadId;
+  if (heroImage) {
+    console.log(`[Transform] Found labeled hero image: ${heroImage.payloadId}`);
+    return heroImage.payloadId;
+  }
 
   const highQuality = mediaRecords.find(m =>
     m.labels?.quality === 'high' &&
     ['wildlife', 'landscape'].includes(m.labels?.imageType)
   );
-  if (highQuality) return highQuality.payloadId;
+  if (highQuality) {
+    console.log(`[Transform] Found high-quality image: ${highQuality.payloadId}`);
+    return highQuality.payloadId;
+  }
 
   const wildlife = mediaRecords.find(m =>
     ['wildlife', 'landscape'].includes(m.labels?.imageType)
   );
-  if (wildlife) return wildlife.payloadId;
+  if (wildlife) {
+    console.log(`[Transform] Found wildlife/landscape image: ${wildlife.payloadId}`);
+    return wildlife.payloadId;
+  }
 
-  return mediaRecords[0]?.payloadId || Object.values(mediaMapping)[0] || null;
+  const fallbackId = mediaRecords[0]?.payloadId || Object.values(mediaMapping)[0] || null;
+  console.log(`[Transform] Using fallback hero image: ${fallbackId}`);
+  return fallbackId;
 }
 
 /**
@@ -195,16 +211,28 @@ function mapInclusions(segment) {
 function mapSegmentToBlock(segment, mediaMapping) {
   const type = segment.type?.toLowerCase();
 
-  // Determine block type
+  // Determine block type - map iTrvl segment types to Payload block types
   let blockType = null;
+  let transferType = null;
+
   if (type === 'stay' || type === 'accommodation') {
     blockType = 'stay';
-  } else if (type === 'service' || type === 'activity') {
+  } else if (type === 'service' || type === 'activity' || type === 'point') {
+    // 'point' = point of interest, treat as activity
     blockType = 'activity';
-  } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat') {
+  } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat' ||
+             type === 'entry' || type === 'exit') {
+    // entry/exit are arrival/departure transfers
     blockType = 'transfer';
+    // Map to transfer type for the select field
+    if (type === 'flight') transferType = 'flight';
+    else if (type === 'boat') transferType = 'boat';
+    else if (type === 'entry') transferType = 'entry';
+    else if (type === 'exit') transferType = 'exit';
+    else transferType = 'road';
   } else {
-    return null; // Skip unknown types
+    console.warn(`[Transform] Unknown segment type: ${type}, skipping`);
+    return null; // Skip truly unknown types
   }
 
   // Get media IDs
@@ -269,9 +297,8 @@ function mapSegmentToBlock(segment, mediaMapping) {
   }
 
   if (blockType === 'transfer') {
-    let transferType = 'road';
-    if (type === 'flight') transferType = 'flight';
-    if (type === 'boat') transferType = 'boat';
+    // Use the transferType we computed earlier (entry, exit, flight, boat, or road)
+    const finalTransferType = transferType || 'road';
 
     const title = segment.name || segment.title || 'Transfer';
     const description = segment.enhancedDescription || segment.description || '';
@@ -288,7 +315,7 @@ function mapSegmentToBlock(segment, mediaMapping) {
       descriptionEnhanced: null,
       descriptionReviewed: false,
       // Other fields
-      type: transferType,
+      type: finalTransferType,
       from: segment.startLocation?.name || segment.from || null,
       to: toDestination,
       departureTime: segment.departureTime || null,

@@ -68,9 +68,18 @@ exports.handler = async (event) => {
 
     // Phase 5: Generate Schema
     await tracker.startPhase('schema');
-    const mediaUrls = Object.values(mediaMapping).map(id =>
-      `${process.env.PAYLOAD_PUBLIC_MEDIA_URL || process.env.PAYLOAD_API_URL}/media/${id}`
-    );
+    // Build actual imgix URLs for schema (not Payload API endpoints)
+    // mediaMapping is s3Key -> payloadId, we need s3Key for imgix URL
+    // S3 key format: media/originals/{itineraryId}/{itineraryId}_{sanitized_s3Key}.{ext}
+    const imgixBaseUrl = process.env.IMGIX_URL || 'https://kiuli.imgix.net';
+    const mediaUrls = Object.keys(mediaMapping).map(s3Key => {
+      const extension = s3Key.includes('.') ? s3Key.split('.').pop() : 'jpg';
+      const baseFilename = s3Key.replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `${itineraryId}_${baseFilename}.${extension}`;
+      const originalS3Key = `media/originals/${itineraryId}/${filename}`;
+      return `${imgixBaseUrl}/${originalS3Key}?w=1200&h=630&fit=crop&auto=format`;
+    }).slice(0, 5); // Schema typically only needs first 5 images
+    console.log(`[Handler] Schema image URLs: ${mediaUrls.length} URLs generated`);
     const schema = generateSchema(enhancedData, rawData.price, itineraryId, mediaUrls);
     await tracker.completePhase('schema');
 

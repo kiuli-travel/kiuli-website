@@ -6,9 +6,24 @@ import { resolveFields, validatePublish } from './hooks'
 const authenticatedOrApiKey = ({ req }: AccessArgs) => {
   if (req.user) return true
   const headers = req.headers as Headers | Record<string, string>
-  const authHeader = typeof headers?.get === 'function'
-    ? headers.get('authorization')
-    : (headers as Record<string, string>)?.authorization
+  const authHeader =
+    typeof headers?.get === 'function'
+      ? headers.get('authorization')
+      : (headers as Record<string, string>)?.authorization
+  if (authHeader?.startsWith('Bearer ')) return true
+  return false
+}
+
+// Only allow creation via API (not admin UI)
+// Users should use the Import Itinerary page instead
+const apiKeyOnlyCreate = ({ req }: AccessArgs) => {
+  // Block logged-in users from creating via admin UI
+  // Allow API key access for Lambda pipeline
+  const headers = req.headers as Headers | Record<string, string>
+  const authHeader =
+    typeof headers?.get === 'function'
+      ? headers.get('authorization')
+      : (headers as Record<string, string>)?.authorization
   if (authHeader?.startsWith('Bearer ')) return true
   return false
 }
@@ -18,11 +33,13 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'overview.nights', '_status', 'updatedAt'],
-    description: 'Safari itineraries imported from iTrvl',
+    description:
+      'Safari itineraries imported from iTrvl. Use the "Import Itinerary" button in the sidebar to add new itineraries.',
+    hideAPIURL: true,
   },
   access: {
     read: authenticatedOrApiKey,
-    create: authenticatedOrApiKey,
+    create: apiKeyOnlyCreate, // Only allow API-based creation (via Lambda pipeline)
     update: authenticatedOrApiKey,
     delete: authenticated,
   },

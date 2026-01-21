@@ -1,9 +1,16 @@
 /**
- * Phase 6: Transform — Convert scraped data to structured format
+ * Phase 6: Transform — Convert scraped data to V7 structured format
+ *
+ * V7 Two-Field Pattern:
+ * - *Itrvl fields: Original data from iTrvl (read-only)
+ * - *Enhanced fields: AI-enhanced content (null initially)
+ * - *Reviewed flags: Editorial review status (false initially)
  *
  * Input: Raw scraped data + enhanced content + media mapping
- * Output: Structured data ready for Payload ingest
+ * Output: V7 structured data ready for Payload ingest
  */
+
+const { convertToRichText } = require('../utils/richTextConverter');
 
 /**
  * Generate URL-friendly slug from title
@@ -20,31 +27,26 @@ function generateSlug(title) {
  * Select the best hero image from media mapping
  */
 function selectHeroImage(mediaMapping, mediaRecords) {
-  // mediaRecords is an array of { s3Key, payloadId, labels }
   if (!mediaRecords || mediaRecords.length === 0) {
-    // Fallback to first value in mediaMapping
     const ids = Object.values(mediaMapping);
     return ids.length > 0 ? ids[0] : null;
   }
 
-  // First: Look for explicitly marked hero images
+  // Priority: hero > high-quality wildlife/landscape > any wildlife/landscape > first
   const heroImage = mediaRecords.find(m => m.labels?.isHero === true);
   if (heroImage) return heroImage.payloadId;
 
-  // Second: High-quality wildlife or landscape
   const highQuality = mediaRecords.find(m =>
     m.labels?.quality === 'high' &&
     ['wildlife', 'landscape'].includes(m.labels?.imageType)
   );
   if (highQuality) return highQuality.payloadId;
 
-  // Third: Any wildlife or landscape
   const wildlife = mediaRecords.find(m =>
     ['wildlife', 'landscape'].includes(m.labels?.imageType)
   );
   if (wildlife) return wildlife.payloadId;
 
-  // Fallback: First image
   return mediaRecords[0]?.payloadId || Object.values(mediaMapping)[0] || null;
 }
 
@@ -53,16 +55,10 @@ function selectHeroImage(mediaMapping, mediaRecords) {
  */
 function extractCountries(segments) {
   const countries = new Set();
-
   for (const segment of segments) {
-    if (segment.country) {
-      countries.add(segment.country);
-    }
-    if (segment.countryName) {
-      countries.add(segment.countryName);
-    }
+    if (segment.country) countries.add(segment.country);
+    if (segment.countryName) countries.add(segment.countryName);
   }
-
   return Array.from(countries).filter(c => c && c !== 'Unknown');
 }
 
@@ -71,15 +67,11 @@ function extractCountries(segments) {
  */
 function extractHighlights(segments) {
   const highlights = [];
-
   for (const segment of segments) {
-    // Add accommodation names as highlights
     if ((segment.type === 'stay' || segment.type === 'accommodation') && segment.name) {
       highlights.push(segment.name);
     }
   }
-
-  // Deduplicate and limit
   return [...new Set(highlights)].slice(0, 8);
 }
 
@@ -87,10 +79,7 @@ function extractHighlights(segments) {
  * Calculate total nights from segments
  */
 function calculateNights(segments, rawItinerary) {
-  // First try to get from itinerary metadata
-  if (rawItinerary?.nights) {
-    return rawItinerary.nights;
-  }
+  if (rawItinerary?.nights) return rawItinerary.nights;
 
   let nights = 0;
   for (const segment of segments) {
@@ -98,8 +87,40 @@ function calculateNights(segments, rawItinerary) {
       nights += segment.nights;
     }
   }
+  return nights || 7;
+}
 
-  return nights || 7;  // Default to 7 if not found
+/**
+ * Generate a title for a day based on its segments
+ * Priority: Stay name > Activity title > Location > Fallback
+ */
+function generateDayTitle(day) {
+  const { dayNumber, location, segments } = day;
+
+  // Check for stay segment
+  const staySegment = segments.find(s => s.type === 'stay' || s.type === 'accommodation');
+  if (staySegment) {
+    const name = staySegment.name || staySegment.title || staySegment.supplierName;
+    if (name) return name;
+  }
+
+  // Check for activity
+  const activitySegment = segments.find(s => s.type === 'service' || s.type === 'activity');
+  if (activitySegment) {
+    const name = activitySegment.name || activitySegment.title;
+    if (name && location) return `${location} - ${name}`;
+    if (name) return name;
+  }
+
+  // Check for significant transfer
+  const transferSegment = segments.find(s => s.type === 'entry' || s.type === 'exit' || s.type === 'flight');
+  if (transferSegment) {
+    const name = transferSegment.name || transferSegment.title;
+    if (name && !name.toLowerCase().includes('transfer')) return name;
+  }
+
+  if (location) return `Day ${dayNumber} - ${location}`;
+  return `Day ${dayNumber}`;
 }
 
 /**
@@ -109,107 +130,67 @@ function groupSegmentsByDay(segments) {
   const dayMap = new Map();
 
   for (const segment of segments) {
-    // Try to determine day number
     let dayNum = segment.day || segment.dayNumber || 1;
-
-    // Parse from sequence if available
     if (!dayNum && segment.sequence) {
-      dayNum = Math.ceil(segment.sequence / 3);  // Rough approximation
+      dayNum = Math.ceil(segment.sequence / 3);
     }
 
     if (!dayMap.has(dayNum)) {
       dayMap.set(dayNum, {
         dayNumber: dayNum,
         date: segment.startDate || null,
-        title: null,
         location: null,
         segments: []
       });
     }
 
     const day = dayMap.get(dayNum);
-
-    // Collect location from any segment
     if (!day.location && (segment.location || segment.locationName)) {
       day.location = segment.location || segment.locationName;
     }
-
     day.segments.push(segment);
   }
 
-  // Second pass: Generate titles for all days
-  const dayArray = Array.from(dayMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
-
-  for (const day of dayArray) {
-    day.title = generateDayTitle(day);
-  }
-
-  return dayArray;
+  return Array.from(dayMap.values()).sort((a, b) => a.dayNumber - b.dayNumber);
 }
 
 /**
- * Generate a title for a day based on its segments
- * Priority:
- * 1. If day has stay segment → use accommodation name
- * 2. If day has activity only → use location + first activity
- * 3. Fallback → "Day {n} - {location}" or "Day {n}"
- *
- * @param {Object} day - Day object with dayNumber, location, segments
- * @returns {string} Generated title
+ * Extract 'to' destination from transfer title
  */
-function generateDayTitle(day) {
-  const { dayNumber, location, segments } = day;
+function extractTransferTo(title) {
+  if (!title) return null;
 
-  // Check for stay segment first
-  const staySegment = segments.find(s =>
-    s.type === 'stay' || s.type === 'accommodation'
-  );
+  // Pattern: "Transfer to X", "Flight to X", "Drive to X"
+  const toMatch = title.match(/(?:transfer|flight|drive|road)\s+to\s+([^,\-]+)/i);
+  if (toMatch) return toMatch[1].trim();
 
-  if (staySegment) {
-    const accommodationName = staySegment.name || staySegment.title || staySegment.supplierName;
-    if (accommodationName) {
-      return accommodationName;
-    }
-  }
+  // Pattern: "X to Y"
+  const fromToMatch = title.match(/\bto\s+([^,\-]+)$/i);
+  if (fromToMatch) return fromToMatch[1].trim();
 
-  // Check for activity segments
-  const activitySegment = segments.find(s =>
-    s.type === 'service' || s.type === 'activity'
-  );
-
-  if (activitySegment) {
-    const activityName = activitySegment.name || activitySegment.title;
-    if (activityName && location) {
-      return `${location} - ${activityName}`;
-    }
-    if (activityName) {
-      return activityName;
-    }
-  }
-
-  // Check for significant transfer (entry/exit points often have meaningful names)
-  const transferSegment = segments.find(s =>
-    s.type === 'entry' || s.type === 'exit' || s.type === 'flight'
-  );
-
-  if (transferSegment) {
-    const transferTitle = transferSegment.name || transferSegment.title;
-    if (transferTitle && !transferTitle.toLowerCase().includes('transfer')) {
-      return transferTitle;
-    }
-  }
-
-  // Fallback: Use location if available
-  if (location) {
-    return `Day ${dayNumber} - ${location}`;
-  }
-
-  // Final fallback
-  return `Day ${dayNumber}`;
+  return null;
 }
 
 /**
- * Map segment type to block type
+ * Map inclusions from clientIncludeExclude array
+ */
+function mapInclusions(segment) {
+  const raw = segment.clientIncludeExclude || segment.inclusions || segment.included;
+
+  if (typeof raw === 'string') return raw;
+
+  if (Array.isArray(raw)) {
+    return raw
+      .filter(item => item.included === true || item.type === 'included')
+      .map(item => item.name || item.description || item)
+      .join('\n');
+  }
+
+  return '';
+}
+
+/**
+ * Map segment to V7 block structure
  */
 function mapSegmentToBlock(segment, mediaMapping) {
   const type = segment.type?.toLowerCase();
@@ -223,11 +204,10 @@ function mapSegmentToBlock(segment, mediaMapping) {
   } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat') {
     blockType = 'transfer';
   } else {
-    // Skip segments we don't map (entry, exit, point, etc.)
-    return null;
+    return null; // Skip unknown types
   }
 
-  // Get Payload Media IDs for segment images
+  // Get media IDs
   const imageIds = [];
   if (segment.images && Array.isArray(segment.images)) {
     for (const img of segment.images) {
@@ -238,28 +218,53 @@ function mapSegmentToBlock(segment, mediaMapping) {
     }
   }
 
-  // Build block based on type
+  // Build V7 block based on type
   if (blockType === 'stay') {
+    const accommodationName = segment.name || segment.title || 'Accommodation';
+    const description = segment.enhancedDescription || segment.description || '';
+    const inclusions = mapInclusions(segment);
+
     return {
       blockType: 'stay',
-      accommodationName: segment.name || segment.title || 'Accommodation',
-      description: segment.enhancedDescription || segment.description || null,
+      // V7 two-field pattern for accommodationName
+      accommodationNameItrvl: accommodationName,
+      accommodationNameEnhanced: null,
+      accommodationNameReviewed: false,
+      // V7 two-field pattern for description
+      descriptionItrvl: convertToRichText(description),
+      descriptionEnhanced: null,
+      descriptionReviewed: false,
+      // V7 two-field pattern for inclusions
+      inclusionsItrvl: convertToRichText(inclusions),
+      inclusionsEnhanced: null,
+      inclusionsReviewed: false,
+      // Other fields
       nights: segment.nights || 1,
       location: segment.location || segment.locationName || null,
       country: segment.country || segment.countryName || null,
       images: imageIds,
-      // clientIncludeExclude is the primary iTrvl field for inclusions
-      inclusions: segment.clientIncludeExclude || segment.inclusions || segment.included || null,
+      imagesReviewed: false,
       roomType: segment.roomType || null,
     };
   }
 
   if (blockType === 'activity') {
+    const title = segment.name || segment.title || 'Activity';
+    const description = segment.enhancedDescription || segment.description || '';
+
     return {
       blockType: 'activity',
-      title: segment.name || segment.title || 'Activity',
-      description: segment.enhancedDescription || segment.description || null,
+      // V7 two-field pattern for title
+      titleItrvl: title,
+      titleEnhanced: null,
+      titleReviewed: false,
+      // V7 two-field pattern for description
+      descriptionItrvl: convertToRichText(description),
+      descriptionEnhanced: null,
+      descriptionReviewed: false,
+      // Other fields
       images: imageIds,
+      imagesReviewed: false,
     };
   }
 
@@ -269,33 +274,23 @@ function mapSegmentToBlock(segment, mediaMapping) {
     if (type === 'boat') transferType = 'boat';
 
     const title = segment.name || segment.title || 'Transfer';
-
-    // Extract 'to' destination from multiple sources
-    let toDestination = segment.endLocation?.name || segment.to || null;
-
-    // If no direct 'to', try to parse from title
-    if (!toDestination && title) {
-      // Common patterns: "Transfer to X", "Flight to X", "Drive to X"
-      const toMatch = title.match(/(?:transfer|flight|drive|road)\s+to\s+([^,\-]+)/i);
-      if (toMatch) {
-        toDestination = toMatch[1].trim();
-      }
-      // Also try "X to Y" pattern
-      if (!toDestination) {
-        const fromToMatch = title.match(/\bto\s+([^,\-]+)$/i);
-        if (fromToMatch) {
-          toDestination = fromToMatch[1].trim();
-        }
-      }
-    }
+    const description = segment.enhancedDescription || segment.description || '';
+    const toDestination = segment.endLocation?.name || segment.to || extractTransferTo(title);
 
     return {
       blockType: 'transfer',
+      // V7 two-field pattern for title
+      titleItrvl: title,
+      titleEnhanced: null,
+      titleReviewed: false,
+      // V7 two-field pattern for description
+      descriptionItrvl: convertToRichText(description),
+      descriptionEnhanced: null,
+      descriptionReviewed: false,
+      // Other fields
       type: transferType,
-      title: title,
       from: segment.startLocation?.name || segment.from || null,
       to: toDestination,
-      description: segment.enhancedDescription || segment.description || null,
       departureTime: segment.departureTime || null,
       arrivalTime: segment.arrivalTime || null,
     };
@@ -305,7 +300,7 @@ function mapSegmentToBlock(segment, mediaMapping) {
 }
 
 /**
- * Generate FAQ items from segments
+ * Generate FAQ items with V7 pattern
  */
 function generateFaqItems(segments, title, countries) {
   const faqItems = [];
@@ -314,10 +309,17 @@ function generateFaqItems(segments, title, countries) {
   const stays = segments.filter(s => s.type === 'stay' || s.type === 'accommodation');
   for (const stay of stays.slice(0, 3)) {
     if (stay.name) {
+      const question = `What is included at ${stay.name}?`;
+      const answer = stay.inclusions || stay.description ||
+        `${stay.name} offers luxury accommodation with full board and activities as specified in the itinerary.`;
+
       faqItems.push({
-        question: `What is included at ${stay.name}?`,
-        answer: stay.inclusions || stay.description ||
-                `${stay.name} offers luxury accommodation with full board and activities as specified in the itinerary.`,
+        questionItrvl: question,
+        questionEnhanced: null,
+        questionReviewed: false,
+        answerItrvl: convertToRichText(answer),
+        answerEnhanced: null,
+        answerReviewed: false,
       });
     }
   }
@@ -325,24 +327,40 @@ function generateFaqItems(segments, title, countries) {
   // Destination FAQ
   const countryList = countries.length > 0 ? countries.join(' and ') : 'East Africa';
   faqItems.push({
-    question: `What is the best time to visit ${countryList}?`,
-    answer: `${countryList} offers excellent wildlife viewing year-round. Our travel designers can advise on the optimal timing based on your specific interests, whether that's the Great Migration, calving season, or particular wildlife encounters.`,
+    questionItrvl: `What is the best time to visit ${countryList}?`,
+    questionEnhanced: null,
+    questionReviewed: false,
+    answerItrvl: convertToRichText(`${countryList} offers excellent wildlife viewing year-round. Our travel designers can advise on the optimal timing based on your specific interests, whether that's the Great Migration, calving season, or particular wildlife encounters.`),
+    answerEnhanced: null,
+    answerReviewed: false,
   });
 
   // General FAQs
   faqItems.push({
-    question: 'What level of fitness is required for this safari?',
-    answer: 'This safari is suitable for most fitness levels. Game drives involve sitting in comfortable vehicles, and bush walks can be adjusted to your pace. Please let us know of any mobility concerns.',
+    questionItrvl: 'What level of fitness is required for this safari?',
+    questionEnhanced: null,
+    questionReviewed: false,
+    answerItrvl: convertToRichText('This safari is suitable for most fitness levels. Game drives involve sitting in comfortable vehicles, and bush walks can be adjusted to your pace. Please let us know of any mobility concerns.'),
+    answerEnhanced: null,
+    answerReviewed: false,
   });
 
   faqItems.push({
-    question: 'Is this safari suitable for children?',
-    answer: 'Family safaris are a specialty. Some lodges have age restrictions for certain activities, but we can customize the itinerary to ensure an unforgettable experience for travelers of all ages.',
+    questionItrvl: 'Is this safari suitable for children?',
+    questionEnhanced: null,
+    questionReviewed: false,
+    answerItrvl: convertToRichText('Family safaris are a specialty. Some lodges have age restrictions for certain activities, but we can customize the itinerary to ensure an unforgettable experience for travelers of all ages.'),
+    answerEnhanced: null,
+    answerReviewed: false,
   });
 
   faqItems.push({
-    question: 'What should I pack for this safari?',
-    answer: 'We recommend neutral-colored clothing, comfortable walking shoes, sun protection, binoculars, and a camera. A detailed packing list will be provided upon booking.',
+    questionItrvl: 'What should I pack for this safari?',
+    questionEnhanced: null,
+    questionReviewed: false,
+    answerItrvl: convertToRichText('We recommend neutral-colored clothing, comfortable walking shoes, sun protection, binoculars, and a camera. A detailed packing list will be provided upon booking.'),
+    answerEnhanced: null,
+    answerReviewed: false,
   });
 
   return faqItems;
@@ -353,25 +371,16 @@ function generateFaqItems(segments, title, countries) {
  */
 function generateMetaFields(title, nights, countries) {
   const countryList = countries.length > 0 ? countries.join(' & ') : 'Africa';
-
   const metaTitle = `${title} | ${nights}-Night Luxury Safari`.substring(0, 60);
-
   const metaDescription = `Experience a ${nights}-night luxury safari through ${countryList}. Exclusive lodges, expert guides, and unforgettable wildlife encounters. Inquire with Kiuli today.`.substring(0, 160);
-
   return { metaTitle, metaDescription };
 }
 
 /**
  * Generate investmentLevel.includes by aggregating inclusions from all stay segments
- *
- * @param {Array} segments - Raw segments from iTrvl
- * @param {number} nights - Total nights
- * @returns {string} Summary text of inclusions
  */
 function generateInvestmentIncludes(segments, nights) {
   const stays = segments.filter(s => s.type === 'stay' || s.type === 'accommodation');
-
-  // Collect unique inclusions from all stays
   const allInclusions = new Set();
   const accommodationNames = [];
 
@@ -382,7 +391,7 @@ function generateInvestmentIncludes(segments, nights) {
 
     const inclusionsText = stay.clientIncludeExclude || stay.inclusions || stay.included || '';
     if (inclusionsText) {
-      const text = inclusionsText.toLowerCase();
+      const text = String(inclusionsText).toLowerCase();
       if (text.includes('meal') || text.includes('breakfast') || text.includes('dinner') || text.includes('full board')) {
         allInclusions.add('all meals');
       }
@@ -408,31 +417,27 @@ function generateInvestmentIncludes(segments, nights) {
   }
 
   const parts = [];
-
   if (accommodationNames.length > 0) {
     const uniqueNames = [...new Set(accommodationNames)];
     parts.push(`${nights} nights at ${uniqueNames.slice(0, 3).join(', ')}${uniqueNames.length > 3 ? ' and more' : ''}`);
   }
-
   if (allInclusions.size > 0) {
-    const inclusionsList = Array.from(allInclusions).slice(0, 5);
-    parts.push(inclusionsList.join(', '));
+    parts.push(Array.from(allInclusions).slice(0, 5).join(', '));
   }
 
   if (parts.length === 0) {
     return `Luxury accommodation for ${nights} nights with full board, game activities, and expert guiding throughout your safari experience.`;
   }
-
   return parts.join('. ') + '.';
 }
 
 /**
- * Main transform function
+ * Main transform function — outputs V7 two-field pattern structure
  */
 async function transform(rawData, enhancedData, mediaMapping, mediaRecords, itrvlUrl) {
-  console.log('[Transform] Starting transformation');
+  console.log('[Transform] Starting V7 transformation');
 
-  // Extract itinerary data (handle nested structure)
+  // Extract itinerary data
   const itinerary = rawData.itinerary?.itineraries?.[0] ||
                     rawData.itinerary ||
                     rawData;
@@ -462,85 +467,114 @@ async function transform(rawData, enhancedData, mediaMapping, mediaRecords, itrv
   const countries = extractCountries(segments);
   const highlights = extractHighlights(segments);
   const heroImage = selectHeroImage(mediaMapping, mediaRecords);
+  const { metaTitle, metaDescription } = generateMetaFields(title, nights, countries);
+  const investmentIncludes = generateInvestmentIncludes(segments, nights);
 
   console.log(`[Transform] Nights: ${nights}, Countries: ${countries.join(', ')}`);
 
-  // Group segments by day
+  // Group and transform segments by day
   const groupedDays = groupSegmentsByDay(segments);
+  const days = groupedDays.map(day => {
+    const dayTitle = generateDayTitle(day);
+    return {
+      dayNumber: day.dayNumber,
+      date: day.date,
+      // V7 two-field pattern for day title
+      titleItrvl: dayTitle,
+      titleEnhanced: null,
+      titleReviewed: false,
+      // Location
+      location: day.location,
+      // V7 segments
+      segments: day.segments
+        .map(s => mapSegmentToBlock(s, mediaMapping))
+        .filter(Boolean)
+    };
+  });
 
-  // Transform each day's segments to blocks
-  const days = groupedDays.map(day => ({
-    dayNumber: day.dayNumber,
-    date: day.date,
-    title: day.title,
-    location: day.location,
-    segments: day.segments
-      .map(s => mapSegmentToBlock(s, mediaMapping))
-      .filter(Boolean)
-  }));
-
-  // Generate FAQ items
+  // Generate FAQ items with V7 pattern
   const faqItems = generateFaqItems(segments, title, countries);
-
-  // Generate meta fields
-  const { metaTitle, metaDescription } = generateMetaFields(title, nights, countries);
-
-  // Generate investment includes
-  const investmentIncludes = generateInvestmentIncludes(segments, nights);
 
   // Get all media IDs
   const allImageIds = Object.values(mediaMapping);
 
-  // Build the transformed output
+  // Build V7 transformed output
   const transformed = {
-    // Basic
+    // === BASIC INFO ===
+    // Display field (resolveFields hook will compute from Itrvl/Enhanced)
     title,
     slug,
     itineraryId,
 
-    // SEO
+    // V7 two-field pattern for title
+    titleItrvl: title,
+    titleEnhanced: null,
+    titleReviewed: false,
+
+    // === SEO ===
+    // Display fields
     metaTitle,
     metaDescription,
 
-    // Hero
-    heroImage,
+    // V7 two-field pattern for metaTitle
+    metaTitleItrvl: metaTitle,
+    metaTitleEnhanced: null,
+    metaTitleReviewed: false,
 
-    // Overview
+    // V7 two-field pattern for metaDescription
+    metaDescriptionItrvl: metaDescription,
+    metaDescriptionEnhanced: null,
+    metaDescriptionReviewed: false,
+
+    // === HERO ===
+    heroImage,
+    heroImageReviewed: false,
+
+    // === OVERVIEW ===
     overview: {
       nights,
       countries: countries.map(c => ({ country: c })),
       highlights: highlights.map(h => ({ highlight: h })),
+      // V7 two-field pattern for summary
+      summaryItrvl: convertToRichText(itinerary.presentation?.overview || `A ${nights}-night luxury safari through ${countries.join(' and ') || 'Africa'}.`),
+      summaryEnhanced: null,
+      summaryReviewed: false,
     },
 
-    // Investment
+    // === INVESTMENT LEVEL ===
     investmentLevel: {
       fromPrice: Math.round(priceInCents / 100),
       currency: 'USD',
-      includes: investmentIncludes,
+      // V7 two-field pattern for includes
+      includesItrvl: convertToRichText(investmentIncludes),
+      includesEnhanced: null,
+      includesReviewed: false,
+      notIncluded: null,
     },
 
-    // Structured days
+    // === DAYS (with V7 segments) ===
     days,
 
-    // FAQ
+    // === FAQ (with V7 pattern) ===
     faqItems,
 
-    // All images
+    // === IMAGES ===
     images: allImageIds,
 
-    // Source (hidden)
+    // === SOURCE (hidden in admin) ===
     source: {
       itrvlUrl,
       lastScrapedAt: new Date().toISOString(),
-      rawData: rawData,
+      // Note: rawData removed to avoid payload size issues
+      // Raw data available in iTrvl via itrvlUrl
     },
 
-    // Build info
+    // === STATUS ===
     buildTimestamp: new Date().toISOString(),
     _status: 'draft',
   };
 
-  console.log(`[Transform] Complete: ${days.length} days, ${faqItems.length} FAQs, ${allImageIds.length} images`);
+  console.log(`[Transform] V7 Complete: ${days.length} days, ${faqItems.length} FAQs, ${allImageIds.length} images`);
 
   return transformed;
 }

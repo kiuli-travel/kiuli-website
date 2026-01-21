@@ -187,14 +187,14 @@ exports.handler = async (event) => {
       // Update mode: archive current version, update
       console.log(`[Orchestrator] Updating existing itinerary: ${existingItinerary.id}`);
 
+      // Store minimal version info to avoid payload size issues
+      // Full data can be retrieved from Payload version history if needed
       const previousVersion = {
         versionNumber: existingItinerary.version || 1,
         scrapedAt: existingItinerary.source?.lastScrapedAt || existingItinerary.updatedAt,
-        data: {
-          title: existingItinerary.title,
-          overview: existingItinerary.overview,
-          days: existingItinerary.days
-        }
+        title: existingItinerary.title,
+        nights: existingItinerary.overview?.nights || 0,
+        dayCount: existingItinerary.days?.length || 0,
       };
 
       const updateData = {

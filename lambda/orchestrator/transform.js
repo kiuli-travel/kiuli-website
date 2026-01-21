@@ -606,7 +606,8 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     source: {
       itrvlUrl,
       lastScrapedAt: new Date().toISOString(),
-      rawData: rawData,
+      // Note: rawData removed to avoid payload size issues (was causing 413 errors)
+      // Raw data available in iTrvl via itrvlUrl if needed
     },
 
     // Build info

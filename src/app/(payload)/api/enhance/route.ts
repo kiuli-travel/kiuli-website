@@ -56,21 +56,26 @@ function setNestedValue(
   const parts = path.split('.');
   const result = JSON.parse(JSON.stringify(obj)); // Deep clone
 
-  let current = result;
+  let current: Record<string, unknown> | unknown[] = result;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
     const index = parseInt(part, 10);
+    const nextPart = parts[i + 1];
+    const nextIndex = parseInt(nextPart, 10);
 
     if (!isNaN(index) && Array.isArray(current)) {
-      current = current[index];
-    } else {
-      if (current[part] === undefined) {
-        // Create intermediate objects/arrays as needed
-        const nextPart = parts[i + 1];
-        const nextIndex = parseInt(nextPart, 10);
-        current[part] = !isNaN(nextIndex) ? [] : {};
+      // Ensure array has element at this index
+      if (current[index] === undefined) {
+        current[index] = !isNaN(nextIndex) ? [] : {};
       }
-      current = current[part];
+      current = current[index] as Record<string, unknown> | unknown[];
+    } else {
+      const obj = current as Record<string, unknown>;
+      if (obj[part] === undefined) {
+        // Create intermediate objects/arrays as needed
+        obj[part] = !isNaN(nextIndex) ? [] : {};
+      }
+      current = obj[part] as Record<string, unknown> | unknown[];
     }
   }
 
@@ -80,7 +85,7 @@ function setNestedValue(
   if (!isNaN(lastIndex) && Array.isArray(current)) {
     current[lastIndex] = value;
   } else {
-    current[lastPart] = value;
+    (current as Record<string, unknown>)[lastPart] = value;
   }
 
   return result;
@@ -299,11 +304,13 @@ export async function POST(request: NextRequest) {
     // Get Payload instance
     const payload = await getPayload({ config });
 
-    // Fetch the itinerary
+    // Fetch the itinerary with overrideAccess to bypass afterRead hooks
+    // The afterRead hook strips *Itrvl fields, but we need them for enhancement
     const itinerary = await payload.findByID({
       collection: 'itineraries',
       id: itineraryId,
       depth: 2,
+      overrideAccess: true, // Bypass access control but NOT hooks
     });
 
     if (!itinerary) {
@@ -316,8 +323,16 @@ export async function POST(request: NextRequest) {
     // Get the field paths
     const { itrvlPath, enhancedPath, isRichText } = getFieldPaths(fieldPath);
 
-    // Get the original content
-    const originalValue = getNestedValue(itinerary as unknown as Record<string, unknown>, itrvlPath);
+    // Get the original content from either the Itrvl field or the resolved field
+    // The afterRead hook may have resolved fields, so check both
+    let originalValue = getNestedValue(itinerary as unknown as Record<string, unknown>, itrvlPath);
+
+    // If Itrvl field is empty, try the base field name (afterRead may have resolved it)
+    if (!originalValue) {
+      // Extract base field name from itrvlPath (e.g., "overview.summaryItrvl" -> "overview.summary")
+      const baseFieldPath = itrvlPath.replace(/Itrvl$/, '');
+      originalValue = getNestedValue(itinerary as unknown as Record<string, unknown>, baseFieldPath);
+    }
 
     if (!originalValue) {
       return NextResponse.json(
@@ -350,8 +365,10 @@ export async function POST(request: NextRequest) {
     // Convert to RichText if needed
     const enhancedValue = isRichText ? toRichText(result.enhanced) : result.enhanced;
 
-    // Build update data
-    const updateData = setNestedValue({}, enhancedPath, enhancedValue);
+    // Update the itinerary using dot notation for nested fields
+    // Payload supports dot notation to update nested fields directly
+    const updateData: Record<string, unknown> = {};
+    updateData[enhancedPath] = enhancedValue;
 
     // Update the itinerary
     await payload.update({

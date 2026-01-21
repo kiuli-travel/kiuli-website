@@ -8,6 +8,43 @@ interface EnhanceButtonProps {
   dayIndex?: number
   segmentIndex?: number
   faqIndex?: number
+  /** Optional: explicit field path (e.g., "days.0.segments.1.description") */
+  fieldPath?: string
+}
+
+/**
+ * Build fieldPath and voiceConfig from target and indices
+ */
+function buildEnhanceParams(
+  target: string,
+  dayIndex?: number,
+  segmentIndex?: number,
+  faqIndex?: number
+): { fieldPath: string; voiceConfig: string } {
+  switch (target) {
+    case 'overview':
+      return { fieldPath: 'overview.summary', voiceConfig: 'overview-summary' }
+    case 'whyKiuli':
+      return { fieldPath: 'whyKiuli', voiceConfig: 'why-kiuli' }
+    case 'segment':
+      if (dayIndex !== undefined && segmentIndex !== undefined) {
+        return {
+          fieldPath: `days.${dayIndex}.segments.${segmentIndex}.description`,
+          voiceConfig: 'segment-description',
+        }
+      }
+      throw new Error('dayIndex and segmentIndex required for segment target')
+    case 'faq':
+      if (faqIndex !== undefined) {
+        return {
+          fieldPath: `faqItems.${faqIndex}.answer`,
+          voiceConfig: 'faq-answer',
+        }
+      }
+      throw new Error('faqIndex required for faq target')
+    default:
+      throw new Error(`Unknown target: ${target}`)
+  }
 }
 
 export const EnhanceButton: React.FC<EnhanceButtonProps> = ({
@@ -15,6 +52,7 @@ export const EnhanceButton: React.FC<EnhanceButtonProps> = ({
   dayIndex,
   segmentIndex,
   faqIndex,
+  fieldPath: explicitFieldPath,
 }) => {
   const { id } = useDocumentInfo()
   const [isEnhancing, setIsEnhancing] = useState(false)
@@ -32,6 +70,11 @@ export const EnhanceButton: React.FC<EnhanceButtonProps> = ({
     setMessage('')
 
     try {
+      // Build the correct fieldPath and voiceConfig for the API
+      const { fieldPath, voiceConfig } = explicitFieldPath
+        ? { fieldPath: explicitFieldPath, voiceConfig: `${target}-description` }
+        : buildEnhanceParams(target, dayIndex, segmentIndex, faqIndex)
+
       const response = await fetch('/api/enhance', {
         method: 'POST',
         headers: {
@@ -40,10 +83,8 @@ export const EnhanceButton: React.FC<EnhanceButtonProps> = ({
         credentials: 'include',
         body: JSON.stringify({
           itineraryId: id,
-          target,
-          dayIndex,
-          segmentIndex,
-          faqIndex,
+          fieldPath,
+          voiceConfig,
         }),
       })
 

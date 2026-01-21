@@ -20,6 +20,8 @@ import * as migration_20260120_seed_faq_answer_voice from './20260120_seed_faq_a
 import * as migration_20260120_seed_meta_description_voice from './20260120_seed_meta_description_voice';
 import * as migration_20260120_seed_day_title_voice from './20260120_seed_day_title_voice';
 import * as migration_20260120_seed_investment_includes_voice from './20260120_seed_investment_includes_voice';
+import * as migration_20260121_seed_overview_summary_voice from './20260121_seed_overview_summary_voice';
+import * as migration_20260121_seed_why_kiuli_voice from './20260121_seed_why_kiuli_voice';
 
 export const migrations = [
   {
@@ -131,5 +133,15 @@ export const migrations = [
     up: migration_20260120_seed_investment_includes_voice.up,
     down: migration_20260120_seed_investment_includes_voice.down,
     name: '20260120_seed_investment_includes_voice'
+  },
+  {
+    up: migration_20260121_seed_overview_summary_voice.up,
+    down: migration_20260121_seed_overview_summary_voice.down,
+    name: '20260121_seed_overview_summary_voice'
+  },
+  {
+    up: migration_20260121_seed_why_kiuli_voice.up,
+    down: migration_20260121_seed_why_kiuli_voice.down,
+    name: '20260121_seed_why_kiuli_voice'
   },
 ];

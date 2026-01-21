@@ -1,5 +1,15 @@
 import type { CollectionConfig } from 'payload'
 
+// Helper to check for API key auth
+const hasApiKeyAuth = (req: { headers: Headers }): boolean => {
+  const authHeader = req.headers.get('Authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    return token === process.env.SCRAPER_API_KEY || token === process.env.PAYLOAD_API_KEY
+  }
+  return false
+}
+
 export const VoiceConfiguration: CollectionConfig = {
   slug: 'voice-configuration',
   admin: {
@@ -9,8 +19,8 @@ export const VoiceConfiguration: CollectionConfig = {
   },
   access: {
     read: () => true,
-    update: ({ req }) => !!req.user,
-    create: () => false, // Only predefined configs via seed
+    update: ({ req }) => !!req.user || hasApiKeyAuth(req),
+    create: ({ req }) => !!req.user || hasApiKeyAuth(req), // Allow authenticated users or API key to create
     delete: () => false,
   },
   fields: [
@@ -20,7 +30,6 @@ export const VoiceConfiguration: CollectionConfig = {
       required: true,
       unique: true,
       admin: {
-        readOnly: true,
         description: 'Configuration identifier (e.g., segment-description)',
       },
     },

@@ -200,28 +200,40 @@ exports.handler = async (event) => {
     }
 
     // Get all media for this itinerary
-    // Use bracket notation - Payload doesn't parse JSON where clauses correctly
-    const mediaResult = await payload.find('media', {
-      'where[usedInItineraries][contains]': itineraryId,
-      limit: '500'
-    });
-
-    const mediaRecords = mediaResult.docs || [];
-    console.log(`[Finalizer] Found ${mediaRecords.length} media records`);
-
-    // 2. Get job and image statuses from collection
-    const job = await payload.getJob(jobId);
-    if (!job) {
-      throw new Error(`Job not found: ${jobId}`);
-    }
-
-    // Query image statuses from separate collection
+    // NOTE: We can't rely on usedInItineraries query because it's not updated for dedup hits
+    // Instead, get media IDs from image-statuses collection first, then fetch media records
     const imageStatusesResult = await payload.find('image-statuses', {
       'where[job][equals]': jobId,
       limit: '1000'
     });
     const imageStatuses = imageStatusesResult.docs || [];
     console.log(`[Finalizer] Found ${imageStatuses.length} ImageStatus records`);
+
+    // Get unique media IDs from image statuses (both complete and skipped)
+    const mediaIds = [...new Set(
+      imageStatuses
+        .filter(s => s.mediaId && (s.status === 'complete' || s.status === 'skipped'))
+        .map(s => s.mediaId)
+    )];
+    console.log(`[Finalizer] Unique media IDs from ImageStatuses: ${mediaIds.length}`);
+
+    // Fetch actual media records for these IDs
+    let mediaRecords = [];
+    if (mediaIds.length > 0) {
+      // Batch fetch media records
+      const mediaResult = await payload.find('media', {
+        'where[id][in]': mediaIds.join(','),
+        limit: '500'
+      });
+      mediaRecords = mediaResult.docs || [];
+    }
+    console.log(`[Finalizer] Fetched ${mediaRecords.length} media records`);
+
+    // 2. Get job (imageStatuses already queried above)
+    const job = await payload.getJob(jobId);
+    if (!job) {
+      throw new Error(`Job not found: ${jobId}`);
+    }
 
     // Reconcile counter fields with authoritative ImageStatuses collection
     const reconciledCounts = await reconcileJobCounters(jobId, imageStatuses);

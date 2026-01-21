@@ -11,11 +11,14 @@ async function deduplicate(rawData, itineraryId) {
   const imagesToProcess = [];
 
   for (const s3Key of uniqueKeys) {
-    const filename = `${itineraryId}_${s3Key.replace(/\//g, '_')}`;
+    // Match filename format from processImages.js
+    const extension = s3Key.includes('.') ? s3Key.split('.').pop() : 'jpg';
+    const baseFilename = s3Key.replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `${itineraryId}_${baseFilename}.${extension}`;
 
     try {
       const response = await fetch(
-        `${process.env.PAYLOAD_API_URL}/api/media?where[filename][equals]=${encodeURIComponent(filename)}&limit=1`,
+        `${process.env.PAYLOAD_API_URL}/api/media?where[filename][contains]=${encodeURIComponent(itineraryId + '_' + baseFilename)}&limit=1`,
         {
           headers: { 'Authorization': `Bearer ${process.env.PAYLOAD_API_KEY}` }
         }
@@ -24,8 +27,9 @@ async function deduplicate(rawData, itineraryId) {
       const result = await response.json();
 
       if (result.docs?.length > 0) {
-        existingMedia[s3Key] = result.docs[0].id;
-        console.log(`[Dedup] Existing: ${filename}`);
+        const mediaId = result.docs[0].id;
+        existingMedia[s3Key] = mediaId;
+        console.log(`[Dedup] Existing: ${filename} -> ID ${mediaId}`);
       } else {
         imagesToProcess.push(s3Key);
       }
@@ -37,6 +41,12 @@ async function deduplicate(rawData, itineraryId) {
 
   console.log(`[Dedup] To process: ${imagesToProcess.length}`);
   console.log(`[Dedup] Already exist: ${Object.keys(existingMedia).length}`);
+
+  // Debug: Show first few existing media mappings
+  const existingKeys = Object.keys(existingMedia);
+  if (existingKeys.length > 0) {
+    console.log(`[Dedup] First existing mapping: "${existingKeys[0]}" -> ${existingMedia[existingKeys[0]]}`);
+  }
 
   return {
     uniqueImages: imagesToProcess,

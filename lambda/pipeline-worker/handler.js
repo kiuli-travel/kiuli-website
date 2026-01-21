@@ -56,6 +56,15 @@ exports.handler = async (event) => {
       existingMedia,
       tracker
     );
+
+    // Debug: log mediaMapping content
+    console.log(`[Handler] mediaMapping has ${Object.keys(mediaMapping).length} entries`);
+    if (Object.keys(mediaMapping).length > 0) {
+      const firstKey = Object.keys(mediaMapping)[0];
+      const firstValue = mediaMapping[firstKey];
+      console.log(`[Handler] First mapping: "${firstKey}" -> ${firstValue}`);
+    }
+
     await tracker.completePhase('images', {
       processedImages: processed,
       failedImages: failed
@@ -72,19 +81,29 @@ exports.handler = async (event) => {
     // mediaMapping is s3Key -> payloadId, we need s3Key for imgix URL
     // S3 key format: media/originals/{itineraryId}/{itineraryId}_{sanitized_s3Key}.{ext}
     const imgixBaseUrl = process.env.IMGIX_URL || 'https://kiuli.imgix.net';
-    const mediaUrls = Object.keys(mediaMapping).map(s3Key => {
+    const mediaMappingKeys = Object.keys(mediaMapping);
+    console.log(`[Handler] Schema generation: ${mediaMappingKeys.length} keys in mediaMapping`);
+
+    const mediaUrls = mediaMappingKeys.map(s3Key => {
       const extension = s3Key.includes('.') ? s3Key.split('.').pop() : 'jpg';
       const baseFilename = s3Key.replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `${itineraryId}_${baseFilename}.${extension}`;
       const originalS3Key = `media/originals/${itineraryId}/${filename}`;
       return `${imgixBaseUrl}/${originalS3Key}?w=1200&h=630&fit=crop&auto=format`;
     }).slice(0, 5); // Schema typically only needs first 5 images
+
     console.log(`[Handler] Schema image URLs: ${mediaUrls.length} URLs generated`);
+    if (mediaUrls.length > 0) {
+      console.log(`[Handler] First schema URL: ${mediaUrls[0]}`);
+    }
+
     const schema = generateSchema(enhancedData, rawData.price, itineraryId, mediaUrls);
+    console.log(`[Handler] Schema generated with ${schema.image?.length || 0} images`);
     await tracker.completePhase('schema');
 
     // Phase 6: Transform to structured format
     await tracker.startPhase('transform');
+    console.log(`[Handler] Calling transform with ${Object.keys(mediaMapping).length} media mappings`);
     const transformedData = await transform(
       rawData,
       enhancedData,
@@ -92,6 +111,7 @@ exports.handler = async (event) => {
       null,  // mediaRecords - not yet tracking labels
       itrvlUrl
     );
+    console.log(`[Handler] Transform complete. heroImage: ${transformedData.heroImage}, images: ${transformedData.images?.length || 0}`);
     await tracker.completePhase('transform');
 
     // Phase 7: Ingest to Payload

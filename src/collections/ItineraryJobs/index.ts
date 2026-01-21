@@ -28,19 +28,87 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
     update: authenticatedOrApiKey,
   },
   admin: {
-    defaultColumns: ['itrvlUrl', 'status', 'itineraryId', 'duration', 'createdAt'],
-    useAsTitle: 'itrvlUrl',
-    description: 'Manage iTrvl itinerary processing jobs. Paste an iTrvl URL to create a job, then use the "Trigger Processing" button to start the pipeline.',
+    defaultColumns: ['displayTitle', 'status', 'itrvlUrlLink', 'duration', 'createdAt'],
+    useAsTitle: 'displayTitle',
+    description:
+      'Manage iTrvl itinerary processing jobs. Use the Import Itinerary page to create new jobs.',
     listSearchableFields: ['itrvlUrl', 'itineraryId', 'payloadId'],
   },
   fields: [
+    // Virtual field for list display - shows itinerary title
+    {
+      name: 'displayTitle',
+      type: 'text',
+      admin: {
+        hidden: true, // Hide in edit view, only show in list
+        components: {
+          Cell: '@/collections/ItineraryJobs/cells/TitleCell#TitleCell',
+        },
+      },
+      hooks: {
+        afterRead: [
+          async ({ data, req }) => {
+            if (!data) return 'Untitled'
+
+            // If we have a processed itinerary, try to get its title
+            if (data.processedItinerary) {
+              try {
+                const itineraryId =
+                  typeof data.processedItinerary === 'object'
+                    ? data.processedItinerary.id
+                    : data.processedItinerary
+
+                if (itineraryId && req?.payload) {
+                  const itinerary = await req.payload.findByID({
+                    collection: 'itineraries',
+                    id: itineraryId,
+                    depth: 0,
+                  })
+                  if (itinerary?.title) {
+                    return itinerary.title
+                  }
+                }
+              } catch {
+                // Fall through to default
+              }
+            }
+
+            // Fallback to itinerary ID
+            if (data.itineraryId) {
+              return `ID: ...${data.itineraryId.slice(-8)}`
+            }
+
+            return 'Untitled'
+          },
+        ],
+      },
+    },
+    // Virtual field for iTrvl URL link in list view
+    {
+      name: 'itrvlUrlLink',
+      type: 'text',
+      admin: {
+        hidden: true,
+        components: {
+          Cell: '@/collections/ItineraryJobs/cells/ItrvlUrlCell#ItrvlUrlCell',
+        },
+      },
+      hooks: {
+        afterRead: [
+          ({ data }) => {
+            return data?.itrvlUrl || null
+          },
+        ],
+      },
+    },
     {
       name: 'itrvlUrl',
       type: 'text',
       required: true,
       label: 'iTrvl URL',
       admin: {
-        description: 'Paste the full iTrvl client portal URL (e.g., https://itrvl.com/client/portal/{accessKey}/{itineraryId})',
+        description:
+          'Paste the full iTrvl client portal URL (e.g., https://itrvl.com/client/portal/{accessKey}/{itineraryId})',
         placeholder: 'https://itrvl.com/client/portal/...',
       },
     },

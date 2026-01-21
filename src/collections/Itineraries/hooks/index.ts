@@ -1,1 +1,2 @@
-export { resolveFields } from './resolveFields';
+export { resolveFields } from './resolveFields'
+export { validatePublish } from './validatePublish'

@@ -1,6 +1,6 @@
 import type { CollectionConfig, AccessArgs } from 'payload'
 import { authenticated } from '../../access/authenticated'
-import { resolveFields } from './hooks'
+import { resolveFields, validatePublish } from './hooks'
 
 // Allow authenticated users OR API key access for Lambda pipeline
 const authenticatedOrApiKey = ({ req }: AccessArgs) => {
@@ -27,6 +27,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     delete: authenticated,
   },
   hooks: {
+    beforeChange: [validatePublish],
     afterRead: [resolveFields],
   },
   versions: {

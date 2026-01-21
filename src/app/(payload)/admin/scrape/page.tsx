@@ -28,14 +28,29 @@ export default function ScrapePage() {
         body: JSON.stringify({ itrvlUrl: url }),
       })
 
-      const data = await res.json()
+      // Check for empty response
+      const text = await res.text()
+
+      if (!text) {
+        throw new Error(`Server returned empty response (status ${res.status})`)
+      }
+
+      // Try to parse as JSON
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch {
+        console.error('Non-JSON response:', text)
+        throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`)
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || 'Scrape failed')
+        throw new Error(data.error || `Request failed with status ${res.status}`)
       }
 
       setResult(data)
     } catch (err) {
+      console.error('Scrape error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)

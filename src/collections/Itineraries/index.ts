@@ -1078,12 +1078,21 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
 
     // === ALL IMAGES (for gallery) ===
     {
+      name: 'imagesGalleryUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/components/admin/RootImagesGallery#RootImagesGallery',
+        },
+      },
+    },
+    {
       name: 'images',
       type: 'relationship',
       relationTo: 'media',
       hasMany: true,
       admin: {
-        description: 'All images associated with this itinerary',
+        description: 'All images associated with this itinerary (use gallery above to preview)',
       },
     },
 

@@ -34,7 +34,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'overview.nights', '_status', 'updatedAt'],
     description:
-      'Safari itineraries imported from iTrvl. Use the "Import Itinerary" button in the sidebar to add new itineraries.',
+      'Safari itineraries imported from iTrvl. To import a new itinerary, use the "Import Itinerary" button in the sidebar or go to /admin/scrape',
     hideAPIURL: true,
   },
   access: {

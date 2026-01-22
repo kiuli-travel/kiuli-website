@@ -293,6 +293,14 @@ export interface Media {
    */
   sourceS3Key?: string | null;
   /**
+   * Type of media (image or video)
+   */
+  mediaType?: ('image' | 'video') | null;
+  /**
+   * Video usage context
+   */
+  videoContext?: ('hero' | 'background' | 'gallery') | null;
+  /**
    * Image processing status
    */
   processingStatus?: ('pending' | 'processing' | 'complete' | 'failed') | null;
@@ -528,7 +536,7 @@ export interface Media {
   };
 }
 /**
- * Safari itineraries imported from iTrvl. Use the "Import Itinerary" button in the sidebar to add new itineraries.
+ * Safari itineraries imported from iTrvl. To import a new itinerary, use the "Import Itinerary" button in the sidebar or go to /admin/scrape
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "itineraries".
@@ -600,6 +608,18 @@ export interface Itinerary {
    * Hero image selection has been reviewed
    */
   heroImageReviewed?: boolean | null;
+  /**
+   * Hero video for itinerary header (background video)
+   */
+  heroVideo?: (number | null) | Media;
+  /**
+   * Lock hero video to prevent auto-replacement on re-scrape
+   */
+  heroVideoLocked?: boolean | null;
+  /**
+   * Hero video selection has been reviewed
+   */
+  heroVideoReviewed?: boolean | null;
   /**
    * Countries, regions, and parks featured in this itinerary
    */
@@ -1222,9 +1242,13 @@ export interface Itinerary {
    */
   whyKiuliReviewed?: boolean | null;
   /**
-   * All images associated with this itinerary
+   * All images associated with this itinerary (use gallery above to preview)
    */
   images?: (number | Media)[] | null;
+  /**
+   * All videos associated with this itinerary
+   */
+  videos?: (number | Media)[] | null;
   /**
    * Gated publishing checklist - all must be true to publish
    */
@@ -2076,6 +2100,14 @@ export interface ImageStatus {
   mediaId?: string | null;
   status?: ('pending' | 'processing' | 'complete' | 'failed' | 'skipped') | null;
   /**
+   * Type of media being processed
+   */
+  mediaType?: ('image' | 'video') | null;
+  /**
+   * Video usage context (hero, background, etc.)
+   */
+  videoContext?: string | null;
+  /**
    * Error message if failed
    */
   error?: string | null;
@@ -2682,6 +2714,8 @@ export interface PostsSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   sourceS3Key?: T;
+  mediaType?: T;
+  videoContext?: T;
   processingStatus?: T;
   processingError?: T;
   labelingStatus?: T;
@@ -2866,6 +2900,9 @@ export interface ItinerariesSelect<T extends boolean = true> {
   heroImage?: T;
   heroImageLocked?: T;
   heroImageReviewed?: T;
+  heroVideo?: T;
+  heroVideoLocked?: T;
+  heroVideoReviewed?: T;
   destinations?: T;
   tripTypes?: T;
   overview?:
@@ -2997,6 +3034,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
   whyKiuliItrvl?: T;
   whyKiuliReviewed?: T;
   images?: T;
+  videos?: T;
   publishChecklist?:
     | T
     | {
@@ -3096,6 +3134,8 @@ export interface ImageStatusesSelect<T extends boolean = true> {
   sourceS3Key?: T;
   mediaId?: T;
   status?: T;
+  mediaType?: T;
+  videoContext?: T;
   error?: T;
   startedAt?: T;
   completedAt?: T;

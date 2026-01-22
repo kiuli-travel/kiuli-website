@@ -528,7 +528,7 @@ export interface Media {
   };
 }
 /**
- * Safari itineraries imported from iTrvl
+ * Safari itineraries imported from iTrvl. Use the "Import Itinerary" button in the sidebar to add new itineraries.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "itineraries".
@@ -1897,7 +1897,7 @@ export interface Form {
   createdAt: string;
 }
 /**
- * Manage iTrvl itinerary processing jobs. Paste an iTrvl URL to create a job, then use the "Trigger Processing" button to start the pipeline.
+ * Manage iTrvl itinerary processing jobs. Use the Import Itinerary page to create new jobs.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "itinerary-jobs".

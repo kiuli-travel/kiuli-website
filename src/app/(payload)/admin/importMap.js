@@ -26,9 +26,18 @@ import { PublishChecklist as PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44 }
 import { ImageSelectorField as ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e } from '@/components/admin/ImageSelectorField'
 import { EnhanceOverviewButton as EnhanceOverviewButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
 import { ReviewToggle as ReviewToggle_69a80548c6026a9b8dc50316b85cb80c } from '@/collections/Itineraries/components/ReviewToggle'
-import { EnhanceSegmentButton as EnhanceSegmentButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
+import { AccommodationNameEditor as AccommodationNameEditor_46849b3ddab8795c07b91cec57a7ed79 } from '@/components/admin/StayFieldEditors'
+import { StayDescriptionEditor as StayDescriptionEditor_46849b3ddab8795c07b91cec57a7ed79 } from '@/components/admin/StayFieldEditors'
 import { ImageThumbnailsPreview as ImageThumbnailsPreview_4de4e0e6b22a238573dce8aa53b47d99 } from '@/components/admin/ImageThumbnailsPreview'
+import { InclusionsEditor as InclusionsEditor_46849b3ddab8795c07b91cec57a7ed79 } from '@/components/admin/StayFieldEditors'
+import { ActivityTitleEditor as ActivityTitleEditor_d3a89ba8ab9a61988575a5c3a7c3c4fa } from '@/components/admin/ActivityFieldEditors'
+import { ActivityDescriptionEditor as ActivityDescriptionEditor_d3a89ba8ab9a61988575a5c3a7c3c4fa } from '@/components/admin/ActivityFieldEditors'
+import { TransferTitleEditor as TransferTitleEditor_6ba9b31bc705390895417e76c47f2c73 } from '@/components/admin/TransferFieldEditors'
+import { TransferDescriptionEditor as TransferDescriptionEditor_6ba9b31bc705390895417e76c47f2c73 } from '@/components/admin/TransferFieldEditors'
+import { FAQQuestionEditor as FAQQuestionEditor_9b62e83ff894759746eacaf6f7067714 } from '@/components/admin/FAQFieldEditors'
+import { FAQAnswerEditor as FAQAnswerEditor_9b62e83ff894759746eacaf6f7067714 } from '@/components/admin/FAQFieldEditors'
 import { EnhanceWhyKiuliButton as EnhanceWhyKiuliButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
+import { RootImagesGallery as RootImagesGallery_255ef2e6cf8a21ab49525f913eb50e27 } from '@/components/admin/RootImagesGallery'
 import { ProcessButton as ProcessButton_6f8f56340afe606e50afe37e4a9f28d1 } from '@/collections/ItineraryJobs/components/ProcessButton'
 import { JobControlPanel as JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2 } from '@/collections/ItineraryJobs/components/JobControlPanel'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
@@ -36,6 +45,7 @@ import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from 
 import { FolderTypeField as FolderTypeField_3817bf644402e67bfe6577f60ef982de } from '@payloadcms/ui'
 import { RowLabel as RowLabel_ec255a65fa6fa8d1faeb09cf35284224 } from '@/Header/RowLabel'
 import { RowLabel as RowLabel_1f6ff6ff633e3695d348f4f3c58f1466 } from '@/Footer/RowLabel'
+import { ImportItineraryLink as ImportItineraryLink_4ec22f07d32f94aa350ea732b4015f51 } from '@/components/admin/ImportItineraryLink'
 import { NotificationBell as NotificationBell_a85350652356ec53eeb8176045ede954 } from '@/components/admin/NotificationBell'
 import { default as default_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
 import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
@@ -70,9 +80,18 @@ export const importMap = {
   "@/components/admin/ImageSelectorField#ImageSelectorField": ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e,
   "@/collections/Itineraries/components/EnhanceButton#EnhanceOverviewButton": EnhanceOverviewButton_4402482392cbdf4b96f22257e980d1a3,
   "@/collections/Itineraries/components/ReviewToggle#ReviewToggle": ReviewToggle_69a80548c6026a9b8dc50316b85cb80c,
-  "@/collections/Itineraries/components/EnhanceButton#EnhanceSegmentButton": EnhanceSegmentButton_4402482392cbdf4b96f22257e980d1a3,
+  "@/components/admin/StayFieldEditors#AccommodationNameEditor": AccommodationNameEditor_46849b3ddab8795c07b91cec57a7ed79,
+  "@/components/admin/StayFieldEditors#StayDescriptionEditor": StayDescriptionEditor_46849b3ddab8795c07b91cec57a7ed79,
   "@/components/admin/ImageThumbnailsPreview#ImageThumbnailsPreview": ImageThumbnailsPreview_4de4e0e6b22a238573dce8aa53b47d99,
+  "@/components/admin/StayFieldEditors#InclusionsEditor": InclusionsEditor_46849b3ddab8795c07b91cec57a7ed79,
+  "@/components/admin/ActivityFieldEditors#ActivityTitleEditor": ActivityTitleEditor_d3a89ba8ab9a61988575a5c3a7c3c4fa,
+  "@/components/admin/ActivityFieldEditors#ActivityDescriptionEditor": ActivityDescriptionEditor_d3a89ba8ab9a61988575a5c3a7c3c4fa,
+  "@/components/admin/TransferFieldEditors#TransferTitleEditor": TransferTitleEditor_6ba9b31bc705390895417e76c47f2c73,
+  "@/components/admin/TransferFieldEditors#TransferDescriptionEditor": TransferDescriptionEditor_6ba9b31bc705390895417e76c47f2c73,
+  "@/components/admin/FAQFieldEditors#FAQQuestionEditor": FAQQuestionEditor_9b62e83ff894759746eacaf6f7067714,
+  "@/components/admin/FAQFieldEditors#FAQAnswerEditor": FAQAnswerEditor_9b62e83ff894759746eacaf6f7067714,
   "@/collections/Itineraries/components/EnhanceButton#EnhanceWhyKiuliButton": EnhanceWhyKiuliButton_4402482392cbdf4b96f22257e980d1a3,
+  "@/components/admin/RootImagesGallery#RootImagesGallery": RootImagesGallery_255ef2e6cf8a21ab49525f913eb50e27,
   "@/collections/ItineraryJobs/components/ProcessButton#ProcessButton": ProcessButton_6f8f56340afe606e50afe37e4a9f28d1,
   "@/collections/ItineraryJobs/components/JobControlPanel#JobControlPanel": JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
@@ -80,6 +99,7 @@ export const importMap = {
   "@payloadcms/ui#FolderTypeField": FolderTypeField_3817bf644402e67bfe6577f60ef982de,
   "@/Header/RowLabel#RowLabel": RowLabel_ec255a65fa6fa8d1faeb09cf35284224,
   "@/Footer/RowLabel#RowLabel": RowLabel_1f6ff6ff633e3695d348f4f3c58f1466,
+  "@/components/admin/ImportItineraryLink#ImportItineraryLink": ImportItineraryLink_4ec22f07d32f94aa350ea732b4015f51,
   "@/components/admin/NotificationBell#NotificationBell": NotificationBell_a85350652356ec53eeb8176045ede954,
   "@/components/BeforeDashboard#default": default_1a7510af427896d367a49dbf838d2de6,
   "@/components/BeforeLogin#default": default_8a7ab0eb7ab5c511aba12e68480bfe5e,

@@ -8,7 +8,7 @@ const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
 function getHeaders() {
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${PAYLOAD_API_KEY}`
+    'Authorization': `users API-Key ${PAYLOAD_API_KEY}`
   };
 }
 

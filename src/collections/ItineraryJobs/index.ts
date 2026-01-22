@@ -12,7 +12,8 @@ const authenticatedOrApiKey = ({ req }: AccessArgs) => {
   const authHeader = typeof headers?.get === 'function'
     ? headers.get('authorization')
     : (headers as Record<string, string>)?.authorization
-  if (authHeader?.startsWith('Bearer ')) {
+  // Accept both Bearer (legacy) and users API-Key (Payload native) formats
+  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) {
     // API key auth - always allow for Lambda pipeline worker
     return true
   }

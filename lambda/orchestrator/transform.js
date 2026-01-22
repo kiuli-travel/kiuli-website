@@ -362,63 +362,60 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
 }
 
 /**
- * Generate FAQ items (V6 format with *Original fields)
+ * Generate FAQ items (V7 format with two-field pattern)
+ * - question: the display title
+ * - questionItrvl: original scraped question (same as question initially)
+ * - questionEnhanced: enhanced version (null initially)
+ * - answerItrvl: original scraped answer
+ * - answerEnhanced: enhanced version (null initially)
  */
 function generateFaqItems(segments, title, countries) {
   const faqItems = [];
 
+  // Helper to create a FAQ item with proper V7 two-field pattern
+  const createFaqItem = (question, answerText) => ({
+    question,
+    questionItrvl: question,
+    questionEnhanced: null,
+    questionReviewed: false,
+    answerItrvl: textToRichText(answerText),
+    answerEnhanced: null,
+    answerReviewed: false,
+    reviewed: false,
+  });
+
   const stays = segments.filter(s => s.type === 'stay' || s.type === 'accommodation');
   for (const stay of stays.slice(0, 3)) {
     if (stay.name) {
-      faqItems.push({
-        question: `What is included at ${stay.name}?`,
-        answerItrvl: textToRichText(
-          stay.inclusions || stay.description ||
-          `${stay.name} offers luxury accommodation with full board and activities as specified in the itinerary.`
-        ),
-        answerEnhanced: null,
-        answerReviewed: false,
-      });
+      faqItems.push(createFaqItem(
+        `What is included at ${stay.name}?`,
+        stay.inclusions || stay.description ||
+        `${stay.name} offers luxury accommodation with full board and activities as specified in the itinerary.`
+      ));
     }
   }
 
   const countryList = countries.length > 0 ? countries.join(' and ') : 'East Africa';
 
-  faqItems.push({
-    question: `What is the best time to visit ${countryList}?`,
-    answerItrvl: textToRichText(
-      `${countryList} offers excellent wildlife viewing year-round. Our travel designers can advise on the optimal timing based on your specific interests.`
-    ),
-    answerEnhanced: null,
-        answerReviewed: false,
-  });
+  faqItems.push(createFaqItem(
+    `What is the best time to visit ${countryList}?`,
+    `${countryList} offers excellent wildlife viewing year-round. Our travel designers can advise on the optimal timing based on your specific interests.`
+  ));
 
-  faqItems.push({
-    question: 'What level of fitness is required for this safari?',
-    answerItrvl: textToRichText(
-      'This safari is suitable for most fitness levels. Game drives involve sitting in comfortable vehicles, and bush walks can be adjusted to your pace.'
-    ),
-    answerEnhanced: null,
-        answerReviewed: false,
-  });
+  faqItems.push(createFaqItem(
+    'What level of fitness is required for this safari?',
+    'This safari is suitable for most fitness levels. Game drives involve sitting in comfortable vehicles, and bush walks can be adjusted to your pace.'
+  ));
 
-  faqItems.push({
-    question: 'Is this safari suitable for children?',
-    answerItrvl: textToRichText(
-      'Family safaris are a specialty. Some lodges have age restrictions for certain activities, but we can customize the itinerary for travelers of all ages.'
-    ),
-    answerEnhanced: null,
-        answerReviewed: false,
-  });
+  faqItems.push(createFaqItem(
+    'Is this safari suitable for children?',
+    'Family safaris are a specialty. Some lodges have age restrictions for certain activities, but we can customize the itinerary for travelers of all ages.'
+  ));
 
-  faqItems.push({
-    question: 'What should I pack for this safari?',
-    answerItrvl: textToRichText(
-      'We recommend neutral-colored clothing, comfortable walking shoes, sun protection, binoculars, and a camera. A detailed packing list will be provided upon booking.'
-    ),
-    answerEnhanced: null,
-        answerReviewed: false,
-  });
+  faqItems.push(createFaqItem(
+    'What should I pack for this safari?',
+    'We recommend neutral-colored clothing, comfortable walking shoes, sun protection, binoculars, and a camera. A detailed packing list will be provided upon booking.'
+  ));
 
   return faqItems;
 }

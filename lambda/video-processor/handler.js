@@ -142,7 +142,31 @@ exports.handler = async (event) => {
       await updateVideoStatus(statusId, 'complete', mediaId, null, new Date().toISOString());
     }
 
-    // 8. Cleanup temp file
+    // 8. Link video to itinerary's videos field and set as heroVideo if applicable
+    console.log(`[VideoProcessor] Linking video ${mediaId} to itinerary ${itineraryId}`);
+
+    // Get current itinerary to check existing videos
+    const itinerary = await payload.getItinerary(itineraryIdNum);
+    const currentVideos = itinerary.videos || [];
+    const videoIds = currentVideos.map(v => typeof v === 'object' ? v.id : v);
+
+    // Add video to videos array if not already present
+    if (!videoIds.includes(mediaId)) {
+      const updateData = {
+        videos: [...videoIds, mediaId]
+      };
+
+      // If this is a hero video and no heroVideo is set, set it
+      if (videoContext === 'hero' && !itinerary.heroVideo) {
+        updateData.heroVideo = mediaId;
+        console.log(`[VideoProcessor] Setting video ${mediaId} as heroVideo`);
+      }
+
+      await payload.updateItinerary(itineraryIdNum, updateData);
+      console.log(`[VideoProcessor] Added video to itinerary videos array`);
+    }
+
+    // 9. Cleanup temp file
     fs.unlinkSync(outputFile);
 
     console.log(`[VideoProcessor] Complete`);

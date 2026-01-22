@@ -81,13 +81,14 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
 
   // Add FAQ schema if we have FAQ items
   // Filter out FAQ items with placeholder text like "Unknown Country"
+  // V7: Use answerEnhanced ?? answerItrvl (falling back to answerOriginal for legacy)
   if (itinerary.faqItems && itinerary.faqItems.length > 0) {
     const validFaqItems = itinerary.faqItems.filter(faq => {
       const question = faq.question || '';
-      const answerText = extractTextFromRichText(faq.answerEnhanced || faq.answerOriginal);
+      const answerText = extractTextFromRichText(faq.answerEnhanced || faq.answerItrvl || faq.answerOriginal);
       // Skip FAQs with "Unknown" placeholder content
       const hasUnknown = /unknown/i.test(question) || /unknown/i.test(answerText);
-      return !hasUnknown;
+      return !hasUnknown && answerText.trim().length > 0;
     });
 
     if (validFaqItems.length > 0) {
@@ -98,7 +99,7 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
           'name': faq.question,
           'acceptedAnswer': {
             '@type': 'Answer',
-            'text': extractTextFromRichText(faq.answerEnhanced || faq.answerOriginal)
+            'text': extractTextFromRichText(faq.answerEnhanced || faq.answerItrvl || faq.answerOriginal)
           }
         }))
       };

@@ -64,68 +64,55 @@ async function reconcileJobCounters(jobId, imageStatuses) {
 }
 
 /**
- * Link images to segments by matching source s3Keys to processed mediaIds
+ * Link images to segments using ImageStatuses collection data
+ *
+ * ImageStatuses contains context about each image:
+ * - segmentType: 'stay' | 'activity' | 'transfer'
+ * - propertyName: accommodation/segment name
+ * - segmentIndex: index within all segments (not by type)
+ * - dayIndex: which day the segment belongs to
+ * - mediaId: the processed Payload media ID
+ *
+ * We match images to segments by segment type + property name
  *
  * @param {Object} itinerary - The itinerary document from Payload
  * @param {array} imageStatuses - ImageStatuses from the collection
  * @returns {Object} Updated days array with populated segment.images
  */
 function linkImagesToSegments(itinerary, imageStatuses) {
-  // Build lookup: sourceS3Key -> mediaId from ImageStatuses collection
-  const mediaMapping = {};
-  for (const img of (imageStatuses || [])) {
-    if ((img.status === 'complete' || img.status === 'skipped') && img.mediaId && img.sourceS3Key) {
-      mediaMapping[img.sourceS3Key] = img.mediaId;
-    }
-  }
+  // Filter to only processed images with valid mediaIds
+  const processedImages = (imageStatuses || []).filter(img =>
+    (img.status === 'complete' || img.status === 'skipped') && img.mediaId
+  );
 
-  console.log(`[Finalizer] Built mediaMapping with ${Object.keys(mediaMapping).length} entries`);
+  console.log(`[Finalizer] Processed images with mediaId: ${processedImages.length}`);
 
-  if (Object.keys(mediaMapping).length === 0) {
-    console.log('[Finalizer] No mediaMapping entries, skipping segment linking');
+  if (processedImages.length === 0) {
+    console.log('[Finalizer] No processed images, skipping segment linking');
     return itinerary.days;
   }
 
-  // Get raw segments from source.rawData (which have image s3Key references)
-  const rawData = itinerary.source?.rawData || {};
-  const rawItinerary = rawData.itinerary?.itineraries?.[0] || rawData.itinerary || rawData;
-  const rawSegments = rawItinerary.segments || [];
+  // Group images by segment identifier (blockType-propertyName)
+  const imagesBySegment = {};
+  for (const img of processedImages) {
+    // Build key matching transform.js block type
+    const segmentType = img.segmentType || 'unknown';
+    const propertyName = img.propertyName || img.segmentTitle || '';
+    const segKey = `${segmentType}-${propertyName}`;
 
-  console.log(`[Finalizer] Raw segments: ${rawSegments.length}`);
-
-  // Build lookup: segment identifier -> [s3Keys]
-  // Match by name/title since that's how transform creates segments
-  const segmentImageKeys = {};
-  for (const rawSeg of rawSegments) {
-    const segName = rawSeg.name || rawSeg.title || '';
-    const segType = rawSeg.type?.toLowerCase() || '';
-
-    // Create key matching transform.js logic
-    let blockType = 'unknown';
-    if (segType === 'stay' || segType === 'accommodation') {
-      blockType = 'stay';
-    } else if (segType === 'service' || segType === 'activity') {
-      blockType = 'activity';
-    } else if (segType === 'flight' || segType === 'road' || segType === 'transfer' || segType === 'boat') {
-      blockType = 'transfer';
+    if (!imagesBySegment[segKey]) {
+      imagesBySegment[segKey] = [];
     }
 
-    const segKey = `${blockType}-${segName}`;
-    const imageKeys = [];
-
-    if (rawSeg.images && Array.isArray(rawSeg.images)) {
-      for (const img of rawSeg.images) {
-        const s3Key = typeof img === 'string' ? img : (img.s3Key || img.key);
-        if (s3Key) {
-          imageKeys.push(s3Key);
-        }
-      }
+    const mediaId = typeof img.mediaId === 'number' ? img.mediaId : parseInt(img.mediaId, 10);
+    if (!isNaN(mediaId) && !imagesBySegment[segKey].includes(mediaId)) {
+      imagesBySegment[segKey].push(mediaId);
     }
+  }
 
-    if (imageKeys.length > 0) {
-      segmentImageKeys[segKey] = imageKeys;
-      console.log(`[Finalizer] Raw segment "${segKey}" has ${imageKeys.length} image keys`);
-    }
+  console.log(`[Finalizer] Image groups by segment: ${Object.keys(imagesBySegment).length}`);
+  for (const [key, ids] of Object.entries(imagesBySegment)) {
+    console.log(`[Finalizer]   "${key}": ${ids.length} images`);
   }
 
   // Update itinerary segments with mediaIds
@@ -138,24 +125,18 @@ function linkImagesToSegments(itinerary, imageStatuses) {
     const updatedSegments = [];
 
     for (const segment of (day.segments || [])) {
-      // Build segment key to match raw segment
+      // Build segment key to match ImageStatuses grouping
+      const blockType = segment.blockType || 'unknown';
       const segName = segment.accommodationName || segment.title || '';
-      const segKey = `${segment.blockType}-${segName}`;
-      const sourceKeys = segmentImageKeys[segKey] || [];
+      const segKey = `${blockType}-${segName}`;
 
-      // Map source keys to media IDs
-      const mediaIds = [];
-      for (const s3Key of sourceKeys) {
-        const mediaId = mediaMapping[s3Key];
-        if (mediaId) {
-          // Ensure it's a number for Payload relationship field
-          mediaIds.push(typeof mediaId === 'number' ? mediaId : parseInt(mediaId, 10));
-          linkedCount++;
-        }
-      }
+      // Get media IDs for this segment
+      const mediaIds = imagesBySegment[segKey] || [];
 
       if (mediaIds.length > 0) {
         segmentsWithImages++;
+        linkedCount += mediaIds.length;
+        console.log(`[Finalizer] Segment "${segKey}" -> ${mediaIds.length} images`);
       } else {
         segmentsWithoutImages++;
       }
@@ -172,8 +153,8 @@ function linkImagesToSegments(itinerary, imageStatuses) {
     });
   }
 
-  console.log(`[Finalizer] Linked ${linkedCount} images to segments`);
-  console.log(`[Finalizer] Segments with images: ${segmentsWithImages}, without: ${segmentsWithoutImages}`);
+  console.log(`[Finalizer] Linked ${linkedCount} images to ${segmentsWithImages} segments`);
+  console.log(`[Finalizer] Segments without images: ${segmentsWithoutImages}`);
 
   return updatedDays;
 }

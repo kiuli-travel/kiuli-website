@@ -566,6 +566,30 @@ async function transform(rawData, enhancedData, mediaMapping, mediaRecords, itrv
   console.log(`[Transform] Processing: ${title}`);
   console.log(`[Transform] Segments: ${segments.length}`);
 
+  // DEBUG: Log complete rawData and itinerary structure to understand image locations
+  console.log(`[Transform] rawData keys: ${Object.keys(rawData).join(', ')}`);
+  console.log(`[Transform] rawData.images exists: ${!!rawData.images}, length: ${rawData.images?.length || 0}`);
+  console.log(`[Transform] itinerary keys: ${Object.keys(itinerary).join(', ')}`);
+
+  // Check for itinerary-level images with segment references
+  if (itinerary.images && Array.isArray(itinerary.images)) {
+    console.log(`[Transform] itinerary.images has ${itinerary.images.length} items`);
+    if (itinerary.images.length > 0) {
+      console.log(`[Transform] First itinerary.images item: ${JSON.stringify(itinerary.images[0]).substring(0, 500)}`);
+    }
+  }
+
+  // Check for days-level images
+  if (itinerary.days && Array.isArray(itinerary.days)) {
+    const firstDay = itinerary.days[0];
+    if (firstDay) {
+      console.log(`[Transform] First day keys: ${Object.keys(firstDay).join(', ')}`);
+      if (firstDay.images) {
+        console.log(`[Transform] First day.images: ${JSON.stringify(firstDay.images).substring(0, 300)}`);
+      }
+    }
+  }
+
   // DEBUG: Log first segment's complete structure to understand data format
   if (segments.length > 0) {
     const firstSegment = segments[0];

@@ -12,16 +12,25 @@ Kiuli connects discerning travellers with high-margin African safaris. The websi
 
 ---
 
-## 2. Failure History
+## 2. Architecture Overview
 
-| Date | What Happened | Cause | Consequence |
-|------|---------------|-------|-------------|
-| Jan 2026 | 5 files with critical S3 fixes uncommitted | Work done but not committed | Risk of lost work, divergent state |
-| Jan 2026 | 0 itineraries in production | Pipeline never completed full cycle | No content despite working components |
-| Jan 2026 | Scrape endpoint publicly accessible | No authentication implemented | Security vulnerability, DoS risk |
-| Multiple | Documentation says gemini-1.5-pro | Code uses gemini-2.0-flash | Confusion, wrong assumptions |
+Kiuli uses a **Lambda-based async pipeline** for importing safari itineraries from iTrvl.
 
-**Uncommitted work is the most common failure. Commit early, commit often.**
+**For complete pipeline documentation, see: `KIULI_LAMBDA_ARCHITECTURE.md`**
+
+### Pipeline Flow
+```
+Admin UI → Orchestrator → Scraper → Image Processor → Labeler → Finalizer
+```
+
+### Lambda Functions
+| Function | Purpose |
+|----------|---------|
+| `kiuli-scraper` | Web scraping with Puppeteer |
+| `kiuli-v6-orchestrator` | Pipeline coordination |
+| `kiuli-v6-image-processor` | Image re-hosting to S3 |
+| `kiuli-v6-labeler` | AI image enrichment (GPT-4o) |
+| `kiuli-v6-finalizer` | Schema generation, hero selection |
 
 ---
 
@@ -71,7 +80,9 @@ If documentation says one thing and code says another, **code is truth**. Update
 | CMS | Payload CMS 3.63.0 |
 | Database | Vercel Postgres |
 | Storage | AWS S3 (kiuli-bucket, eu-north-1) |
-| AI | Google Gemini (gemini-2.0-flash) |
+| CDN | imgix (kiuli.imgix.net) |
+| AI | OpenRouter GPT-4o (image labeling) |
+| Pipeline | AWS Lambda (eu-north-1) |
 | Deploy | Vercel |
 
 ### Domains
@@ -91,30 +102,40 @@ https://github.com/kiuli-travel/kiuli-website.git
 
 ### Commands
 ```bash
-npm run dev          # Local development
-npm run build        # Production build
-vercel deploy        # Deploy preview
-vercel --prod        # Deploy production
+npm run dev              # Local development
+npm run build            # Production build
+vercel deploy            # Deploy preview
+vercel --prod            # Deploy production
 ```
 
-### Pipeline Phases
-| Phase | Script | Output |
-|-------|--------|--------|
-| 2 | itrvl_scraper.cjs | raw-itinerary.json |
-| 3 | media_rehoster.cjs | media-mapping.json |
-| 4 | content_enhancer.cjs | enhanced-itinerary.json |
-| 5 | schema_generator.cjs | schema.jsonld |
-| 6 | faq_formatter.cjs | faq.html |
-| 7 | payload_ingester.cjs | payload_id.txt |
+### Lambda Deployment
+```bash
+# Deploy a Lambda function
+cd lambda/orchestrator
+zip -r function.zip handler.js transform.js shared/ node_modules/ -x "*.DS_Store"
+aws lambda update-function-code \
+  --function-name kiuli-v6-orchestrator \
+  --zip-file fileb://function.zip \
+  --region eu-north-1
+```
 
 ---
 
 ## 5. Environment Variables
 
-**Required (NOT values, just names):**
-- POSTGRES_URL, PAYLOAD_SECRET, PAYLOAD_API_URL, PAYLOAD_API_KEY
-- GEMINI_API_KEY
-- AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET, S3_REGION
+### Vercel (Website)
+- `POSTGRES_URL` - Database connection
+- `PAYLOAD_SECRET` - Payload encryption key
+- `PAYLOAD_API_URL` - Admin API URL
+- `PAYLOAD_API_KEY` - API authentication
+
+### Lambda Functions
+- `AWS_REGION` - eu-north-1
+- `PAYLOAD_API_URL`, `PAYLOAD_API_KEY` - Payload access
+- `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` - S3 storage
+- `IMGIX_DOMAIN` - CDN domain
+- `OPENROUTER_API_KEY` - AI enrichment
+- `LAMBDA_*_ARN` - Inter-Lambda invocation
 
 **Check local vs Vercel parity before deploying.**
 
@@ -127,7 +148,7 @@ vercel --prod        # Deploy production
 | `vercel --prod` | Deploys to live site | After local build passes |
 | Editing payload.config.ts | Can break CMS | After backup, verify after |
 | Modifying S3 files | Can break existing images | With explicit plan |
-| Running full pipeline | Creates production content | After validation scripts pass |
+| Lambda deployment | Affects pipeline | After testing in dev |
 
 ---
 
@@ -137,8 +158,12 @@ After any change:
 ```bash
 npm run build         # Must pass
 npm run dev           # Must work locally
-# If pipeline change, run validation scripts
-node validation_scripts/validate_phase_N.cjs
+```
+
+After Lambda changes:
+```bash
+# Check CloudWatch logs
+aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 1h --region eu-north-1
 ```
 
 ---
@@ -153,4 +178,14 @@ node validation_scripts/validate_phase_N.cjs
 
 ---
 
-*Last updated: January 2026*
+## 9. Key Documentation Files
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | This file - project overview and rules |
+| `KIULI_LAMBDA_ARCHITECTURE.md` | Complete pipeline documentation |
+| `README.md` | Public repository readme |
+
+---
+
+*Last updated: January 22, 2026*

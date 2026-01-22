@@ -115,7 +115,7 @@ async function updateJobPhase(jobId, phase, extra = {}) {
 }
 
 async function updateJobProgress(jobId, processed, total, failed = 0) {
-  const progress = Math.round((processed / total) * 100);
+  const progress = Math.min(100, Math.round((processed / total) * 100));
   return updateJob(jobId, {
     progress,
     processedImages: processed,

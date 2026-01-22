@@ -104,7 +104,7 @@ exports.handler = async (event) => {
       processedImages: totalProcessed,
       skippedImages: totalSkipped,
       failedImages: totalFailed,
-      progress: Math.round(((totalProcessed + totalSkipped + totalFailed) / allStatuses.length) * 100)
+      progress: Math.min(100, Math.round(((totalProcessed + totalSkipped + totalFailed) / allStatuses.length) * 100))
     });
 
     // 5. Skip itinerary media update here - defer to finalizer

@@ -48,13 +48,20 @@ exports.handler = async (event) => {
         await updateVideoStatus(statusId, 'skipped', existing.id, null, new Date().toISOString());
       }
 
-      // Add to usedInItineraries if not already present
-      const usedIn = existing.usedInItineraries || [];
+      // Note: usedInItineraries is readOnly, video will be linked via itinerary.videos
+      // Link video to itinerary if not already linked
       const itineraryIdNum = typeof itineraryId === 'number' ? itineraryId : parseInt(itineraryId, 10);
-      if (!usedIn.includes(itineraryIdNum)) {
-        await payload.updateMedia(existing.id, {
-          usedInItineraries: [...usedIn, itineraryIdNum]
-        });
+      const itinerary = await payload.getItinerary(itineraryIdNum);
+      const currentVideos = itinerary.videos || [];
+      const videoIds = currentVideos.map(v => typeof v === 'object' ? v.id : v);
+
+      if (!videoIds.includes(existing.id)) {
+        const updateData = { videos: [...videoIds, existing.id] };
+        if (videoContext === 'hero' && !itinerary.heroVideo) {
+          updateData.heroVideo = existing.id;
+        }
+        await payload.updateItinerary(itineraryIdNum, updateData);
+        console.log(`[VideoProcessor] Linked existing video ${existing.id} to itinerary ${itineraryIdNum}`);
       }
 
       return {
@@ -129,7 +136,7 @@ exports.handler = async (event) => {
       videoContext: videoContext || 'hero',
       processingStatus: 'complete',
       labelingStatus: 'skipped', // Videos don't need AI labeling
-      usedInItineraries: [itineraryIdNum],
+      // Note: usedInItineraries is readOnly in schema, managed via itinerary.videos relationship
     };
 
     const mediaResponse = await payload.create('media', mediaData);

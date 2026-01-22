@@ -28,10 +28,34 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
   // Images field path: days.0.segments.0.images
   const imagesPath = path.replace(/\.imagePreviewUI$/, '.images')
 
-  const { value, setValue } = useField<number[] | null>({ path: imagesPath })
+  // Debug: log path transformation
+  console.log('[ImageThumbnailsPreview] path:', path, '-> imagesPath:', imagesPath)
+
+  const { value, setValue } = useField<unknown>({ path: imagesPath })
+
+  // Debug: log the raw value we receive
+  console.log('[ImageThumbnailsPreview] raw value:', value, 'type:', typeof value, 'isArray:', Array.isArray(value))
   const [images, setImages] = useState<MediaItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Normalize value to array of IDs
+  // Value can be: null, number[], or array of objects with id property
+  const normalizeToIds = (val: unknown): number[] => {
+    if (!val || !Array.isArray(val)) return []
+    return val.map((item: unknown) => {
+      if (typeof item === 'number') return item
+      if (typeof item === 'string') return parseInt(item, 10)
+      if (item && typeof item === 'object' && 'id' in item) {
+        const id = (item as { id: unknown }).id
+        return typeof id === 'number' ? id : parseInt(String(id), 10)
+      }
+      return 0
+    }).filter(id => id > 0)
+  }
+
+  const imageIds = normalizeToIds(value)
+  console.log('[ImageThumbnailsPreview] normalized imageIds:', imageIds)
 
   const handleClearAll = () => {
     setValue([])
@@ -43,13 +67,13 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
   }
 
   const handleRemoveImage = (idToRemove: number) => {
-    const newValue = (value || []).filter(id => id !== idToRemove)
+    const newValue = imageIds.filter(id => id !== idToRemove)
     setValue(newValue)
   }
 
   // Fetch image data when value changes
   useEffect(() => {
-    if (!value || value.length === 0) {
+    if (imageIds.length === 0) {
       setImages([])
       return
     }
@@ -58,7 +82,7 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
       setIsLoading(true)
       try {
         // Fetch each image by ID
-        const imagePromises = value.map(async (id) => {
+        const imagePromises = imageIds.map(async (id) => {
           try {
             const response = await fetch(`/api/media/${id}`, {
               credentials: 'include',
@@ -82,7 +106,7 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
     }
 
     fetchImages()
-  }, [value])
+  }, [imageIds.join(',')])  // Use joined string as dependency to avoid infinite loops
 
   const getImageSrc = (image: MediaItem): string => {
     if (image.imgixUrl) {
@@ -94,10 +118,14 @@ export const ImageThumbnailsPreview: React.FC<ImageThumbnailsPreviewProps> = ({ 
     return `/api/media/file/${image.filename}`
   }
 
-  const currentIds = value || []
+  const currentIds = imageIds
 
   return (
     <div style={{ marginBottom: '0.5rem' }}>
+      {/* Debug info - remove after testing */}
+      <div style={{ fontSize: '10px', color: '#999', marginBottom: '4px', fontFamily: 'monospace' }}>
+        DEBUG: path={path} | imagesPath={imagesPath} | ids={imageIds.length} | rawType={typeof value}
+      </div>
       {/* Header with count and actions */}
       <div
         style={{

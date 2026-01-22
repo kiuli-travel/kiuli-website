@@ -206,6 +206,65 @@ function mapInclusions(segment) {
 }
 
 /**
+ * Extract s3Keys from various possible image locations on a segment
+ * iTrvl data can have images in different structures:
+ * - segment.images: ['s3key', ...] or [{s3Key: 'key'}, ...]
+ * - segment.photos: similar
+ * - segment.media: similar
+ * - segment.headerImage: 's3key'
+ * - segment.accommodation.images: nested
+ * - segment.supplier.images: nested
+ */
+function extractSegmentImageKeys(segment) {
+  const keys = [];
+
+  // Helper to extract from an array
+  const extractFromArray = (arr) => {
+    if (!Array.isArray(arr)) return;
+    for (const item of arr) {
+      if (typeof item === 'string' && item.length > 0) {
+        keys.push(item);
+      } else if (item && typeof item === 'object') {
+        const key = item.s3Key || item.key || item.url || item.src;
+        if (key && typeof key === 'string') keys.push(key);
+      }
+    }
+  };
+
+  // Check common image locations
+  extractFromArray(segment.images);
+  extractFromArray(segment.photos);
+  extractFromArray(segment.media);
+  extractFromArray(segment.gallery);
+
+  // Check for single header image
+  if (segment.headerImage && typeof segment.headerImage === 'string') {
+    keys.push(segment.headerImage);
+  }
+  if (segment.image && typeof segment.image === 'string') {
+    keys.push(segment.image);
+  }
+
+  // Check nested objects
+  if (segment.accommodation) {
+    extractFromArray(segment.accommodation.images);
+    extractFromArray(segment.accommodation.photos);
+    if (segment.accommodation.headerImage) keys.push(segment.accommodation.headerImage);
+  }
+  if (segment.supplier) {
+    extractFromArray(segment.supplier.images);
+    extractFromArray(segment.supplier.photos);
+    if (segment.supplier.headerImage) keys.push(segment.supplier.headerImage);
+  }
+  if (segment.property) {
+    extractFromArray(segment.property.images);
+    extractFromArray(segment.property.photos);
+  }
+
+  return [...new Set(keys)]; // Deduplicate
+}
+
+/**
  * Map segment to V7 block structure
  */
 function mapSegmentToBlock(segment, mediaMapping) {
@@ -235,16 +294,35 @@ function mapSegmentToBlock(segment, mediaMapping) {
     return null; // Skip truly unknown types
   }
 
-  // Get media IDs
+  // Get media IDs using enhanced extraction
   const imageIds = [];
-  if (segment.images && Array.isArray(segment.images)) {
-    for (const img of segment.images) {
-      const s3Key = typeof img === 'string' ? img : img.s3Key || img.key;
-      if (s3Key && mediaMapping[s3Key]) {
-        imageIds.push(mediaMapping[s3Key]);
-      }
+  const segmentName = segment.name || segment.title || segment.supplierName || 'unknown';
+
+  // DEBUG: Log segment structure (first segment only to avoid log spam)
+  const segmentKeys = Object.keys(segment);
+  console.log(`[Transform] Segment "${segmentName}" keys: ${segmentKeys.join(', ')}`);
+
+  // Extract image keys from all possible locations
+  const imageKeys = extractSegmentImageKeys(segment);
+  console.log(`[Transform] Segment "${segmentName}" found ${imageKeys.length} image keys from structure`);
+
+  // Map keys to Payload media IDs
+  for (const s3Key of imageKeys) {
+    if (mediaMapping[s3Key]) {
+      imageIds.push(mediaMapping[s3Key]);
+      console.log(`[Transform]   - "${s3Key}" -> mediaId: ${mediaMapping[s3Key]}`);
+    } else {
+      console.log(`[Transform]   - "${s3Key}" NOT FOUND in mediaMapping`);
     }
   }
+
+  // If no images found directly, check if there's an images property that's not an array
+  if (imageIds.length === 0 && segment.images) {
+    console.log(`[Transform] segment.images exists but no IDs extracted. Type: ${typeof segment.images}, value:`,
+      typeof segment.images === 'object' ? JSON.stringify(segment.images).substring(0, 200) : segment.images);
+  }
+
+  console.log(`[Transform] Segment "${segmentName}" final imageIds: ${imageIds.length}`);
 
   // Build V7 block based on type
   if (blockType === 'stay') {
@@ -487,6 +565,22 @@ async function transform(rawData, enhancedData, mediaMapping, mediaRecords, itrv
 
   console.log(`[Transform] Processing: ${title}`);
   console.log(`[Transform] Segments: ${segments.length}`);
+
+  // DEBUG: Log first segment's complete structure to understand data format
+  if (segments.length > 0) {
+    const firstSegment = segments[0];
+    console.log(`[Transform] First segment type: ${firstSegment.type}`);
+    console.log(`[Transform] First segment keys: ${Object.keys(firstSegment).join(', ')}`);
+    console.log(`[Transform] First segment (truncated): ${JSON.stringify(firstSegment).substring(0, 1000)}`);
+
+    // Find first stay segment and log its structure
+    const firstStay = segments.find(s => s.type === 'stay' || s.type === 'accommodation');
+    if (firstStay) {
+      console.log(`[Transform] First STAY segment keys: ${Object.keys(firstStay).join(', ')}`);
+      console.log(`[Transform] First STAY segment.images: ${JSON.stringify(firstStay.images)}`);
+      console.log(`[Transform] First STAY segment (truncated): ${JSON.stringify(firstStay).substring(0, 1500)}`);
+    }
+  }
 
   // Calculate values
   const slug = generateSlug(title);

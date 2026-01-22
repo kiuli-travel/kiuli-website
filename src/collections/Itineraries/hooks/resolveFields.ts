@@ -8,11 +8,23 @@ import type { CollectionAfterReadHook } from 'payload';
  * The front-end should NEVER see *Itrvl, *Enhanced, or *Reviewed fields.
  * This hook transforms the internal editorial structure into clean output.
  *
+ * IMPORTANT: Admin UI requests (authenticated users) get the raw document
+ * with all internal fields preserved. This is required for FieldPairEditor
+ * components to access *Itrvl, *Enhanced, and *Reviewed fields.
+ *
  * NOTE: Using afterRead hook (not beforeRead) because Payload re-applies
  * schema fields after beforeRead, which would re-add our filtered fields.
  */
-export const resolveFields: CollectionAfterReadHook = async ({ doc }) => {
+export const resolveFields: CollectionAfterReadHook = async ({ doc, req }) => {
   if (!doc) return doc;
+
+  // Preserve internal fields for authenticated requests (admin UI)
+  // The admin UI needs access to *Itrvl, *Enhanced, *Reviewed fields
+  // for FieldPairEditor components to work correctly.
+  // Frontend requests are typically unauthenticated and only need resolved fields.
+  if (req?.user) {
+    return doc;
+  }
 
   // Helper to resolve a field pair
   const resolve = <T>(enhanced: T | null | undefined, itrvl: T | null | undefined): T | null => {

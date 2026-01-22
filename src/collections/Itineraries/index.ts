@@ -247,8 +247,16 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       name: 'heroVideo',
       type: 'relationship',
       relationTo: 'media',
+      filterOptions: {
+        mediaType: {
+          equals: 'video',
+        },
+      },
       admin: {
         description: 'Hero video for itinerary header (background video)',
+        components: {
+          Field: '@/components/admin/VideoSelectorField#VideoSelectorField',
+        },
       },
     },
     {

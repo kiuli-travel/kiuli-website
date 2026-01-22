@@ -33,9 +33,10 @@ exports.handler = async (event) => {
       throw new Error(`Job not found: ${jobId}`);
     }
 
-    // 2. Query image statuses from separate collection
+    // 2. Query image statuses from separate collection (images only, not videos)
     const allStatusesResult = await payload.find('image-statuses', {
-      'where[job][equals]': jobId,
+      'where[and][0][job][equals]': jobId,
+      'where[and][1][mediaType][not_equals]': 'video',
       limit: '1000'
     });
     const allStatuses = allStatusesResult.docs || [];
@@ -43,6 +44,7 @@ exports.handler = async (event) => {
     const pendingResult = await payload.find('image-statuses', {
       'where[and][0][job][equals]': jobId,
       'where[and][1][status][equals]': 'pending',
+      'where[and][2][mediaType][not_equals]': 'video',
       limit: '1000'
     });
     const pendingImages = pendingResult.docs || [];
@@ -130,8 +132,14 @@ exports.handler = async (event) => {
       }));
 
     } else {
+      // All images done, process videos before triggering labeler
+      console.log('[ImageProcessor] All images processed, checking for videos...');
+
+      // Process pending videos
+      await processVideos(jobId, itineraryId);
+
       // All done, trigger labeler
-      console.log('[ImageProcessor] All images processed, triggering labeler');
+      console.log('[ImageProcessor] Triggering labeler');
 
       await payload.updateJob(jobId, {
         phase2CompletedAt: new Date().toISOString(),
@@ -209,6 +217,53 @@ async function updateItineraryMedia(itineraryId, mediaMapping) {
   } catch (error) {
     console.error('[ImageProcessor] Failed to update itinerary media:', error.message);
   }
+}
+
+/**
+ * Process pending videos by invoking video-processor Lambda
+ */
+async function processVideos(jobId, itineraryId) {
+  // Query pending videos
+  const pendingVideosResult = await payload.find('image-statuses', {
+    'where[and][0][job][equals]': jobId,
+    'where[and][1][status][equals]': 'pending',
+    'where[and][2][mediaType][equals]': 'video',
+    limit: '100'
+  });
+  const pendingVideos = pendingVideosResult.docs || [];
+
+  if (pendingVideos.length === 0) {
+    console.log('[ImageProcessor] No pending videos');
+    return;
+  }
+
+  console.log(`[ImageProcessor] Processing ${pendingVideos.length} video(s)...`);
+
+  const videoProcessorArn = process.env.LAMBDA_VIDEO_PROCESSOR_ARN;
+
+  if (!videoProcessorArn) {
+    console.log('[ImageProcessor] LAMBDA_VIDEO_PROCESSOR_ARN not set, skipping video processing');
+    return;
+  }
+
+  // Invoke video-processor for each video (async)
+  for (const video of pendingVideos) {
+    console.log(`[ImageProcessor] Invoking video-processor for: ${video.sourceS3Key}`);
+
+    await lambdaClient.send(new InvokeCommand({
+      FunctionName: videoProcessorArn,
+      InvocationType: 'Event', // Async
+      Payload: JSON.stringify({
+        jobId,
+        itineraryId,
+        hlsUrl: video.sourceS3Key, // HLS URL stored as sourceS3Key
+        videoContext: video.videoContext,
+        statusId: video.id
+      })
+    }));
+  }
+
+  console.log(`[ImageProcessor] Video processor invoked for ${pendingVideos.length} video(s)`);
 }
 
 /**

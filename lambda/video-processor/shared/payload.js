@@ -1,0 +1,217 @@
+/**
+ * Payload API Client for V6 Pipeline
+ */
+
+const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'https://admin.kiuli.com';
+const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
+
+function getHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${PAYLOAD_API_KEY}`
+  };
+}
+
+/**
+ * Generic find one document
+ */
+async function findOne(collection, query = {}) {
+  const params = new URLSearchParams({ ...query, limit: '1' });
+  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}?${params}`, {
+    headers: getHeaders()
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to find ${collection}: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.docs?.[0] || null;
+}
+
+/**
+ * Generic find documents
+ */
+async function find(collection, query = {}) {
+  const params = new URLSearchParams(query);
+  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}?${params}`, {
+    headers: getHeaders()
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to find ${collection}: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Generic create document
+ */
+async function create(collection, data) {
+  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to create ${collection}: ${response.status} - ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Generic update document
+ */
+async function update(collection, id, data) {
+  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}/${id}`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to update ${collection}/${id}: ${response.status} - ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get document by ID
+ */
+async function getById(collection, id) {
+  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}/${id}`, {
+    headers: getHeaders()
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get ${collection}/${id}: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// === Job Helpers ===
+
+async function getJob(jobId) {
+  return getById('itinerary-jobs', jobId);
+}
+
+async function updateJob(jobId, data) {
+  return update('itinerary-jobs', jobId, data);
+}
+
+async function updateJobPhase(jobId, phase, extra = {}) {
+  return updateJob(jobId, {
+    currentPhase: phase,
+    status: 'processing',
+    ...extra
+  });
+}
+
+async function updateJobProgress(jobId, processed, total, failed = 0) {
+  const progress = Math.round((processed / total) * 100);
+  return updateJob(jobId, {
+    progress,
+    processedImages: processed,
+    totalImages: total,
+    failedImages: failed
+  });
+}
+
+async function completeJob(jobId, payloadId, duration, timing = {}) {
+  return updateJob(jobId, {
+    status: 'completed',
+    progress: 100,
+    currentPhase: 'complete',
+    payloadId,
+    processedItinerary: payloadId,
+    completedAt: new Date().toISOString(),
+    duration,
+    timings: timing
+  });
+}
+
+async function failJob(jobId, error, phase) {
+  return updateJob(jobId, {
+    status: 'failed',
+    errorMessage: error,
+    errorPhase: phase,
+    failedAt: new Date().toISOString()
+  });
+}
+
+// === Itinerary Helpers ===
+
+async function getItinerary(id) {
+  return getById('itineraries', id);
+}
+
+async function createItinerary(data) {
+  const result = await create('itineraries', data);
+  // Payload returns { doc: {...}, message: "..." }
+  return result.doc || result;
+}
+
+async function updateItinerary(id, data) {
+  const result = await update('itineraries', id, data);
+  // Payload returns { doc: {...}, message: "..." }
+  return result.doc || result;
+}
+
+async function findItineraryByItineraryId(itineraryId) {
+  // Use bracket notation - Payload doesn't parse JSON where clauses correctly
+  return findOne('itineraries', {
+    'where[itineraryId][equals]': itineraryId
+  });
+}
+
+// === Media Helpers ===
+
+async function getMedia(id) {
+  return getById('media', id);
+}
+
+async function findMediaBySourceS3Key(sourceS3Key) {
+  // Use bracket notation - Payload doesn't parse JSON where clauses correctly
+  return findOne('media', {
+    'where[sourceS3Key][equals]': sourceS3Key
+  });
+}
+
+async function updateMedia(id, data) {
+  return update('media', id, data);
+}
+
+module.exports = {
+  // Generic
+  findOne,
+  find,
+  create,
+  update,
+  getById,
+  // Jobs
+  getJob,
+  updateJob,
+  updateJobPhase,
+  updateJobProgress,
+  completeJob,
+  failJob,
+  // Itineraries
+  getItinerary,
+  createItinerary,
+  updateItinerary,
+  findItineraryByItineraryId,
+  // Media
+  getMedia,
+  findMediaBySourceS3Key,
+  updateMedia,
+  // Config
+  PAYLOAD_API_URL,
+  PAYLOAD_API_KEY
+};

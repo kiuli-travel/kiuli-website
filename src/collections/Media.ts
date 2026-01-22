@@ -47,6 +47,35 @@ export const Media: CollectionConfig = {
       },
     },
 
+    // === MEDIA TYPE ===
+    {
+      name: 'mediaType',
+      type: 'select',
+      defaultValue: 'image',
+      options: [
+        { label: 'Image', value: 'image' },
+        { label: 'Video', value: 'video' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description: 'Type of media (image or video)',
+      },
+    },
+    {
+      name: 'videoContext',
+      type: 'select',
+      options: [
+        { label: 'Hero/Header', value: 'hero' },
+        { label: 'Background', value: 'background' },
+        { label: 'Gallery', value: 'gallery' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description: 'Video usage context',
+        condition: (data) => data?.mediaType === 'video',
+      },
+    },
+
     // === V6 PROCESSING STATUS ===
     {
       name: 'processingStatus',
@@ -385,6 +414,7 @@ export const Media: CollectionConfig = {
     staticDir: path.resolve(dirname, '../../public/media'),
     adminThumbnail: 'thumbnail',
     focalPoint: true,
+    mimeTypes: ['image/*', 'video/mp4', 'video/webm', 'video/quicktime'],
     imageSizes: [
       {
         name: 'thumbnail',

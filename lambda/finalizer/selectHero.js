@@ -53,4 +53,31 @@ function selectHeroImage(mediaRecords) {
   return mediaRecords[0].id;
 }
 
-module.exports = { selectHeroImage };
+/**
+ * Select the best hero video from media records
+ *
+ * Priority:
+ * 1. Videos with videoContext 'hero'
+ * 2. First available video
+ */
+function selectHeroVideo(mediaRecords) {
+  if (!mediaRecords || mediaRecords.length === 0) {
+    return null;
+  }
+
+  // Filter to only videos
+  const videos = mediaRecords.filter(m => m.mediaType === 'video');
+
+  if (videos.length === 0) {
+    return null;
+  }
+
+  // 1. Look for videos marked as hero context
+  const heroVideo = videos.find(v => v.videoContext === 'hero');
+  if (heroVideo) return heroVideo.id;
+
+  // 2. Fallback to first video
+  return videos[0].id;
+}
+
+module.exports = { selectHeroImage, selectHeroVideo };

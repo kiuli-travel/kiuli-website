@@ -14,6 +14,43 @@ try {
 }
 
 /**
+ * HLS Video URL construction
+ * iTrvl uses HLS streaming with pattern: assembled_{itineraryId}_{quality}.m3u8
+ */
+const HLS_CDN_BASE = 'https://cdn-media.itrvl.com/video/hls';
+
+function getHlsVideoUrl(itineraryId, quality = '480') {
+  if (!itineraryId) return null;
+  return `${HLS_CDN_BASE}/assembled_${itineraryId}_${quality}.m3u8`;
+}
+
+/**
+ * Check if HLS video exists for this itinerary
+ * Uses HEAD request to avoid downloading the entire manifest
+ */
+async function checkVideoExists(itineraryId) {
+  const hlsUrl = getHlsVideoUrl(itineraryId);
+  if (!hlsUrl) return null;
+
+  try {
+    const response = await fetch(hlsUrl, { method: 'HEAD' });
+    if (response.ok) {
+      console.log(`[Scraper] HLS video found: ${hlsUrl}`);
+      return {
+        hlsUrl,
+        itineraryId,
+        context: 'hero',
+        quality: '480',
+      };
+    }
+    console.log(`[Scraper] No video at ${hlsUrl} (status: ${response.status})`);
+  } catch (e) {
+    console.log(`[Scraper] Video check failed for ${hlsUrl}:`, e.message);
+  }
+  return null;
+}
+
+/**
  * Parse iTrvl URL to extract Access Key and Itinerary ID
  */
 function parseItrvlUrl(url) {
@@ -160,9 +197,20 @@ async function scrapeItrvl(browser, url, parsedUrl) {
   // Extract images
   const images = extractS3Keys(renderDataClientData);
 
+  // Check for HLS video
+  const videoInfo = await checkVideoExists(parsedUrl.itineraryId);
+  const videos = videoInfo ? [videoInfo] : [];
+
+  if (videos.length > 0) {
+    console.log(`[Scraper] Found ${videos.length} video(s) for itinerary`);
+  } else {
+    console.log('[Scraper] No videos found for itinerary');
+  }
+
   return {
     itinerary: renderDataClientData,
     images: images,
+    videos: videos,
     price: price,
   };
 }
@@ -230,7 +278,7 @@ exports.handler = async (event) => {
     // Scrape
     const result = await scrapeItrvl(browser, itrvlUrl, parsedUrl);
 
-    console.log(`Scraping complete. Images: ${result.images.length}, Price: ${result.price}`);
+    console.log(`Scraping complete. Images: ${result.images.length}, Videos: ${result.videos.length}, Price: ${result.price}`);
 
     return {
       statusCode: 200,

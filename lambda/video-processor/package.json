@@ -1,0 +1,9 @@
+{
+  "name": "kiuli-video-processor",
+  "version": "1.0.0",
+  "description": "Video processor Lambda for Kiuli pipeline",
+  "main": "handler.js",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0"
+  }
+}

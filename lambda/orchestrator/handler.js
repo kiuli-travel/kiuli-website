@@ -88,7 +88,7 @@ exports.handler = async (event) => {
     }
 
     const rawData = scraperResult.data;
-    console.log(`[Orchestrator] Scrape complete: ${rawData.images?.length || 0} images found`);
+    console.log(`[Orchestrator] Scrape complete: ${rawData.images?.length || 0} images, ${rawData.videos?.length || 0} videos found`);
 
     // Update phase timestamp
     await payload.updateJob(jobId, {
@@ -180,6 +180,27 @@ exports.handler = async (event) => {
 
     console.log(`[Orchestrator] Image list: ${imageList.length} images with context`);
 
+    // 5b. Build video list from scraper result
+    const videoList = [];
+    const videos = rawData.videos || [];
+
+    videos.forEach((videoData) => {
+      videoList.push({
+        sourceS3Key: videoData.hlsUrl, // Use HLS URL as source key for dedup
+        status: 'pending',
+        mediaType: 'video',
+        videoContext: videoData.context || 'hero',
+        propertyName: null,
+        segmentType: null,
+        segmentTitle: null,
+        dayIndex: null,
+        segmentIndex: null,
+        country: defaultCountry,
+      });
+    });
+
+    console.log(`[Orchestrator] Video list: ${videoList.length} videos`);
+
     // 6. Create or update itinerary
     let payloadItinerary;
 
@@ -239,11 +260,12 @@ exports.handler = async (event) => {
 
     console.log(`[Orchestrator] Itinerary saved: ${payloadItinerary.id}`);
 
-    // 7. Update job with itinerary reference and counters
+    // 7. Update job with itinerary reference and counters (images + videos)
+    const totalMediaCount = imageList.length + videoList.length;
     await payload.updateJob(jobId, {
       processedItinerary: payloadItinerary.id,
       payloadId: payloadItinerary.id,
-      totalImages: imageList.length,
+      totalImages: totalMediaCount,
       processedImages: 0,
       failedImages: 0,
       skippedImages: 0,
@@ -257,6 +279,7 @@ exports.handler = async (event) => {
         job: jobId,
         sourceS3Key: img.sourceS3Key,
         status: img.status,
+        mediaType: 'image',
         propertyName: img.propertyName,
         segmentType: img.segmentType,
         segmentTitle: img.segmentTitle,
@@ -266,6 +289,27 @@ exports.handler = async (event) => {
       });
     }
     console.log(`[Orchestrator] ImageStatus records created`);
+
+    // 7c. Create VideoStatus records (using same collection with mediaType: 'video')
+    if (videoList.length > 0) {
+      console.log(`[Orchestrator] Creating ${videoList.length} VideoStatus records...`);
+      for (const vid of videoList) {
+        await payload.create('image-statuses', {
+          job: jobId,
+          sourceS3Key: vid.sourceS3Key,
+          status: vid.status,
+          mediaType: 'video',
+          videoContext: vid.videoContext,
+          propertyName: vid.propertyName,
+          segmentType: vid.segmentType,
+          segmentTitle: vid.segmentTitle,
+          dayIndex: vid.dayIndex,
+          segmentIndex: vid.segmentIndex,
+          country: vid.country,
+        });
+      }
+      console.log(`[Orchestrator] VideoStatus records created`);
+    }
 
     // Send notification
     await notifyJobStarted(jobId, transformedData.title);
@@ -302,6 +346,7 @@ exports.handler = async (event) => {
         jobId,
         itineraryId: payloadItinerary.id,
         imagesFound: imageList.length,
+        videosFound: videoList.length,
         mode: existingItinerary ? 'update' : 'create',
         duration
       })

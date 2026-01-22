@@ -240,6 +240,32 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
 
+    // === HERO VIDEO ===
+    {
+      name: 'heroVideo',
+      type: 'relationship',
+      relationTo: 'media',
+      admin: {
+        description: 'Hero video for itinerary header (background video)',
+      },
+    },
+    {
+      name: 'heroVideoLocked',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Lock hero video to prevent auto-replacement on re-scrape',
+      },
+    },
+    {
+      name: 'heroVideoReviewed',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Hero video selection has been reviewed',
+      },
+    },
+
     // === CATEGORIZATION ===
     {
       name: 'destinations',
@@ -1093,6 +1119,17 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       hasMany: true,
       admin: {
         description: 'All images associated with this itinerary (use gallery above to preview)',
+      },
+    },
+
+    // === ALL VIDEOS ===
+    {
+      name: 'videos',
+      type: 'relationship',
+      relationTo: 'media',
+      hasMany: true,
+      admin: {
+        description: 'All videos associated with this itinerary',
       },
     },
 

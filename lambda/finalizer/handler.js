@@ -10,7 +10,7 @@
  * 6. Send notification
  */
 
-const { selectHeroImage } = require('./selectHero');
+const { selectHeroImage, selectHeroVideo } = require('./selectHero');
 const { generateSchema } = require('./generateSchema');
 const { validateSchema, formatValidationResult } = require('./schemaValidator');
 const payload = require('./shared/payload');
@@ -232,6 +232,20 @@ exports.handler = async (event) => {
       console.log(`[Finalizer] Hero image locked: ${heroImageId}`);
     }
 
+    // 3b. Select hero video (if not locked)
+    let heroVideoId = itinerary.heroVideo;
+
+    if (!itinerary.heroVideoLocked || !heroVideoId) {
+      heroVideoId = selectHeroVideo(mediaRecords);
+      if (heroVideoId) {
+        console.log(`[Finalizer] Selected hero video: ${heroVideoId}`);
+      } else {
+        console.log(`[Finalizer] No videos available for hero`);
+      }
+    } else {
+      console.log(`[Finalizer] Hero video locked: ${heroVideoId}`);
+    }
+
     // 4. Generate and validate JSON-LD schema
     const schema = generateSchema(itinerary, mediaRecords, heroImageId);
     const schemaValidation = validateSchema(schema);
@@ -305,11 +319,18 @@ exports.handler = async (event) => {
     const hasErrors = publishBlockers.some(b => b.severity === 'error');
     const finalStatus = hasErrors ? 'needs_attention' : 'ready_for_review';
 
-    // 6. Update itinerary with linked images and other fields
-    // Build flat images array from all media IDs in ImageStatuses collection
+    // 6. Update itinerary with linked images/videos and other fields
+    // Build flat images array from all media IDs in ImageStatuses collection (images only)
     const allMediaIds = imageStatuses
-      .filter(img => img.mediaId && (img.status === 'complete' || img.status === 'skipped'))
+      .filter(img => img.mediaId && (img.status === 'complete' || img.status === 'skipped') && img.mediaType !== 'video')
       .map(img => typeof img.mediaId === 'number' ? img.mediaId : parseInt(img.mediaId, 10));
+
+    // Build video IDs array (videos only)
+    const allVideoIds = imageStatuses
+      .filter(img => img.mediaId && (img.status === 'complete' || img.status === 'skipped') && img.mediaType === 'video')
+      .map(img => typeof img.mediaId === 'number' ? img.mediaId : parseInt(img.mediaId, 10));
+
+    console.log(`[Finalizer] Videos found: ${allVideoIds.length}`);
 
     // Log sample of what we're sending for debugging
     if (updatedDays.length > 0 && updatedDays[0].segments?.length > 0) {
@@ -323,7 +344,9 @@ exports.handler = async (event) => {
     await payload.updateItinerary(itineraryId, {
       days: updatedDays,
       images: [...new Set(allMediaIds)],
+      videos: [...new Set(allVideoIds)],
       heroImage: heroImageId,
+      heroVideo: heroVideoId,
       schema,
       schemaStatus: schemaValidation.status,  // 'pass', 'warn', or 'fail'
       publishChecklist,
@@ -366,6 +389,8 @@ exports.handler = async (event) => {
       success: true,
       status: finalStatus,
       heroImage: heroImageId,
+      heroVideo: heroVideoId,
+      videosCount: allVideoIds.length,
       publishChecklist,
       blockers: publishBlockers.length,
       duration

@@ -41,11 +41,12 @@ exports.handler = async (event) => {
       });
     }
 
-    // 2. Get unlabeled media for this itinerary
+    // 2. Get unlabeled media for this itinerary (exclude videos)
     // Use bracket notation - Payload doesn't parse JSON where clauses correctly
     const mediaResult = await payload.find('media', {
       'where[and][0][labelingStatus][equals]': 'pending',
       'where[and][1][usedInItineraries][contains]': itineraryId,
+      'where[and][2][mediaType][not_equals]': 'video',
       limit: BATCH_SIZE.toString()
     });
 
@@ -72,6 +73,7 @@ exports.handler = async (event) => {
       const totalUnlabeled = await payload.find('media', {
         'where[and][0][labelingStatus][equals]': 'pending',
         'where[and][1][usedInItineraries][contains]': itineraryId,
+        'where[and][2][mediaType][not_equals]': 'video',
         limit: '1'
       });
 
@@ -117,11 +119,12 @@ exports.handler = async (event) => {
 
     console.log(`[Labeler] Batch complete: ${labeled} labeled, ${failed} failed`);
 
-    // 6. Check if more to label
+    // 6. Check if more to label (exclude videos)
     // Use bracket notation - Payload doesn't parse JSON where clauses correctly
     const remainingResult = await payload.find('media', {
       'where[and][0][labelingStatus][equals]': 'pending',
       'where[and][1][usedInItineraries][contains]': itineraryId,
+      'where[and][2][mediaType][not_equals]': 'video',
       limit: '1'
     });
 

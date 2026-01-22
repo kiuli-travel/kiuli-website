@@ -62,6 +62,28 @@ export const ImageStatuses: CollectionConfig = {
         { label: 'Skipped', value: 'skipped' },
       ],
     },
+    // Media type (image or video)
+    {
+      name: 'mediaType',
+      type: 'select',
+      defaultValue: 'image',
+      index: true,
+      options: [
+        { label: 'Image', value: 'image' },
+        { label: 'Video', value: 'video' },
+      ],
+      admin: {
+        description: 'Type of media being processed',
+      },
+    },
+    {
+      name: 'videoContext',
+      type: 'text',
+      admin: {
+        description: 'Video usage context (hero, background, etc.)',
+        condition: (data) => data?.mediaType === 'video',
+      },
+    },
     {
       name: 'error',
       type: 'text',

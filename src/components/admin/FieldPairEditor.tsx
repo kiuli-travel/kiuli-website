@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useDocumentInfo, useFormFields } from '@payloadcms/ui';
+import { useDocumentInfo, useField } from '@payloadcms/ui';
 
 // Styles
 const styles = {
@@ -154,34 +154,42 @@ export const FieldPairEditor: React.FC<FieldPairEditorProps> = ({
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Get field values using useFormFields
-  const { itrvlValue, enhancedValue, reviewedValue, setEnhanced, setReviewed } = useFormFields(
-    ([fields, dispatch]) => {
-      const itrvlField = fields[itrvlPath];
-      const enhancedField = fields[enhancedPath];
-      const reviewedField = fields[reviewedPath];
+  // Get field values using useField - more reliable than useFormFields dispatch
+  const { value: itrvlValue } = useField<unknown>({ path: itrvlPath });
+  const { value: enhancedValue, setValue: setEnhancedValue } = useField<unknown>({ path: enhancedPath });
+  const { value: reviewedValue, setValue: setReviewedValue } = useField<boolean>({ path: reviewedPath });
 
-      return {
-        itrvlValue: itrvlField?.value,
-        enhancedValue: enhancedField?.value,
-        reviewedValue: reviewedField?.value as boolean,
-        setEnhanced: (value: string) => {
-          dispatch({
-            type: 'UPDATE',
-            path: enhancedPath,
-            value: value,
-          });
-        },
-        setReviewed: (value: boolean) => {
-          dispatch({
-            type: 'UPDATE',
-            path: reviewedPath,
-            value: value,
-          });
-        },
-      };
+  // Helper to convert plain text to RichText format
+  const toRichText = (text: string): object => ({
+    root: {
+      type: 'root',
+      format: '',
+      indent: 0,
+      version: 1,
+      children: text.split('\n\n').filter(p => p.trim()).map(paragraph => ({
+        type: 'paragraph',
+        format: '',
+        indent: 0,
+        version: 1,
+        children: [{ type: 'text', text: paragraph.trim(), format: 0, version: 1 }],
+        direction: 'ltr',
+      })),
+      direction: 'ltr',
+    },
+  });
+
+  // Wrapper functions for setting values
+  const setEnhanced = useCallback((value: string) => {
+    if (isRichText) {
+      setEnhancedValue(toRichText(value));
+    } else {
+      setEnhancedValue(value);
     }
-  );
+  }, [isRichText, setEnhancedValue]);
+
+  const setReviewed = useCallback((value: boolean) => {
+    setReviewedValue(value);
+  }, [setReviewedValue]);
 
   // Extract display text from iTrvl value
   const originalText = isRichText

@@ -24,7 +24,13 @@ export const VideoMedia: React.FC<MediaProps> = (props) => {
   }, [])
 
   if (resource && typeof resource === 'object') {
-    const { filename } = resource
+    const { filename, url, imgixUrl } = resource as { filename?: string; url?: string; imgixUrl?: string }
+
+    // Prefer imgixUrl for S3-hosted media (absolute URL), otherwise use url or local path
+    // imgixUrl is the full CDN URL for scraped media, while url may be a local Payload path
+    const videoSrc = imgixUrl?.startsWith('http') ? imgixUrl : (url || imgixUrl || (filename ? getMediaUrl(`/media/${filename}`) : undefined))
+
+    if (!videoSrc) return null
 
     return (
       <video
@@ -37,7 +43,7 @@ export const VideoMedia: React.FC<MediaProps> = (props) => {
         playsInline
         ref={videoRef}
       >
-        <source src={getMediaUrl(`/media/${filename}`)} />
+        <source src={videoSrc} />
       </video>
     )
   }

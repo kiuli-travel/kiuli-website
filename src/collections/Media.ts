@@ -268,6 +268,14 @@ export const Media: CollectionConfig = {
         description: 'imgix URL for optimized serving',
       },
     },
+    {
+      name: 'url',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'Full URL for displaying the media',
+      },
+    },
 
     // === SOURCE CONTEXT (from scrape - read only) ===
     {

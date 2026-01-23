@@ -18,11 +18,23 @@ import type { CollectionAfterReadHook } from 'payload';
 export const resolveFields: CollectionAfterReadHook = async ({ doc, req }) => {
   if (!doc) return doc;
 
-  // Preserve internal fields for authenticated requests (admin UI)
+  // Preserve internal fields for authenticated requests (admin UI and API)
   // The admin UI needs access to *Itrvl, *Enhanced, *Reviewed fields
   // for FieldPairEditor components to work correctly.
   // Frontend requests are typically unauthenticated and only need resolved fields.
-  if (req?.user) {
+  // Check for both user auth (session) and API key auth (Authorization header)
+  let authHeader: string | null = null;
+  if (req?.headers) {
+    // Headers could be a Headers object (with .get method) or plain object
+    if (typeof req.headers.get === 'function') {
+      authHeader = req.headers.get('authorization');
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      authHeader = (req.headers as any).authorization ?? null;
+    }
+  }
+  const isApiKeyAuth = authHeader && authHeader.includes('API-Key');
+  if (req?.user || isApiKeyAuth) {
     return doc;
   }
 

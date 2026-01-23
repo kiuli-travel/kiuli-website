@@ -1003,8 +1003,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           name: 'questionItrvl',
           type: 'text',
           admin: {
-            readOnly: true,
-            description: 'Original question from iTrvl (read-only)',
+            description: 'Original question from iTrvl',
             condition: () => false, // Hidden - use questionEditor UI
           },
         },
@@ -1045,8 +1044,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           name: 'answerItrvl',
           type: 'richText',
           admin: {
-            readOnly: true,
-            description: 'Original answer from iTrvl (read-only)',
+            description: 'Original answer from iTrvl',
             condition: () => false, // Hidden - use answerEditor UI
           },
         },

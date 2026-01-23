@@ -36,7 +36,13 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
   let src: StaticImageData | string = srcFromProps || ''
 
   if (!src && resource && typeof resource === 'object') {
-    const { alt: altFromResource, height: fullHeight, url, width: fullWidth } = resource
+    const {
+      alt: altFromResource,
+      height: fullHeight,
+      url,
+      imgixUrl,
+      width: fullWidth,
+    } = resource as { alt?: string; height?: number; url?: string; imgixUrl?: string; width?: number; updatedAt?: string }
 
     width = fullWidth!
     height = fullHeight!
@@ -44,7 +50,10 @@ export const ImageMedia: React.FC<MediaProps> = (props) => {
 
     const cacheTag = resource.updatedAt
 
-    src = getMediaUrl(url, cacheTag)
+    // Prefer imgixUrl for S3-hosted images (absolute URL), otherwise use url
+    // imgixUrl is the full CDN URL for scraped images, while url may be a local Payload path
+    const mediaUrl = imgixUrl?.startsWith('http') ? imgixUrl : (url || imgixUrl)
+    src = getMediaUrl(mediaUrl, cacheTag)
   }
 
   const loading = loadingFromProps || (!priority ? 'lazy' : undefined)

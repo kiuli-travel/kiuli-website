@@ -15,6 +15,15 @@ const payload = require('./shared/payload');
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'eu-north-1' });
 const BUCKET = process.env.S3_BUCKET;
+const IMGIX_DOMAIN = process.env.IMGIX_DOMAIN || 'kiuli.imgix.net';
+
+/**
+ * Generate imgix URL for video
+ * Videos don't need image transformation params
+ */
+function getVideoImgixUrl(s3Key) {
+  return `https://${IMGIX_DOMAIN}/${s3Key}`;
+}
 
 exports.handler = async (event) => {
   console.log('[VideoProcessor] Invoked');
@@ -120,8 +129,7 @@ exports.handler = async (event) => {
     console.log(`[VideoProcessor] Uploaded to S3: ${s3Key}`);
 
     // 6. Create Media record via Payload API
-    const region = process.env.S3_REGION || 'eu-north-1';
-    const videoUrl = `https://${BUCKET}.s3.${region}.amazonaws.com/${s3Key}`;
+    const imgixUrl = getVideoImgixUrl(s3Key);
     const itineraryIdNum = typeof itineraryId === 'number' ? itineraryId : parseInt(itineraryId, 10);
 
     const mediaData = {
@@ -129,7 +137,8 @@ exports.handler = async (event) => {
       alt: `Hero video for itinerary ${itineraryId}`,
       sourceS3Key: sourceKey, // HLS URL for dedup
       originalS3Key: s3Key,
-      url: videoUrl,
+      url: imgixUrl, // Use imgix URL for CDN delivery
+      imgixUrl: imgixUrl, // Also set imgixUrl for frontend components
       mimeType: 'video/mp4',
       filesize: fileSize,
       mediaType: 'video',

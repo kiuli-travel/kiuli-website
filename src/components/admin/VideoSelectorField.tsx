@@ -37,6 +37,7 @@ export const VideoSelectorField: React.FC<VideoSelectorFieldProps> = ({ field, p
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [selectedVideo, setSelectedVideo] = useState<MediaItem | null>(null)
+  const [showPlayer, setShowPlayer] = useState(false)
 
   const LIMIT = 20
 
@@ -118,6 +119,7 @@ export const VideoSelectorField: React.FC<VideoSelectorFieldProps> = ({ field, p
   const handleClear = () => {
     setValue(null)
     setSelectedVideo(null)
+    setShowPlayer(false)
   }
 
   // Handle cancel
@@ -299,6 +301,23 @@ export const VideoSelectorField: React.FC<VideoSelectorFieldProps> = ({ field, p
               >
                 Select Video
               </button>
+              {selectedVideo && (
+                <button
+                  type="button"
+                  onClick={() => setShowPlayer(!showPlayer)}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    backgroundColor: '#198754',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {showPlayer ? 'Hide Video' : 'Watch Video'}
+                </button>
+              )}
               {value && (
                 <button
                   type="button"
@@ -318,6 +337,29 @@ export const VideoSelectorField: React.FC<VideoSelectorFieldProps> = ({ field, p
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Expandable Video Player */}
+      {showPlayer && selectedVideo && !showPicker && (
+        <div
+          style={{
+            marginTop: '0.75rem',
+            border: '1px solid #e0e0e0',
+            borderRadius: '4px',
+            overflow: 'hidden',
+            backgroundColor: '#000',
+          }}
+        >
+          <video
+            src={selectedVideo.url}
+            controls
+            style={{
+              width: '100%',
+              maxHeight: '400px',
+              display: 'block',
+            }}
+          />
         </div>
       )}
 

@@ -467,6 +467,9 @@ export interface Media {
   folder?: (number | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
+  /**
+   * Full URL for displaying the media
+   */
   url?: string | null;
   thumbnailURL?: string | null;
   filename?: string | null;
@@ -620,6 +623,10 @@ export interface Itinerary {
    * Hero video selection has been reviewed
    */
   heroVideoReviewed?: boolean | null;
+  /**
+   * Include hero video on the published page (when frontend is built)
+   */
+  showHeroVideo?: boolean | null;
   /**
    * Countries, regions, and parks featured in this itinerary
    */
@@ -1117,7 +1124,7 @@ export interface Itinerary {
         reviewed?: boolean | null;
         question: string;
         /**
-         * Original question from iTrvl (read-only)
+         * Original question from iTrvl
          */
         questionItrvl?: string | null;
         /**
@@ -1144,7 +1151,7 @@ export interface Itinerary {
           [k: string]: unknown;
         } | null;
         /**
-         * Original answer from iTrvl (read-only)
+         * Original answer from iTrvl
          */
         answerItrvl?: {
           root: {
@@ -2903,6 +2910,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
   heroVideo?: T;
   heroVideoLocked?: T;
   heroVideoReviewed?: T;
+  showHeroVideo?: T;
   destinations?: T;
   tripTypes?: T;
   overview?:

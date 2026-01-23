@@ -244,6 +244,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
 
     // === HERO VIDEO ===
     {
+      name: 'heroVideoSectionUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/components/admin/SectionHeader#HeroVideoSectionHeader',
+        },
+      },
+    },
+    {
       name: 'heroVideo',
       type: 'relationship',
       relationTo: 'media',
@@ -273,6 +282,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       defaultValue: false,
       admin: {
         description: 'Hero video selection has been reviewed',
+      },
+    },
+    {
+      name: 'showHeroVideo',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Include hero video on the published page (when frontend is built)',
       },
     },
 
@@ -1132,10 +1149,24 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
 
     // === ALL VIDEOS ===
     {
+      name: 'videosGalleryUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/components/admin/VideosGallery#VideosGallery',
+        },
+      },
+    },
+    {
       name: 'videos',
       type: 'relationship',
       relationTo: 'media',
       hasMany: true,
+      filterOptions: {
+        mediaType: {
+          equals: 'video',
+        },
+      },
       admin: {
         description: 'All videos associated with this itinerary',
       },

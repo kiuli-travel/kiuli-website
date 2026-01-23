@@ -6,7 +6,8 @@ const { uploadToS3, generateS3Key, getImgixUrl } = require('./shared/s3');
 const payload = require('./shared/payload');
 
 // iTrvl uses imgix CDN for their production media
-const ITRVL_CDN_BASE = 'https://itrvl-production-media.imgix.net';
+// Externalized for resilience if iTrvl changes their CDN
+const ITRVL_CDN_BASE = process.env.ITRVL_IMAGE_CDN_BASE || 'https://itrvl-production-media.imgix.net';
 
 /**
  * Process a single image

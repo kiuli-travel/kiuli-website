@@ -1,5 +1,6 @@
 /**
  * Payload API Client for V6 Pipeline
+ * With retry logic for resilience
  */
 
 const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'https://admin.kiuli.com';
@@ -13,11 +14,48 @@ function getHeaders() {
 }
 
 /**
+ * Fetch with exponential backoff retry
+ * Retries on 5xx errors and network failures
+ */
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // Don't retry on client errors (4xx) - those are usually permanent
+      if (response.ok || response.status < 500) {
+        return response;
+      }
+
+      // Server error - will retry
+      lastError = new Error(`Server error: ${response.status}`);
+      console.log(`[Payload] Attempt ${attempt}/${maxRetries} failed: ${response.status}`);
+
+    } catch (error) {
+      // Network error - will retry
+      lastError = error;
+      console.log(`[Payload] Attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+    }
+
+    // Don't wait after last attempt
+    if (attempt < maxRetries) {
+      const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+      console.log(`[Payload] Retrying in ${delay}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Generic find one document
  */
 async function findOne(collection, query = {}) {
   const params = new URLSearchParams({ ...query, limit: '1' });
-  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}?${params}`, {
+  const response = await fetchWithRetry(`${PAYLOAD_API_URL}/api/${collection}?${params}`, {
     headers: getHeaders()
   });
 
@@ -34,7 +72,7 @@ async function findOne(collection, query = {}) {
  */
 async function find(collection, query = {}) {
   const params = new URLSearchParams(query);
-  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}?${params}`, {
+  const response = await fetchWithRetry(`${PAYLOAD_API_URL}/api/${collection}?${params}`, {
     headers: getHeaders()
   });
 
@@ -49,7 +87,7 @@ async function find(collection, query = {}) {
  * Generic create document
  */
 async function create(collection, data) {
-  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}`, {
+  const response = await fetchWithRetry(`${PAYLOAD_API_URL}/api/${collection}`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data)
@@ -67,7 +105,7 @@ async function create(collection, data) {
  * Generic update document
  */
 async function update(collection, id, data) {
-  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}/${id}`, {
+  const response = await fetchWithRetry(`${PAYLOAD_API_URL}/api/${collection}/${id}`, {
     method: 'PATCH',
     headers: getHeaders(),
     body: JSON.stringify(data)
@@ -85,7 +123,7 @@ async function update(collection, id, data) {
  * Get document by ID
  */
 async function getById(collection, id) {
-  const response = await fetch(`${PAYLOAD_API_URL}/api/${collection}/${id}`, {
+  const response = await fetchWithRetry(`${PAYLOAD_API_URL}/api/${collection}/${id}`, {
     headers: getHeaders()
   });
 

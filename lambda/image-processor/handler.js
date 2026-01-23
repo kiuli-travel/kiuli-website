@@ -135,8 +135,13 @@ exports.handler = async (event) => {
       // All images done, process videos before triggering labeler
       console.log('[ImageProcessor] All images processed, checking for videos...');
 
-      // Process pending videos
-      await processVideos(jobId, itineraryId);
+      // Process pending videos (non-blocking - don't let video failures block labeler)
+      try {
+        await processVideos(jobId, itineraryId);
+      } catch (videoError) {
+        console.error(`[ImageProcessor] Video processing failed (non-fatal): ${videoError.message}`);
+        // Continue to labeler regardless of video failures
+      }
 
       // All done, trigger labeler
       console.log('[ImageProcessor] Triggering labeler');

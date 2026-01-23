@@ -22,9 +22,9 @@ function getS3Client() {
 }
 
 /**
- * Upload buffer to S3
+ * Upload buffer to S3 with retry logic
  */
-async function uploadToS3(buffer, key, contentType) {
+async function uploadToS3(buffer, key, contentType, maxRetries = 3) {
   const client = getS3Client();
   const bucket = process.env.S3_BUCKET;
 
@@ -32,16 +32,34 @@ async function uploadToS3(buffer, key, contentType) {
     throw new Error('S3_BUCKET environment variable not set');
   }
 
-  await client.send(new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-    CacheControl: 'public, max-age=31536000, immutable'
-  }));
+  let lastError;
 
-  console.log(`[S3] Uploaded: s3://${bucket}/${key}`);
-  return key;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await client.send(new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        CacheControl: 'public, max-age=31536000, immutable'
+      }));
+
+      console.log(`[S3] Uploaded: s3://${bucket}/${key}`);
+      return key;
+
+    } catch (error) {
+      lastError = error;
+      console.log(`[S3] Upload attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(`[S3] Retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 /**

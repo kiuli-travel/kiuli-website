@@ -87,8 +87,9 @@ function discoverEndpoints(capturedResponses) {
 /**
  * HLS Video URL construction
  * iTrvl uses HLS streaming with pattern: assembled_{itineraryId}_{quality}.m3u8
+ * Externalized for resilience if iTrvl changes their CDN
  */
-const HLS_CDN_BASE = 'https://cdn-media.itrvl.com/video/hls';
+const HLS_CDN_BASE = process.env.ITRVL_VIDEO_CDN_BASE || 'https://cdn-media.itrvl.com/video/hls';
 
 function getHlsVideoUrl(itineraryId, quality = '480') {
   if (!itineraryId) return null;

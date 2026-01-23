@@ -29,7 +29,8 @@ Admin UI → Orchestrator → Scraper → Image Processor → Labeler → Finali
 | `kiuli-scraper` | Web scraping with Puppeteer |
 | `kiuli-v6-orchestrator` | Pipeline coordination |
 | `kiuli-v6-image-processor` | Image re-hosting to S3 |
-| `kiuli-v6-labeler` | AI image enrichment (GPT-4o) |
+| `kiuli-v6-labeler` | AI image enrichment (Nemotron via OpenRouter) |
+| `kiuli-v6-video-processor` | HLS to MP4 video conversion |
 | `kiuli-v6-finalizer` | Schema generation, hero selection |
 
 ---
@@ -81,7 +82,8 @@ If documentation says one thing and code says another, **code is truth**. Update
 | Database | Vercel Postgres |
 | Storage | AWS S3 (kiuli-bucket, eu-north-1) |
 | CDN | imgix (kiuli.imgix.net) |
-| AI | OpenRouter GPT-4o (image labeling) |
+| AI Labeling | Nemotron (free) via OpenRouter |
+| AI Enhancement | Claude 3.5 Sonnet via OpenRouter |
 | Pipeline | AWS Lambda (eu-north-1) |
 | Deploy | Vercel |
 
@@ -136,6 +138,8 @@ aws lambda update-function-code \
 - `IMGIX_DOMAIN` - CDN domain
 - `OPENROUTER_API_KEY` - AI enrichment
 - `LAMBDA_*_ARN` - Inter-Lambda invocation
+- `ITRVL_IMAGE_CDN_BASE` - iTrvl image CDN (fallback: itrvl-production-media.imgix.net)
+- `ITRVL_VIDEO_CDN_BASE` - iTrvl video CDN (fallback: cdn-media.itrvl.com/video/hls)
 
 **Check local vs Vercel parity before deploying.**
 
@@ -188,4 +192,21 @@ aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 1h --region eu-north-1
 
 ---
 
-*Last updated: January 22, 2026*
+## 10. Important Notes
+
+### FAQ Generation
+FAQs are **auto-generated** by the orchestrator from segment data, NOT scraped from iTrvl.
+The `transform.js` file generates questions like:
+- "What is included at [accommodation]?"
+- "Best time to visit [country]?"
+
+### Two AI Systems
+1. **Image Labeling** (Lambda/labeler) → Nemotron → labels: scene, mood, animals, etc.
+2. **Text Enhancement** (Admin UI) → Claude 3.5 Sonnet → controlled by Voice Configurator
+
+### V7 Two-Field Pattern
+Itinerary text fields use: `*Itrvl` (original scraped) + `*Enhanced` (AI improved) + `*Reviewed` (final)
+
+---
+
+*Last updated: January 23, 2026*

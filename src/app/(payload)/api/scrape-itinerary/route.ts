@@ -100,6 +100,38 @@ export async function POST(request: NextRequest) {
 
     const payload = await getPayload({ config })
 
+    // Idempotency check: Prevent duplicate jobs for same URL
+    const existingActiveJob = await payload.find({
+      collection: 'itinerary-jobs',
+      where: {
+        and: [
+          { itrvlUrl: { equals: itrvlUrl } },
+          {
+            or: [
+              { status: { equals: 'pending' } },
+              { status: { equals: 'processing' } },
+            ],
+          },
+        ],
+      },
+      limit: 1,
+    })
+
+    if (existingActiveJob.docs.length > 0) {
+      const activeJob = existingActiveJob.docs[0]
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'A job is already running for this URL',
+          existingJobId: activeJob.id,
+          existingJobStatus: activeJob.status,
+          existingJobProgress: activeJob.progress,
+          message: `Poll /api/job-status/${activeJob.id} for progress.`,
+        },
+        { status: 409 } // Conflict
+      )
+    }
+
     // Check for existing itinerary if mode is 'update'
     let existingItinerary = null
     if (mode === 'update') {

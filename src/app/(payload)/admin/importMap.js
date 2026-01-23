@@ -24,6 +24,8 @@ import { EnhanceAll as EnhanceAll_ec0338562096863f7044cdfe701843c8 } from '@/col
 import { ImageStatusGrid as ImageStatusGrid_5c2c9d3ed51992d83368a5f5852adff8 } from '@/collections/Itineraries/components/ImageStatusGrid'
 import { PublishChecklist as PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44 } from '@/collections/Itineraries/components/PublishChecklist'
 import { ImageSelectorField as ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e } from '@/components/admin/ImageSelectorField'
+import { HeroVideoSectionHeader as HeroVideoSectionHeader_153a2825627b21cec8d3fdbcdc14d3b1 } from '@/components/admin/SectionHeader'
+import { VideoSelectorField as VideoSelectorField_10c7ecda883ac4317bbc6c369b973df9 } from '@/components/admin/VideoSelectorField'
 import { EnhanceOverviewButton as EnhanceOverviewButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
 import { ReviewToggle as ReviewToggle_69a80548c6026a9b8dc50316b85cb80c } from '@/collections/Itineraries/components/ReviewToggle'
 import { AccommodationNameEditor as AccommodationNameEditor_46849b3ddab8795c07b91cec57a7ed79 } from '@/components/admin/StayFieldEditors'
@@ -38,6 +40,7 @@ import { FAQQuestionEditor as FAQQuestionEditor_9b62e83ff894759746eacaf6f7067714
 import { FAQAnswerEditor as FAQAnswerEditor_9b62e83ff894759746eacaf6f7067714 } from '@/components/admin/FAQFieldEditors'
 import { EnhanceWhyKiuliButton as EnhanceWhyKiuliButton_4402482392cbdf4b96f22257e980d1a3 } from '@/collections/Itineraries/components/EnhanceButton'
 import { RootImagesGallery as RootImagesGallery_255ef2e6cf8a21ab49525f913eb50e27 } from '@/components/admin/RootImagesGallery'
+import { VideosGallery as VideosGallery_ff7b062b2c25a438045e482010c02fea } from '@/components/admin/VideosGallery'
 import { ProcessButton as ProcessButton_6f8f56340afe606e50afe37e4a9f28d1 } from '@/collections/ItineraryJobs/components/ProcessButton'
 import { JobControlPanel as JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2 } from '@/collections/ItineraryJobs/components/JobControlPanel'
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
@@ -78,6 +81,8 @@ export const importMap = {
   "@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid": ImageStatusGrid_5c2c9d3ed51992d83368a5f5852adff8,
   "@/collections/Itineraries/components/PublishChecklist#PublishChecklist": PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44,
   "@/components/admin/ImageSelectorField#ImageSelectorField": ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e,
+  "@/components/admin/SectionHeader#HeroVideoSectionHeader": HeroVideoSectionHeader_153a2825627b21cec8d3fdbcdc14d3b1,
+  "@/components/admin/VideoSelectorField#VideoSelectorField": VideoSelectorField_10c7ecda883ac4317bbc6c369b973df9,
   "@/collections/Itineraries/components/EnhanceButton#EnhanceOverviewButton": EnhanceOverviewButton_4402482392cbdf4b96f22257e980d1a3,
   "@/collections/Itineraries/components/ReviewToggle#ReviewToggle": ReviewToggle_69a80548c6026a9b8dc50316b85cb80c,
   "@/components/admin/StayFieldEditors#AccommodationNameEditor": AccommodationNameEditor_46849b3ddab8795c07b91cec57a7ed79,
@@ -92,6 +97,7 @@ export const importMap = {
   "@/components/admin/FAQFieldEditors#FAQAnswerEditor": FAQAnswerEditor_9b62e83ff894759746eacaf6f7067714,
   "@/collections/Itineraries/components/EnhanceButton#EnhanceWhyKiuliButton": EnhanceWhyKiuliButton_4402482392cbdf4b96f22257e980d1a3,
   "@/components/admin/RootImagesGallery#RootImagesGallery": RootImagesGallery_255ef2e6cf8a21ab49525f913eb50e27,
+  "@/components/admin/VideosGallery#VideosGallery": VideosGallery_ff7b062b2c25a438045e482010c02fea,
   "@/collections/ItineraryJobs/components/ProcessButton#ProcessButton": ProcessButton_6f8f56340afe606e50afe37e4a9f28d1,
   "@/collections/ItineraryJobs/components/JobControlPanel#JobControlPanel": JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2,
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,

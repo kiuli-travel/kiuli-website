@@ -211,6 +211,25 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
                 readOnly: true,
               },
             },
+            // V7: Video tracking
+            {
+              name: 'totalVideos',
+              type: 'number',
+              label: 'Total Videos',
+              admin: {
+                description: 'Total videos to process (tracked separately from images)',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'videoProcessingError',
+              type: 'text',
+              label: 'Video Processing Error',
+              admin: {
+                description: 'Error message if video processing failed (non-fatal)',
+                readOnly: true,
+              },
+            },
             // V6: imageStatuses moved to separate collection (image-statuses)
             // See src/collections/ImageStatuses.ts
             // V6: Labeling progress

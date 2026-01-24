@@ -65,12 +65,18 @@ async function reconcileJobCounters(jobId, imageStatuses) {
   const job = await payload.getJob(jobId);
   const statuses = imageStatuses || [];
 
+  // Separate images from videos for accurate counting
+  const imageOnlyStatuses = statuses.filter(s => s.mediaType !== 'video');
+  const videoStatuses = statuses.filter(s => s.mediaType === 'video');
+
   // Count by status from authoritative ImageStatuses collection
+  // totalImages should only count images, not videos
   const counts = {
-    totalImages: statuses.length,
-    processedImages: statuses.filter(s => s.status === 'complete').length,
-    skippedImages: statuses.filter(s => s.status === 'skipped').length,
-    failedImages: statuses.filter(s => s.status === 'failed').length,
+    totalImages: imageOnlyStatuses.length,
+    processedImages: imageOnlyStatuses.filter(s => s.status === 'complete').length,
+    skippedImages: imageOnlyStatuses.filter(s => s.status === 'skipped').length,
+    failedImages: imageOnlyStatuses.filter(s => s.status === 'failed').length,
+    totalVideos: videoStatuses.length,
   };
 
   // Log if there was a discrepancy

@@ -28,3 +28,5 @@ lambda/function.zip
 lambda/node_modules
 lambda/package-lock.json
 lambda/*/function.zip
+lambda/*/deploy.zip
+lambda/*.zip

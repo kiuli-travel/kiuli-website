@@ -114,8 +114,10 @@ exports.handler = async (event) => {
       throw new Error('Converted video too small, likely failed');
     }
 
-    // 5. Upload to S3
-    const filename = `hero_video_${itineraryId}.mp4`;
+    // 5. Upload to S3 (unique filename to prevent overwrites)
+    const timestamp = Date.now();
+    const contextSlug = (videoContext || 'hero').replace(/[^a-z0-9]/gi, '_');
+    const filename = `${contextSlug}_video_${itineraryId}_${timestamp}.mp4`;
     const s3Key = `media/originals/${itineraryId}/videos/${filename}`;
 
     await s3Client.send(new PutObjectCommand({

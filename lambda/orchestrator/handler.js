@@ -260,12 +260,13 @@ exports.handler = async (event) => {
 
     console.log(`[Orchestrator] Itinerary saved: ${payloadItinerary.id}`);
 
-    // 7. Update job with itinerary reference and counters (images + videos)
-    const totalMediaCount = imageList.length + videoList.length;
+    // 7. Update job with itinerary reference and counters
+    // Track images and videos separately to avoid counter drift
     await payload.updateJob(jobId, {
       processedItinerary: payloadItinerary.id,
       payloadId: payloadItinerary.id,
-      totalImages: totalMediaCount,
+      totalImages: imageList.length,    // Images only (not including videos)
+      totalVideos: videoList.length,    // Videos tracked separately
       processedImages: 0,
       failedImages: 0,
       skippedImages: 0,

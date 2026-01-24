@@ -100,11 +100,17 @@ exports.handler = async (event) => {
     const totalSkipped = (job.skippedImages || 0) + skipped;
     const totalFailed = (job.failedImages || 0) + failed;
 
+    // Cap progress at 99% during processing - finalizer sets 100% after reconciliation
+    // This prevents overflow when videos are processed asynchronously
+    const progressValue = allStatuses.length > 0
+      ? Math.min(99, Math.round(((totalProcessed + totalSkipped + totalFailed) / allStatuses.length) * 100))
+      : 0;
+
     await payload.updateJob(jobId, {
       processedImages: totalProcessed,
       skippedImages: totalSkipped,
       failedImages: totalFailed,
-      progress: Math.min(100, Math.round(((totalProcessed + totalSkipped + totalFailed) / allStatuses.length) * 100))
+      progress: progressValue
     });
 
     // 5. Skip itinerary media update here - defer to finalizer
@@ -140,6 +146,14 @@ exports.handler = async (event) => {
         await processVideos(jobId, itineraryId);
       } catch (videoError) {
         console.error(`[ImageProcessor] Video processing failed (non-fatal): ${videoError.message}`);
+        // Record video error in job for visibility in admin UI
+        try {
+          await payload.updateJob(jobId, {
+            videoProcessingError: videoError.message
+          });
+        } catch (updateErr) {
+          console.error(`[ImageProcessor] Failed to record video error: ${updateErr.message}`);
+        }
         // Continue to labeler regardless of video failures
       }
 

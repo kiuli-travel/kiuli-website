@@ -36,9 +36,19 @@ async function processImage(sourceS3Key, itineraryId, imageContext = {}) {
   if (existingMedia) {
     console.log(`[ProcessImage] Dedup hit: ${sourceS3Key} -> ${existingMedia.id}`);
 
-    // Note: We skip updating usedInItineraries here because:
-    // 1. It causes 413 errors due to Payload returning full populated documents
-    // 2. Usage tracking is better done via itinerary.images array anyway
+    // KNOWN LIMITATION: usedInItineraries is NOT updated for dedup hits.
+    //
+    // Why: Updating usedInItineraries causes 413 Payload Too Large errors
+    // because Payload returns fully populated documents in the response.
+    //
+    // Alternative: Media usage is tracked via itinerary.images array instead.
+    // The finalizer links media to itineraries using ImageStatuses collection.
+    //
+    // Impact: Media.usedInItineraries may not reflect all itineraries using
+    // a given media file. For accurate usage tracking, query itineraries
+    // with images array containing the media ID.
+    //
+    // See: FORENSIC_REPORT.md - Issue H2
     return {
       mediaId: existingMedia.id,
       skipped: true

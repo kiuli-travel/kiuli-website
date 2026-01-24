@@ -121,9 +121,20 @@ async function update(collection, id, data) {
 
 /**
  * Get document by ID
+ * @param {string} collection - Collection name
+ * @param {string|number} id - Document ID
+ * @param {object} options - Query options
+ * @param {number} options.depth - Relationship depth (default: 1, use 0 for large docs)
  */
-async function getById(collection, id) {
-  const response = await fetchWithRetry(`${PAYLOAD_API_URL}/api/${collection}/${id}`, {
+async function getById(collection, id, options = {}) {
+  const params = new URLSearchParams();
+  if (options.depth !== undefined) {
+    params.set('depth', options.depth.toString());
+  }
+  const queryString = params.toString();
+  const url = `${PAYLOAD_API_URL}/api/${collection}/${id}${queryString ? '?' + queryString : ''}`;
+
+  const response = await fetchWithRetry(url, {
     headers: getHeaders()
   });
 
@@ -186,8 +197,16 @@ async function failJob(jobId, error, phase) {
 
 // === Itinerary Helpers ===
 
-async function getItinerary(id) {
-  return getById('itineraries', id);
+/**
+ * Get itinerary by ID
+ * @param {string|number} id - Itinerary ID
+ * @param {object} options - Query options
+ * @param {number} options.depth - Relationship depth (default: 0 to avoid 413 errors)
+ */
+async function getItinerary(id, options = {}) {
+  // Default to depth=0 to mitigate 413 Payload Too Large errors
+  const depth = options.depth !== undefined ? options.depth : 0;
+  return getById('itineraries', id, { depth });
 }
 
 async function createItinerary(data) {

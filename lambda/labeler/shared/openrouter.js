@@ -1,5 +1,8 @@
 /**
  * OpenRouter API Client for V6 Pipeline
+ *
+ * This is the CANONICAL version - all Lambda functions should use this.
+ * Run sync-shared.sh to copy to Lambda-specific shared/ directories.
  */
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';

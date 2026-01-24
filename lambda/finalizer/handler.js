@@ -17,6 +17,39 @@ const payload = require('./shared/payload');
 const { notifyJobCompleted } = require('./shared/notifications');
 
 /**
+ * Generate consistent segment key for image-to-segment matching
+ * Uses same normalization for both ImageStatus grouping and segment lookup
+ *
+ * @param {string} blockType - Segment type ('stay', 'activity', 'transfer')
+ * @param {Object} segment - Segment object from itinerary
+ * @returns {string} Normalized segment key
+ */
+function getSegmentKey(blockType, segment) {
+  let name = '';
+  if (blockType === 'stay') {
+    // For stays: use accommodationName (set from name || title in transform)
+    name = segment.accommodationName || segment.title || '';
+  } else {
+    // For activities/transfers: use title
+    name = segment.title || '';
+  }
+  return `${blockType}-${name}`.toLowerCase().trim();
+}
+
+/**
+ * Generate segment key from ImageStatus record
+ * Must match getSegmentKey() output for proper linking
+ *
+ * @param {Object} img - ImageStatus record
+ * @returns {string} Normalized segment key
+ */
+function getImageStatusKey(img) {
+  const segmentType = img.segmentType || 'unknown';
+  const name = img.propertyName || img.segmentTitle || '';
+  return `${segmentType}-${name}`.toLowerCase().trim();
+}
+
+/**
  * Reconcile job counter fields with authoritative ImageStatuses collection
  *
  * Problem: Counter fields (processedImages, skippedImages, failedImages) are
@@ -92,13 +125,11 @@ function linkImagesToSegments(itinerary, imageStatuses) {
     return itinerary.days;
   }
 
-  // Group images by segment identifier (blockType-propertyName)
+  // Group images by segment identifier using consistent key generation
   const imagesBySegment = {};
   for (const img of processedImages) {
-    // Build key matching transform.js block type
-    const segmentType = img.segmentType || 'unknown';
-    const propertyName = img.propertyName || img.segmentTitle || '';
-    const segKey = `${segmentType}-${propertyName}`;
+    // Use helper function for consistent key generation
+    const segKey = getImageStatusKey(img);
 
     if (!imagesBySegment[segKey]) {
       imagesBySegment[segKey] = [];
@@ -125,10 +156,9 @@ function linkImagesToSegments(itinerary, imageStatuses) {
     const updatedSegments = [];
 
     for (const segment of (day.segments || [])) {
-      // Build segment key to match ImageStatuses grouping
+      // Use helper function for consistent key generation
       const blockType = segment.blockType || 'unknown';
-      const segName = segment.accommodationName || segment.title || '';
-      const segKey = `${blockType}-${segName}`;
+      const segKey = getSegmentKey(blockType, segment);
 
       // Get media IDs for this segment
       const mediaIds = imagesBySegment[segKey] || [];

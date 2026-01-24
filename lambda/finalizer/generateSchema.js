@@ -91,6 +91,12 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
       return !hasUnknown && answerText.trim().length > 0;
     });
 
+    // Log FAQ filtering for visibility
+    const filteredCount = itinerary.faqItems.length - validFaqItems.length;
+    if (filteredCount > 0) {
+      console.log(`[Schema] Filtered ${filteredCount} FAQs with empty/invalid answers`);
+    }
+
     if (validFaqItems.length > 0) {
       schema.mainEntity = {
         '@type': 'FAQPage',

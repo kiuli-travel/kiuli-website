@@ -12,7 +12,18 @@ Kiuli connects discerning travellers with high-margin African safaris. The websi
 
 ---
 
-## 2. Architecture Overview
+## 2. Failure History — Learn From These
+
+| Date | What Happened | Root Cause | Prevention |
+|------|---------------|------------|------------|
+| Jan 2026 | Changes not visible on production for 24+ hours | Forgot to commit/push to git | Always run `git status` before claiming work is done |
+| Jan 2026 | New admin components not appearing | Forgot to regenerate Payload importMap.js | See Rule 5 - always run `npx payload generate:importmap` |
+| Jan 2026 | Production domains pointing to 73-day-old deployment | Git push creates deployments but doesn't update domain aliases | See Rule 6 - use `vercel --prod` then update aliases |
+| Jan 2026 | Admin page went completely blank | Pointed domain to broken deployment without testing | Always test deployment URL directly before updating aliases |
+
+---
+
+## 3. Architecture Overview
 
 Kiuli uses a **Lambda-based async pipeline** for importing safari itineraries from iTrvl.
 
@@ -35,7 +46,7 @@ Admin UI → Orchestrator → Scraper → Image Processor → Labeler → Finali
 
 ---
 
-## 3. THE RULES — NON-NEGOTIABLE
+## 4. THE RULES — NON-NEGOTIABLE
 
 ### Rule 0: STOP on Failure
 
@@ -70,9 +81,37 @@ vercel whoami           # Check Vercel context
 
 If documentation says one thing and code says another, **code is truth**. Update documentation to match.
 
+### Rule 5: Payload Admin Component Changes
+
+When adding or modifying Payload admin components (`src/components/admin/*`), you MUST:
+```bash
+# 1. Regenerate the import map
+npx payload generate:importmap
+
+# 2. Commit the regenerated importMap.js
+git add src/app/\(payload\)/admin/importMap.js
+git commit -m "fix: regenerate importMap for new components"
+git push origin main
+```
+
+**The importMap.js file maps component paths to actual imports. New components will NOT appear in admin without regenerating it.**
+
+### Rule 6: Production Deployment Procedure
+
+**Git push does NOT automatically update custom domain aliases.** After pushing changes:
+```bash
+# Deploy via CLI to update custom domains
+vercel --prod
+
+# Verify the deployment works on production domains
+curl -sI https://admin.kiuli.com | grep "HTTP/2 200"
+```
+
+**Always verify deployment is visible on production domains, not just Vercel preview URLs.**
+
 ---
 
-## 4. Quick Reference
+## 5. Quick Reference
 
 ### Stack
 | Component | Technology |
@@ -123,7 +162,7 @@ aws lambda update-function-code \
 
 ---
 
-## 5. Environment Variables
+## 6. Environment Variables
 
 ### Vercel (Website)
 - `POSTGRES_URL` - Database connection
@@ -145,7 +184,7 @@ aws lambda update-function-code \
 
 ---
 
-## 6. Dangerous Operations
+## 7. Dangerous Operations
 
 | Operation | Risk | When Safe |
 |-----------|------|-----------|
@@ -156,7 +195,7 @@ aws lambda update-function-code \
 
 ---
 
-## 7. Verification
+## 8. Verification
 
 After any change:
 ```bash
@@ -172,7 +211,7 @@ aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 1h --region eu-north-1
 
 ---
 
-## 8. When to STOP and Ask
+## 9. When to STOP and Ask
 
 - Any command fails or produces unexpected output
 - You're about to modify payload.config.ts
@@ -182,7 +221,7 @@ aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 1h --region eu-north-1
 
 ---
 
-## 9. Key Documentation Files
+## 10. Key Documentation Files
 
 | File | Purpose |
 |------|---------|
@@ -192,7 +231,7 @@ aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 1h --region eu-north-1
 
 ---
 
-## 10. Important Notes
+## 11. Important Notes
 
 ### FAQ Generation
 FAQs are **auto-generated** by the orchestrator from segment data, NOT scraped from iTrvl.

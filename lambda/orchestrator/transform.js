@@ -6,6 +6,60 @@
  */
 
 /**
+ * Links itinerary to destination records based on extracted countries
+ * @param {Array<{country: string}>} countries - From overview.countries
+ * @returns {Promise<string[]>} Array of destination document IDs
+ */
+async function linkDestinations(countries) {
+  const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'http://localhost:3000';
+  const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
+
+  if (!countries || countries.length === 0) {
+    console.log('[linkDestinations] No countries to link');
+    return [];
+  }
+
+  if (!PAYLOAD_API_KEY) {
+    console.error('[linkDestinations] PAYLOAD_API_KEY not set');
+    return [];
+  }
+
+  const destinationIds = [];
+
+  for (const { country } of countries) {
+    if (!country) continue;
+
+    const url = `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(country)}&limit=1`;
+    console.log(`[linkDestinations] Querying: ${country}`);
+
+    try {
+      const response = await fetch(url, {
+        headers: { 'Authorization': `users API-Key ${PAYLOAD_API_KEY}` },
+      });
+
+      if (!response.ok) {
+        console.error(`[linkDestinations] Query failed for ${country}: ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+
+      if (data.docs?.[0]?.id) {
+        destinationIds.push(data.docs[0].id);
+        console.log(`[linkDestinations] LINKED: ${country} -> ${data.docs[0].id}`);
+      } else {
+        console.warn(`[linkDestinations] NOT FOUND: ${country}`);
+      }
+    } catch (err) {
+      console.error(`[linkDestinations] Error for ${country}:`, err.message);
+    }
+  }
+
+  console.log(`[linkDestinations] Total linked: ${destinationIds.length}/${countries.length}`);
+  return destinationIds;
+}
+
+/**
  * Generate URL-friendly slug from title
  */
 function generateSlug(title) {
@@ -547,6 +601,10 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
   const { metaTitle, metaDescription } = generateMetaFields(title, nights, countries);
   const investmentIncludes = generateInvestmentIncludes(segments, nights);
 
+  // Link to destination records based on extracted countries
+  const countriesForLinking = countries.map(c => ({ country: c }));
+  const destinationIds = await linkDestinations(countriesForLinking);
+
   const transformed = {
     // Basic - V7 two-field pattern
     title,
@@ -575,6 +633,9 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
       countries: countries.map(c => ({ country: c })),
       highlights: highlights.map(h => ({ highlight: h })),
     },
+
+    // Destinations (linked from countries)
+    destinations: destinationIds,
 
     // Investment
     investmentLevel: {

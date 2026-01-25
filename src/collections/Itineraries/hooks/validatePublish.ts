@@ -144,6 +144,9 @@ export const validatePublish: CollectionBeforeChangeHook = async ({
   if (!checklist.schemaGenerated) {
     blockers.push('Schema not generated')
   }
+  if (!checklist.tripTypesSelected) {
+    blockers.push('No trip types selected')
+  }
 
   // If blockers exist, throw error to prevent publish
   if (blockers.length > 0) {

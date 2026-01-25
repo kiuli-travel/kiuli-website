@@ -56,6 +56,11 @@ const STATIC_CHECKLIST_ITEMS: ChecklistItem[] = [
     label: 'Schema Generated',
     description: 'JSON-LD schema has been generated',
   },
+  {
+    key: 'tripTypesSelected',
+    label: 'Trip Types Selected',
+    description: 'At least one trip type has been selected',
+  },
 ]
 
 interface ReviewItem {

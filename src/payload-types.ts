@@ -1288,6 +1288,10 @@ export interface Itinerary {
      * Meta title and description are set
      */
     metaFieldsFilled?: boolean | null;
+    /**
+     * At least one trip type has been selected
+     */
+    tripTypesSelected?: boolean | null;
   };
   /**
    * List of issues blocking publication
@@ -1990,6 +1994,14 @@ export interface ItineraryJob {
    * Images that failed to process
    */
   failedImages?: number | null;
+  /**
+   * Total videos to process (tracked separately from images)
+   */
+  totalVideos?: number | null;
+  /**
+   * Error message if video processing failed (non-fatal)
+   */
+  videoProcessingError?: string | null;
   /**
    * Number of images that have been AI-labeled
    */
@@ -3053,6 +3065,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
         schemaGenerated?: T;
         schemaValid?: T;
         metaFieldsFilled?: T;
+        tripTypesSelected?: T;
       };
   publishBlockers?:
     | T
@@ -3109,6 +3122,8 @@ export interface ItineraryJobsSelect<T extends boolean = true> {
   processedImages?: T;
   skippedImages?: T;
   failedImages?: T;
+  totalVideos?: T;
+  videoProcessingError?: T;
   imagesLabeled?: T;
   imagesToLabel?: T;
   labelingStartedAt?: T;

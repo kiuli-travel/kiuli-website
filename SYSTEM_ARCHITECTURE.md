@@ -1,6 +1,6 @@
 # Kiuli System Architecture
 
-**Last verified:** 2026-01-25
+**Last verified:** 2026-01-26
 **Repository:** https://github.com/kiuli-travel/kiuli-website
 
 ---

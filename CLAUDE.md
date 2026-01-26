@@ -20,6 +20,7 @@ Kiuli connects discerning travellers with high-margin African safaris. The websi
 | Jan 2026 | New admin components not appearing | Forgot to regenerate Payload importMap.js | See Rule 5 - always run `npx payload generate:importmap` |
 | Jan 2026 | Production domains pointing to 73-day-old deployment | Git push creates deployments but doesn't update domain aliases | See Rule 6 - use `vercel --prod` then update aliases |
 | Jan 2026 | Admin page went completely blank | Pointed domain to broken deployment without testing | Always test deployment URL directly before updating aliases |
+| Jan 2026 | Homepage showing "Payload Website Template" | `homeStatic` fallback used when no home page in database | Replace template content or create home page in Payload admin |
 
 ---
 
@@ -226,6 +227,8 @@ aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 1h --region eu-north-1
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` | This file - project overview and rules |
+| `SYSTEM_ARCHITECTURE.md` | System overview and technology stack |
+| `DEPLOYMENT_CHECKLIST.md` | Deployment procedures and verification |
 | `KIULI_LAMBDA_ARCHITECTURE.md` | Complete pipeline documentation |
 | `README.md` | Public repository readme |
 
@@ -248,4 +251,4 @@ Itinerary text fields use: `*Itrvl` (original scraped) + `*Enhanced` (AI improve
 
 ---
 
-*Last updated: January 23, 2026*
+*Last updated: January 26, 2026*

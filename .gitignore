@@ -30,3 +30,14 @@ lambda/package-lock.json
 lambda/*/function.zip
 lambda/*/deploy.zip
 lambda/*.zip
+
+# Brand assets (store outside repo)
+kiuli Brand Guidelines/
+
+# Audit artifacts
+*.audit.zip
+*-audit*.zip
+kiuli-data-audit*.zip
+
+# Stray Lambda handlers
+lambda/handler.js

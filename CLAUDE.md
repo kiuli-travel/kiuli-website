@@ -119,6 +119,7 @@ curl -sI https://admin.kiuli.com | grep "HTTP/2 200"
 |-----------|------------|
 | Framework | Next.js 15.4.7 |
 | CMS | Payload CMS 3.63.0 |
+| Styling | Tailwind CSS 3.4 |
 | Database | Vercel Postgres |
 | Storage | AWS S3 (kiuli-bucket, eu-north-1) |
 | CDN | imgix (kiuli.imgix.net) |

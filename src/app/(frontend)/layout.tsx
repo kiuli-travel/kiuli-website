@@ -1,27 +1,15 @@
 import type { Metadata } from 'next'
 
-import { cn } from '@/utilities/ui'
-import { GeistMono } from 'geist/font/mono'
 import React from 'react'
-
-import { AdminBar } from '@/components/AdminBar'
-import { Footer } from '@/Footer/Component'
-import { Header } from '@/Header/Component'
-import { Providers } from '@/providers'
-import { InitTheme } from '@/providers/Theme/InitTheme'
-import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
-import { draftMode } from 'next/headers'
 
 import './globals.css'
 import { getServerSideURL } from '@/utilities/getURL'
+import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { isEnabled } = await draftMode()
-
+export default function FrontendLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html className={cn(GeistMono.variable)} lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
-        <InitTheme />
         {/* Preload critical Kiuli brand fonts */}
         <link
           rel="preload"
@@ -46,19 +34,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
           Skip to content
         </a>
-        <Providers>
-          <AdminBar
-            adminBarProps={{
-              preview: isEnabled,
-            }}
-          />
 
-          <Header />
-          <main id="main-content">
-            {children}
-          </main>
-          <Footer />
-        </Providers>
+        {/* Frontend will have its own Kiuli-branded navigation later */}
+
+        <main id="main-content">
+          {children}
+        </main>
+
+        {/* Frontend will have its own Kiuli-branded footer later */}
       </body>
     </html>
   )
@@ -69,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: mergeOpenGraph(),
   twitter: {
     card: 'summary_large_image',
-    creator: '@payloadcms',
+    creator: '@kiuli_travel',
   },
   appleWebApp: {
     title: 'Kiuli',

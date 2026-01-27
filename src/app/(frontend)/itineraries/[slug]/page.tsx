@@ -104,6 +104,13 @@ function getHeroImage(itinerary: Itinerary): { imgixUrl: string; alt: string } |
   }
 }
 
+// Helper: Get hero video data
+function getHeroVideo(itinerary: Itinerary): Media | null {
+  const heroVideo = itinerary.heroVideo
+  if (!heroVideo || typeof heroVideo === 'number') return null
+  return heroVideo as Media
+}
+
 // Helper: Extract plain text from Lexical richText for FAQ answers
 function extractTextFromRichText(richText: unknown): string {
   if (!richText || typeof richText !== 'object') return ''
@@ -164,6 +171,7 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
   }
 
   const heroImage = getHeroImage(itinerary)
+  const heroVideo = getHeroVideo(itinerary)
   const destinations = extractDestinations(itinerary)
   const totalNights = calculateNights(itinerary)
   const faqs = extractFAQs(itinerary)
@@ -183,7 +191,8 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
       <ItineraryHero
         title={itinerary.title}
         heroImage={heroImage}
-        slug={itinerary.slug}
+        heroVideo={heroVideo}
+        showHeroVideo={itinerary.showHeroVideo ?? false}
       />
 
       <TripOverview

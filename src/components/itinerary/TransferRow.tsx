@@ -24,6 +24,22 @@ const transportIcons: Record<TransportType, React.ElementType> = {
   point: Car,
 }
 
+// Format ISO date string to human-readable format
+function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return dateString
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date)
+  } catch {
+    return dateString
+  }
+}
+
 export function TransferRow({
   transportType,
   origin,
@@ -46,7 +62,11 @@ export function TransferRow({
   }, [isExpanded])
 
   const hasExpandableContent = details || departureTime || arrivalTime
-  const route = origin && destination ? `${origin} to ${destination}` : origin || destination || 'Transfer'
+
+  // Build route display with arrow
+  const route = origin && destination
+    ? `${origin} → ${destination}`
+    : origin || destination || 'Transfer'
 
   return (
     <div className="border-b border-kiuli-gray transition-colors hover:bg-kiuli-ivory/30">
@@ -89,7 +109,7 @@ export function TransferRow({
         {/* Date - Desktop */}
         {date && (
           <span className="hidden shrink-0 text-sm text-kiuli-charcoal/60 md:block">
-            {date}
+            {formatDate(date)}
           </span>
         )}
 
@@ -113,7 +133,7 @@ export function TransferRow({
           <div ref={contentRef} className="px-4 pb-4 pl-[3.25rem] md:pl-[4rem]">
             {/* Mobile Date */}
             {date && (
-              <p className="mb-2 text-sm text-kiuli-charcoal/60 md:hidden">{date}</p>
+              <p className="mb-2 text-sm text-kiuli-charcoal/60 md:hidden">{formatDate(date)}</p>
             )}
 
             {/* Times */}

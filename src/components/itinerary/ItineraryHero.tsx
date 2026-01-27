@@ -1,4 +1,6 @@
 import Image from 'next/image'
+import type { Media } from '@/payload-types'
+import { VideoMedia } from '@/components/Media/VideoMedia'
 
 interface ItineraryHeroProps {
   title: string
@@ -6,15 +8,25 @@ interface ItineraryHeroProps {
     imgixUrl: string
     alt: string
   } | null
-  slug: string
+  heroVideo?: Media | null
+  showHeroVideo?: boolean
 }
 
-export function ItineraryHero({ title, heroImage, slug }: ItineraryHeroProps) {
+export function ItineraryHero({ title, heroImage, heroVideo, showHeroVideo }: ItineraryHeroProps) {
+  // Determine if we should show video
+  const shouldShowVideo = showHeroVideo && heroVideo && typeof heroVideo === 'object'
   return (
     <section className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden group">
-      {/* Background Image with Zoom Effect */}
+      {/* Background Video or Image with Zoom Effect */}
       <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.02]">
-        {heroImage?.imgixUrl ? (
+        {shouldShowVideo ? (
+          // Video background
+          <VideoMedia
+            resource={heroVideo}
+            videoClassName="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : heroImage?.imgixUrl ? (
+          // Image background
           <Image
             src={heroImage.imgixUrl}
             alt={heroImage.alt || title}
@@ -24,7 +36,7 @@ export function ItineraryHero({ title, heroImage, slug }: ItineraryHeroProps) {
             sizes="100vw"
           />
         ) : (
-          // Fallback gradient when no hero image
+          // Fallback gradient when no hero media
           <div className="absolute inset-0 bg-gradient-to-br from-kiuli-teal to-kiuli-charcoal" />
         )}
       </div>

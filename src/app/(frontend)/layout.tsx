@@ -6,6 +6,8 @@ import './globals.css'
 import { getServerSideURL } from '@/utilities/getURL'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 import { Providers } from '@/providers'
+import { Header } from '@/components/layout/Header'
+import { Footer } from '@/components/layout/Footer'
 
 export default function FrontendLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -37,9 +39,13 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
             Skip to content
           </a>
 
-          <main id="main-content">
+          <Header />
+
+          <main id="main-content" className="pt-20 flex-1">
             {children}
           </main>
+
+          <Footer />
         </Providers>
       </body>
     </html>

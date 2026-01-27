@@ -10,6 +10,7 @@ import React, { cache } from 'react'
 import { generateMeta } from '@/utilities/generateMeta'
 import { ItineraryHero } from '@/components/itinerary/ItineraryHero'
 import { TripOverview } from '@/components/itinerary/TripOverview'
+import { JourneyNarrative } from '@/components/itinerary/JourneyNarrative'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -137,15 +138,7 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
         }
       />
 
-      {/* Temporarily keep JSON dump for remaining data */}
-      <details className="mx-auto max-w-6xl px-6 py-8">
-        <summary className="cursor-pointer text-kiuli-teal font-semibold mb-4">
-          Raw Days Data (Debug)
-        </summary>
-        <pre className="bg-kiuli-ivory p-4 rounded overflow-auto text-xs max-h-[60vh]">
-          {JSON.stringify(itinerary.days, null, 2)}
-        </pre>
-      </details>
+      <JourneyNarrative days={itinerary.days} />
     </article>
   )
 }

@@ -22,17 +22,17 @@ export function Header() {
           <Image
             src="/logos/mark/kiuli-mark-black.svg"
             alt=""
-            width={40}
-            height={40}
-            className="h-10 w-auto"
+            width={32}
+            height={32}
+            className="h-8 w-auto"
             priority
           />
           <Image
             src="/logos/wordmark/kiuli-wordmark-black.svg"
             alt="Kiuli"
-            width={80}
-            height={24}
-            className="h-6 w-auto"
+            width={72}
+            height={18}
+            className="h-[18px] w-auto"
             priority
           />
         </Link>

@@ -129,7 +129,7 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
     <section className="py-16 md:py-20">
       {/* Section Heading */}
       <div className="text-center mb-12 md:mb-16">
-        <h2 className="font-heading text-3xl md:text-4xl text-kiuli-charcoal">
+        <h2 className="font-serif text-4xl md:text-[42px] text-kiuli-charcoal">
           Your Journey
         </h2>
       </div>

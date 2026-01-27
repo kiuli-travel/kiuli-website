@@ -40,12 +40,12 @@ export function ItineraryHero({ title, heroImage, slug }: ItineraryHeroProps) {
         {/* Breadcrumb - Top Left */}
         <div className="px-6 pt-8 md:px-12 md:pt-12 lg:px-16 lg:pt-16">
           <p
-            className="text-white text-xs uppercase tracking-widest font-medium"
+            className="text-white text-xs tracking-widest font-medium"
             style={{ fontSize: '12px', letterSpacing: '1px' }}
           >
-            <span className="opacity-70">Itineraries</span>
+            <span className="opacity-70">ITINERARIES</span>
             <span className="mx-2 opacity-50">&gt;</span>
-            <span>{title}</span>
+            <span className="uppercase">{title}</span>
           </p>
         </div>
 

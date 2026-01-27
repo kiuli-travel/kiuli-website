@@ -19,7 +19,7 @@ const playfair = Playfair_Display({
 
 export default function FrontendLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={playfair.variable} suppressHydrationWarning>
+    <html lang="en" data-theme="light" className={playfair.variable} suppressHydrationWarning>
       <head>
         {/* Preload critical Kiuli brand fonts */}
         <link

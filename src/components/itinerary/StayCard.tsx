@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { Calendar, Home, Bed, Check } from 'lucide-react'
-import { useState } from 'react'
+import { Calendar, Home, Bed, Check, ChevronDown } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 
 interface StayCardProps {
   dayRange: string
@@ -10,7 +10,7 @@ interface StayCardProps {
   nights: number
   propertyName: string
   location: string
-  description?: string
+  descriptionContent?: React.ReactNode
   insiderTip?: string
   images: Array<{
     imgixUrl: string
@@ -20,25 +20,68 @@ interface StayCardProps {
   inclusions?: string
 }
 
+// Animated Accordion Item Component
+function AccordionItem({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ElementType
+  title: string
+  children: React.ReactNode
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(0)
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setHeight(isOpen ? contentRef.current.scrollHeight : 0)
+    }
+  }, [isOpen])
+
+  return (
+    <div className="border border-kiuli-gray rounded overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full gap-3 p-4 cursor-pointer hover:bg-kiuli-ivory/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="h-5 w-5 text-kiuli-teal" />
+          <span className="font-medium text-kiuli-charcoal">{title}</span>
+        </div>
+        <ChevronDown
+          className={`h-5 w-5 text-kiuli-charcoal/60 transition-transform duration-300 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+      <div
+        style={{ height }}
+        className="transition-[height] duration-300 ease-out overflow-hidden"
+      >
+        <div ref={contentRef} className="px-4 pb-4 pl-12">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function StayCard({
   dayRange,
   dateRange,
   nights,
   propertyName,
   location,
-  description,
+  descriptionContent,
   insiderTip,
   images,
   roomType,
   inclusions,
 }: StayCardProps) {
-  const [roomDetailsOpen, setRoomDetailsOpen] = useState(false)
-  const [inclusionsOpen, setInclusionsOpen] = useState(false)
-
   const heroImage = images[0]
-
-  // Split description into paragraphs
-  const paragraphs = description?.split('\n\n').filter(Boolean) || []
 
   return (
     <article className="w-full">
@@ -109,15 +152,13 @@ export function StayCard({
 
       {/* Content Section */}
       <div className="max-w-3xl mx-auto px-6 md:px-8 py-12 md:py-16">
-        <h2 className="font-heading text-3xl md:text-4xl lg:text-[42px] text-kiuli-charcoal mb-8 leading-tight">
+        <h2 className="font-serif text-3xl md:text-4xl lg:text-[42px] text-kiuli-charcoal mb-8 leading-tight">
           {propertyName}
         </h2>
 
-        {paragraphs.length > 0 && (
-          <div className="space-y-5 text-kiuli-charcoal leading-relaxed">
-            {paragraphs.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
+        {descriptionContent && (
+          <div className="prose prose-lg max-w-none text-kiuli-charcoal leading-relaxed">
+            {descriptionContent}
           </div>
         )}
 
@@ -133,38 +174,16 @@ export function StayCard({
 
         {/* Expandable Sections */}
         <div className="mt-12 space-y-4">
-          {/* Room Details */}
           {roomType && (
-            <details
-              className="border border-kiuli-gray rounded"
-              open={roomDetailsOpen}
-              onToggle={(e) => setRoomDetailsOpen((e.target as HTMLDetailsElement).open)}
-            >
-              <summary className="flex items-center gap-3 p-4 cursor-pointer hover:bg-kiuli-ivory/50">
-                <Bed className="h-5 w-5 text-kiuli-teal" />
-                <span className="font-medium text-kiuli-charcoal">Room Details</span>
-              </summary>
-              <div className="px-4 pb-4 pl-12">
-                <p className="text-kiuli-charcoal/80">{roomType}</p>
-              </div>
-            </details>
+            <AccordionItem icon={Bed} title="Room Details">
+              <p className="text-kiuli-charcoal/80">{roomType}</p>
+            </AccordionItem>
           )}
 
-          {/* Inclusions */}
           {inclusions && (
-            <details
-              className="border border-kiuli-gray rounded"
-              open={inclusionsOpen}
-              onToggle={(e) => setInclusionsOpen((e.target as HTMLDetailsElement).open)}
-            >
-              <summary className="flex items-center gap-3 p-4 cursor-pointer hover:bg-kiuli-ivory/50">
-                <Check className="h-5 w-5 text-kiuli-teal" />
-                <span className="font-medium text-kiuli-charcoal">Inclusions</span>
-              </summary>
-              <div className="px-4 pb-4 pl-12">
-                <p className="text-kiuli-charcoal/80">{inclusions}</p>
-              </div>
-            </details>
+            <AccordionItem icon={Check} title="Inclusions">
+              <p className="text-kiuli-charcoal/80">{inclusions}</p>
+            </AccordionItem>
           )}
         </div>
       </div>

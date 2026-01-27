@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import React from 'react'
+import { Playfair_Display } from 'next/font/google'
 
 import './globals.css'
 import { getServerSideURL } from '@/utilities/getURL'
@@ -9,9 +10,16 @@ import { Providers } from '@/providers'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-playfair',
+  weight: ['400', '500', '600', '700'],
+})
+
 export default function FrontendLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={playfair.variable} suppressHydrationWarning>
       <head>
         {/* Preload critical Kiuli brand fonts */}
         <link

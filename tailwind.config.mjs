@@ -105,6 +105,7 @@ const config = {
       fontFamily: {
         sans: ['Satoshi', 'system-ui', 'sans-serif'],
         heading: ['General Sans', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],
         body: ['Satoshi', 'system-ui', 'sans-serif'],
         accent: ['Waterfall', 'cursive'],
         mono: ['var(--font-geist-mono)'],

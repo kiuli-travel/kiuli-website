@@ -1,11 +1,13 @@
 import type { Itinerary, Media } from '@/payload-types'
 import { StayCard } from './StayCard'
+import RichText from '@/components/RichText'
+import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 interface JourneyNarrativeProps {
   days: Itinerary['days']
 }
 
-// Extract plain text from Lexical richText format
+// Extract plain text from Lexical richText format (for Insider's Tip extraction)
 function extractTextFromRichText(richText: unknown): string {
   if (!richText || typeof richText !== 'object') return ''
 
@@ -32,7 +34,7 @@ function extractTextFromRichText(richText: unknown): string {
   return extractText(root.children)
 }
 
-// Extract "Insider's Tip" from description if present
+// Extract "Insider's Tip" from description text if present
 function extractInsiderTip(description: string): { mainText: string; insiderTip: string | null } {
   const tipMatch = description.match(/Insider['']s Tip:\s*(.*?)$/is)
   if (tipMatch) {
@@ -63,7 +65,7 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
     propertyName: string
     location: string
     country: string
-    description: string
+    descriptionRichText: DefaultTypedEditorState | null
     insiderTip: string | null
     images: Array<{ imgixUrl: string; alt: string }>
     roomType: string | null
@@ -76,15 +78,18 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
 
     for (const segment of day.segments) {
       if (segment.blockType === 'stay') {
-        // Get description from enhanced or iTrvl version
+        // Get description - prefer enhanced over iTrvl over original, also check legacy 'description' field
         const rawDescription =
           segment.descriptionEnhanced ||
           segment.descriptionItrvl ||
-          segment.descriptionOriginal
-        const descriptionText = extractTextFromRichText(rawDescription)
-        const { mainText, insiderTip } = extractInsiderTip(descriptionText)
+          segment.descriptionOriginal ||
+          (segment as any).description
 
-        // Get inclusions
+        // Extract plain text for Insider's Tip detection
+        const descriptionText = extractTextFromRichText(rawDescription)
+        const { insiderTip } = extractInsiderTip(descriptionText)
+
+        // Get inclusions - prefer enhanced
         const rawInclusions =
           segment.inclusionsEnhanced || segment.inclusionsItrvl || segment.inclusions
         const inclusionsText = extractTextFromRichText(rawInclusions)
@@ -98,13 +103,16 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
           }
         }
 
+        // Check if description has content
+        const hasDesc = rawDescription && typeof rawDescription === 'object' && 'root' in rawDescription
+
         stays.push({
           dayStart: day.dayNumber,
           nights: segment.nights || 1,
           propertyName: segment.accommodationName,
           location: segment.location || '',
           country: segment.country || '',
-          description: mainText,
+          descriptionRichText: hasDesc ? (rawDescription as DefaultTypedEditorState) : null,
           insiderTip,
           images,
           roomType: segment.roomType || null,
@@ -146,7 +154,15 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
               nights={stay.nights}
               propertyName={stay.propertyName}
               location={locationText}
-              description={stay.description || undefined}
+              descriptionContent={
+                stay.descriptionRichText ? (
+                  <RichText
+                    data={stay.descriptionRichText}
+                    enableGutter={false}
+                    enableProse={false}
+                  />
+                ) : undefined
+              }
               insiderTip={stay.insiderTip || undefined}
               images={stay.images}
               roomType={stay.roomType || undefined}

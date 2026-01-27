@@ -168,6 +168,7 @@ const queryItineraryBySlug = cache(async ({ slug }: { slug: string }) => {
     limit: 1,
     pagination: false,
     overrideAccess: true,
+    depth: 2,
     where: {
       slug: {
         equals: slug,

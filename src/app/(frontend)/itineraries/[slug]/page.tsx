@@ -11,6 +11,8 @@ import { generateMeta } from '@/utilities/generateMeta'
 import { ItineraryHero } from '@/components/itinerary/ItineraryHero'
 import { TripOverview } from '@/components/itinerary/TripOverview'
 import { JourneyNarrative } from '@/components/itinerary/JourneyNarrative'
+import { InvestmentLevel } from '@/components/itinerary/InvestmentLevel'
+import { FAQSection } from '@/components/itinerary/FAQSection'
 
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
@@ -102,6 +104,55 @@ function getHeroImage(itinerary: Itinerary): { imgixUrl: string; alt: string } |
   }
 }
 
+// Helper: Extract plain text from Lexical richText for FAQ answers
+function extractTextFromRichText(richText: unknown): string {
+  if (!richText || typeof richText !== 'object') return ''
+
+  const root = (richText as { root?: { children?: unknown[] } }).root
+  if (!root?.children) return ''
+
+  const extractText = (nodes: unknown[]): string => {
+    return nodes
+      .map((node) => {
+        if (!node || typeof node !== 'object') return ''
+        const n = node as { type?: string; text?: string; children?: unknown[] }
+
+        if (n.type === 'text' && n.text) {
+          return n.text
+        }
+        if (n.children && Array.isArray(n.children)) {
+          return extractText(n.children)
+        }
+        return ''
+      })
+      .join('')
+  }
+
+  return extractText(root.children)
+}
+
+// Helper: Extract FAQs from itinerary
+function extractFAQs(itinerary: Itinerary): Array<{ question: string; answer: string }> {
+  if (!itinerary.faqItems || itinerary.faqItems.length === 0) return []
+
+  return itinerary.faqItems
+    .map((item) => {
+      // Get question - prefer enhanced
+      const question =
+        item.questionEnhanced || item.questionItrvl || item.question || ''
+
+      // Get answer - prefer enhanced, convert richText to plain text
+      const rawAnswer =
+        item.answerEnhanced || item.answerItrvl || item.answerOriginal
+      const answer = extractTextFromRichText(rawAnswer)
+
+      if (!question || !answer) return null
+
+      return { question, answer }
+    })
+    .filter((item): item is { question: string; answer: string } => item !== null)
+}
+
 export default async function ItineraryPage({ params: paramsPromise }: Args) {
   const { slug } = await paramsPromise
   const decodedSlug = decodeURIComponent(slug)
@@ -115,6 +166,17 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
   const heroImage = getHeroImage(itinerary)
   const destinations = extractDestinations(itinerary)
   const totalNights = calculateNights(itinerary)
+  const faqs = extractFAQs(itinerary)
+
+  // Get investment level data
+  const hasInvestmentLevel = itinerary.investmentLevel?.fromPrice
+
+  // Get includes text (prefer enhanced, convert richText to plain text)
+  const includesRichText =
+    itinerary.investmentLevel?.includesEnhanced ||
+    itinerary.investmentLevel?.includesItrvl ||
+    itinerary.investmentLevel?.includes
+  const includesText = extractTextFromRichText(includesRichText)
 
   return (
     <article>
@@ -129,16 +191,26 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
         destinations={destinations}
         totalNights={totalNights}
         investmentLevel={
-          itinerary.investmentLevel?.fromPrice
+          hasInvestmentLevel
             ? {
-                fromPrice: itinerary.investmentLevel.fromPrice,
-                currency: itinerary.investmentLevel.currency || 'USD',
+                fromPrice: itinerary.investmentLevel!.fromPrice!,
+                currency: itinerary.investmentLevel!.currency || 'USD',
               }
             : null
         }
       />
 
       <JourneyNarrative days={itinerary.days} />
+
+      {hasInvestmentLevel && (
+        <InvestmentLevel
+          price={itinerary.investmentLevel!.fromPrice!}
+          currency={itinerary.investmentLevel!.currency || 'USD'}
+          includedItems={includesText || undefined}
+        />
+      )}
+
+      {faqs.length > 0 && <FAQSection faqs={faqs} />}
     </article>
   )
 }

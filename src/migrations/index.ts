@@ -22,6 +22,7 @@ import * as migration_20260120_seed_day_title_voice from './20260120_seed_day_ti
 import * as migration_20260120_seed_investment_includes_voice from './20260120_seed_investment_includes_voice';
 import * as migration_20260121_seed_overview_summary_voice from './20260121_seed_overview_summary_voice';
 import * as migration_20260121_seed_why_kiuli_voice from './20260121_seed_why_kiuli_voice';
+import * as migration_20260128_add_video_scraping_tracking from './20260128_add_video_scraping_tracking';
 
 export const migrations = [
   {
@@ -143,5 +144,10 @@ export const migrations = [
     up: migration_20260121_seed_why_kiuli_voice.up,
     down: migration_20260121_seed_why_kiuli_voice.down,
     name: '20260121_seed_why_kiuli_voice'
+  },
+  {
+    up: migration_20260128_add_video_scraping_tracking.up,
+    down: migration_20260128_add_video_scraping_tracking.down,
+    name: '20260128_add_video_scraping_tracking'
   },
 ];

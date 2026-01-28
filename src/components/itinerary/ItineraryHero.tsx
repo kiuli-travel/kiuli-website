@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import type { Media } from '@/payload-types'
-import { VideoMedia } from '@/components/Media/VideoMedia'
+import { HeroVideoPlayer } from './HeroVideoPlayer'
 
 interface ItineraryHeroProps {
   title: string
@@ -12,18 +12,30 @@ interface ItineraryHeroProps {
   showHeroVideo?: boolean
 }
 
+// Extract video URL from Media object
+function getVideoUrl(media: Media): string | null {
+  // Prefer imgixUrl for S3-hosted media, otherwise use url
+  if (media.imgixUrl?.startsWith('http')) return media.imgixUrl
+  if (media.url?.startsWith('http')) return media.url
+  if (media.url) return media.url
+  return null
+}
+
 export function ItineraryHero({ title, heroImage, heroVideo, showHeroVideo }: ItineraryHeroProps) {
   // Determine if we should show video
   const shouldShowVideo = showHeroVideo && heroVideo && typeof heroVideo === 'object'
+  const videoUrl = shouldShowVideo ? getVideoUrl(heroVideo) : null
+
   return (
     <section className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden group">
       {/* Background Video or Image with Zoom Effect */}
       <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.02]">
-        {shouldShowVideo ? (
-          // Video background
-          <VideoMedia
-            resource={heroVideo}
-            videoClassName="absolute inset-0 w-full h-full object-cover"
+        {shouldShowVideo && videoUrl ? (
+          // Video player with controls (no autoplay)
+          <HeroVideoPlayer
+            src={videoUrl}
+            poster={heroImage?.imgixUrl}
+            className="absolute inset-0"
           />
         ) : heroImage?.imgixUrl ? (
           // Image background

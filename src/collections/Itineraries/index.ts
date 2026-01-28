@@ -82,6 +82,15 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
+      name: 'rescrapeUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/collections/Itineraries/components/RescrapeButton#RescrapeButton',
+        },
+      },
+    },
+    {
       name: 'publishChecklistUI',
       type: 'ui',
       admin: {

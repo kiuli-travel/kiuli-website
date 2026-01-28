@@ -22,6 +22,7 @@ import { FolderField as FolderField_ab83ff7e88da8d3530831f296ec4756a } from '@pa
 import { ItinerarySideNav as ItinerarySideNav_f9754fff542dddc3bf4141c51aa09f44 } from '@/collections/Itineraries/components/ItinerarySideNav'
 import { EnhanceAll as EnhanceAll_ec0338562096863f7044cdfe701843c8 } from '@/collections/Itineraries/components/EnhanceAll'
 import { ImageStatusGrid as ImageStatusGrid_5c2c9d3ed51992d83368a5f5852adff8 } from '@/collections/Itineraries/components/ImageStatusGrid'
+import { RescrapeButton as RescrapeButton_4a5ffdba490866521922e3635b88db23 } from '@/collections/Itineraries/components/RescrapeButton'
 import { PublishChecklist as PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44 } from '@/collections/Itineraries/components/PublishChecklist'
 import { ImageSelectorField as ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e } from '@/components/admin/ImageSelectorField'
 import { HeroVideoSectionHeader as HeroVideoSectionHeader_153a2825627b21cec8d3fdbcdc14d3b1 } from '@/components/admin/SectionHeader'
@@ -79,6 +80,7 @@ export const importMap = {
   "@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav": ItinerarySideNav_f9754fff542dddc3bf4141c51aa09f44,
   "@/collections/Itineraries/components/EnhanceAll#EnhanceAll": EnhanceAll_ec0338562096863f7044cdfe701843c8,
   "@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid": ImageStatusGrid_5c2c9d3ed51992d83368a5f5852adff8,
+  "@/collections/Itineraries/components/RescrapeButton#RescrapeButton": RescrapeButton_4a5ffdba490866521922e3635b88db23,
   "@/collections/Itineraries/components/PublishChecklist#PublishChecklist": PublishChecklist_69bec01cc2f9c882d1f2099d703f6f44,
   "@/components/admin/ImageSelectorField#ImageSelectorField": ImageSelectorField_df693b1b1f378e5ee3b18b4caaba1c3e,
   "@/components/admin/SectionHeader#HeroVideoSectionHeader": HeroVideoSectionHeader_153a2825627b21cec8d3fdbcdc14d3b1,

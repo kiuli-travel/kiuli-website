@@ -53,43 +53,43 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     drafts: true,
   },
   fields: [
-    // === ADMIN UI COMPONENTS ===
-    {
-      name: 'sideNavUI',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav',
-        },
-      },
-    },
-    {
-      name: 'enhanceAllUI',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '@/collections/Itineraries/components/EnhanceAll#EnhanceAll',
-        },
-      },
-    },
-    {
-      name: 'imageStatusUI',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid',
-        },
-      },
-    },
-    {
-      name: 'publishChecklistUI',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '@/collections/Itineraries/components/PublishChecklist#PublishChecklist',
-        },
-      },
-    },
+    // === ADMIN UI COMPONENTS (temporarily disabled to debug blank page) ===
+    // {
+    //   name: 'sideNavUI',
+    //   type: 'ui',
+    //   admin: {
+    //     components: {
+    //       Field: '@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav',
+    //     },
+    //   },
+    // },
+    // {
+    //   name: 'enhanceAllUI',
+    //   type: 'ui',
+    //   admin: {
+    //     components: {
+    //       Field: '@/collections/Itineraries/components/EnhanceAll#EnhanceAll',
+    //     },
+    //   },
+    // },
+    // {
+    //   name: 'imageStatusUI',
+    //   type: 'ui',
+    //   admin: {
+    //     components: {
+    //       Field: '@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid',
+    //     },
+    //   },
+    // },
+    // {
+    //   name: 'publishChecklistUI',
+    //   type: 'ui',
+    //   admin: {
+    //     components: {
+    //       Field: '@/collections/Itineraries/components/PublishChecklist#PublishChecklist',
+    //     },
+    //   },
+    // },
 
     // === BASIC INFO ===
     {

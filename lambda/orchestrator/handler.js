@@ -201,6 +201,10 @@ exports.handler = async (event) => {
 
     console.log(`[Orchestrator] Video list: ${videoList.length} videos`);
 
+    // 5c. Track if videos were scraped
+    const videoScrapedFromSource = videoList.length > 0;
+    console.log(`[Orchestrator] Videos scraped from source: ${videoScrapedFromSource}`);
+
     // 6. Create or update itinerary
     let payloadItinerary;
 
@@ -225,6 +229,8 @@ exports.handler = async (event) => {
         // Preserve locked hero image
         heroImage: existingItinerary.heroImageLocked ? existingItinerary.heroImage : null,
         heroImageLocked: existingItinerary.heroImageLocked || false,
+        // Track video scraping
+        videoScrapedFromSource,
         // Reset publish checklist
         publishChecklist: {
           allImagesProcessed: false,
@@ -245,6 +251,7 @@ exports.handler = async (event) => {
       const createData = {
         ...transformedData,
         version: 1,
+        videoScrapedFromSource,
         publishChecklist: {
           allImagesProcessed: false,
           noFailedImages: false,

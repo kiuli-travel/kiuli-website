@@ -272,7 +272,7 @@ exports.handler = async (event) => {
     let heroVideoId = itinerary.heroVideo;
 
     if (!itinerary.heroVideoLocked || !heroVideoId) {
-      heroVideoId = selectHeroVideo(mediaRecords);
+      heroVideoId = selectHeroVideo(mediaRecords, itineraryId);
       if (heroVideoId) {
         console.log(`[Finalizer] Selected hero video: ${heroVideoId}`);
       } else {

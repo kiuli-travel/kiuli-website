@@ -147,6 +147,7 @@ exports.handler = async (event) => {
       videoContext: videoContext || 'hero',
       processingStatus: 'complete',
       labelingStatus: 'skipped', // Videos don't need AI labeling
+      sourceItinerary: String(itineraryId), // Track which itinerary this video originated from
       // Note: usedInItineraries is readOnly in schema, managed via itinerary.videos relationship
     };
 

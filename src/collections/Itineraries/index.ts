@@ -292,6 +292,23 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
         description: 'Include hero video on the published page (when frontend is built)',
       },
     },
+    {
+      name: 'videoScrapedFromSource',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        readOnly: true,
+        description: 'Whether videos were found during iTrvl scraping (set by pipeline)',
+      },
+    },
+    {
+      name: 'videoScrapingError',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'Error message if video scraping failed',
+      },
+    },
 
     // === CATEGORIZATION ===
     {

@@ -47,7 +47,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   },
   hooks: {
     beforeChange: [calculateChecklist, validatePublish],
-    afterRead: [resolveFields],
+    // afterRead: [resolveFields], // temporarily disabled to debug blank page
   },
   versions: {
     drafts: true,

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useField } from '@payloadcms/ui'
+import { useField, useForm } from '@payloadcms/ui'
 
 interface ReviewToggleProps {
   path: string
@@ -10,20 +10,70 @@ interface ReviewToggleProps {
 /**
  * Visual toggle for marking segment content as reviewed.
  * Shows current status and allows click to toggle.
+ *
+ * When toggled, sets ALL per-field reviewed flags for the segment:
+ * - All segments: reviewed, descriptionReviewed
+ * - Stay: + accommodationNameReviewed, inclusionsReviewed
+ * - Activity/Transfer: + titleReviewed
  */
 export const ReviewToggle: React.FC<ReviewToggleProps> = ({ path }) => {
-  // The path points to this UI field, but we need the reviewed field path
-  // UI field path: days.0.segments.0.reviewUI
-  // Reviewed field path: days.0.segments.0.reviewed
-  const reviewedPath = path.replace(/\.reviewUI$/, '.reviewed')
+  const { getDataByPath } = useForm()
 
-  const { value, setValue } = useField<boolean>({ path: reviewedPath })
+  // Get the segment base path (e.g., days.0.segments.0)
+  const segmentPath = path.replace(/\.reviewUI$/, '')
 
-  const isReviewed = value === true
+  // Get segment data to determine block type
+  const segment = getDataByPath(segmentPath) as { blockType?: string } | undefined
+  const blockType = segment?.blockType || 'stay'
+
+  // Main reviewed flag
+  const { value: reviewedValue, setValue: setReviewed } = useField<boolean>({
+    path: `${segmentPath}.reviewed`,
+  })
+
+  // Per-field reviewed flags - all segments have description
+  const { setValue: setDescriptionReviewed } = useField<boolean>({
+    path: `${segmentPath}.descriptionReviewed`,
+  })
+
+  // Stay-specific fields
+  const { setValue: setAccommodationNameReviewed } = useField<boolean>({
+    path: `${segmentPath}.accommodationNameReviewed`,
+  })
+  const { setValue: setInclusionsReviewed } = useField<boolean>({
+    path: `${segmentPath}.inclusionsReviewed`,
+  })
+
+  // Activity/Transfer title field
+  const { setValue: setTitleReviewed } = useField<boolean>({
+    path: `${segmentPath}.titleReviewed`,
+  })
+
+  const isReviewed = reviewedValue === true
+
+  const handleToggle = () => {
+    const newValue = !isReviewed
+
+    // Set the main reviewed flag
+    setReviewed(newValue)
+
+    // Set all per-field reviewed flags based on segment type
+    // All segments have description
+    setDescriptionReviewed(newValue)
+
+    if (blockType === 'stay') {
+      setAccommodationNameReviewed(newValue)
+      setInclusionsReviewed(newValue)
+    }
+
+    if (blockType === 'activity' || blockType === 'transfer') {
+      setTitleReviewed(newValue)
+    }
+  }
 
   return (
     <div
-      onClick={() => setValue(!isReviewed)}
+      onClick={handleToggle}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

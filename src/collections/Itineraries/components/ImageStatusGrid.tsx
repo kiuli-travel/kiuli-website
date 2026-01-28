@@ -18,15 +18,15 @@ interface JobStatus {
 
 export const ImageStatusGrid: React.FC = () => {
   const { id } = useDocumentInfo()
-  const { getDataByPath } = useForm()
+  const form = useForm()
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Get the itineraryId from the form data
-  const itineraryId = getDataByPath('itineraryId') as string
+  // Get the itineraryId from the form data (guard against missing form)
+  const itineraryId = form?.getDataByPath?.('itineraryId') as string | undefined
 
   const fetchJobStatus = useCallback(async () => {
-    if (!id || !itineraryId) return
+    if (!id || !itineraryId || !form) return
 
     setIsLoading(true)
 
@@ -67,7 +67,7 @@ export const ImageStatusGrid: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [id, itineraryId])
+  }, [id, itineraryId, form])
 
   useEffect(() => {
     fetchJobStatus()
@@ -81,7 +81,8 @@ export const ImageStatusGrid: React.FC = () => {
     return () => clearInterval(interval)
   }, [fetchJobStatus, jobStatus?.status])
 
-  if (!id) {
+  // Don't render if no document or no form context (e.g., on list view)
+  if (!id || !form) {
     return null
   }
 

@@ -27,7 +27,7 @@ interface Day {
  */
 export const ItinerarySideNav: React.FC = () => {
   const { id } = useDocumentInfo()
-  const { getDataByPath } = useForm()
+  const form = useForm()
   const [days, setDays] = useState<Day[]>([])
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set())
   const [activeSection, setActiveSection] = useState<string | null>(null)
@@ -35,7 +35,8 @@ export const ItinerarySideNav: React.FC = () => {
 
   // Fetch days data from form
   const refreshDays = useCallback(() => {
-    const daysData = getDataByPath('days') as Day[] | undefined
+    if (!form) return
+    const daysData = form.getDataByPath('days') as Day[] | undefined
     if (daysData && Array.isArray(daysData)) {
       setDays(daysData)
       // Expand first 3 days by default
@@ -45,7 +46,7 @@ export const ItinerarySideNav: React.FC = () => {
         setExpandedDays(initialExpanded)
       }
     }
-  }, [getDataByPath, expandedDays.size])
+  }, [form, expandedDays.size])
 
   useEffect(() => {
     refreshDays()
@@ -94,6 +95,11 @@ export const ItinerarySideNav: React.FC = () => {
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Don't render if no document or no form context (e.g., on list view)
+  if (!id || !form) {
+    return null
+  }
 
   const toggleDay = (dayIndex: number) => {
     setExpandedDays(prev => {

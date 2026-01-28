@@ -70,19 +70,14 @@ interface ReviewItem {
 }
 
 export const PublishChecklist: React.FC = () => {
-  const { getDataByPath } = useForm()
+  const form = useForm()
   const { id } = useDocumentInfo()
-
-  const publishChecklist = (getDataByPath('publishChecklist') || {}) as Record<string, boolean>
-  const publishBlockers = (getDataByPath('publishBlockers') || []) as Array<{
-    reason: string
-    severity: string
-  }>
 
   // Build review items for V7 per-field tracking
   const reviewItems = useMemo<ReviewItem[]>(() => {
-    // If no ID, return empty array (hooks must be called unconditionally)
-    if (!id) return []
+    // If no ID or no form context, return empty array (hooks must be called unconditionally)
+    if (!id || !form) return []
+    const { getDataByPath } = form
     const items: ReviewItem[] = []
 
     // Core fields
@@ -197,16 +192,23 @@ export const PublishChecklist: React.FC = () => {
     })
 
     return items
-  }, [getDataByPath, id])
+  }, [form, id])
 
-  // Only show for saved documents (after all hooks are called)
-  if (!id) {
+  // Only show for saved documents with form context (after all hooks are called)
+  if (!id || !form) {
     return (
       <div style={{ padding: '1rem', color: '#666', fontSize: '0.875rem' }}>
         Save the itinerary to see the publish checklist.
       </div>
     )
   }
+
+  const { getDataByPath } = form
+  const publishChecklist = (getDataByPath('publishChecklist') || {}) as Record<string, boolean>
+  const publishBlockers = (getDataByPath('publishBlockers') || []) as Array<{
+    reason: string
+    severity: string
+  }>
 
   // Calculate stats
   const totalReviewItems = reviewItems.length

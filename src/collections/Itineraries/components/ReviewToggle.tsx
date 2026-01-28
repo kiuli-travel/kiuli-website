@@ -17,13 +17,13 @@ interface ReviewToggleProps {
  * - Activity/Transfer: + titleReviewed
  */
 export const ReviewToggle: React.FC<ReviewToggleProps> = ({ path }) => {
-  const { getDataByPath } = useForm()
+  const form = useForm()
 
   // Get the segment base path (e.g., days.0.segments.0)
   const segmentPath = path.replace(/\.reviewUI$/, '')
 
-  // Get segment data to determine block type
-  const segment = getDataByPath(segmentPath) as { blockType?: string } | undefined
+  // Get segment data to determine block type (guard against missing form context)
+  const segment = form?.getDataByPath?.(segmentPath) as { blockType?: string } | undefined
   const blockType = segment?.blockType || 'stay'
 
   // Main reviewed flag
@@ -48,6 +48,11 @@ export const ReviewToggle: React.FC<ReviewToggleProps> = ({ path }) => {
   const { setValue: setTitleReviewed } = useField<boolean>({
     path: `${segmentPath}.titleReviewed`,
   })
+
+  // Guard against missing form context (shouldn't happen but safety first)
+  if (!form) {
+    return null
+  }
 
   const isReviewed = reviewedValue === true
 

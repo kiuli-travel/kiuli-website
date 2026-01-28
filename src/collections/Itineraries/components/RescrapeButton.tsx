@@ -5,11 +5,18 @@ import { Button, useDocumentInfo, useForm } from '@payloadcms/ui'
 
 export const RescrapeButton: React.FC = () => {
   const { id } = useDocumentInfo()
-  const { getDataByPath } = useForm()
+  const form = useForm()
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error' | 'warning'>('success')
   const [jobId, setJobId] = useState<string | null>(null)
+
+  // Don't render if document isn't saved yet or no form context
+  if (!id || !form) {
+    return null
+  }
+
+  const { getDataByPath } = form
 
   const handleRescrape = async () => {
     // Read source data from form
@@ -83,11 +90,6 @@ export const RescrapeButton: React.FC = () => {
     } finally {
       setIsProcessing(false)
     }
-  }
-
-  // Don't render if document isn't saved yet
-  if (!id) {
-    return null
   }
 
   // Get source info for display

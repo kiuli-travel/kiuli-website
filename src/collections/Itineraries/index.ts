@@ -34,7 +34,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   slug: 'itineraries',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'overview.nights', '_status', 'updatedAt'],
+    defaultColumns: ['title', 'slug', '_status', 'updatedAt'],
     description:
       'Safari itineraries imported from iTrvl. To import a new itinerary, use the "Import Itinerary" button in the sidebar or go to /admin/scrape',
     hideAPIURL: true,
@@ -46,8 +46,8 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     delete: authenticated,
   },
   hooks: {
-    beforeChange: [calculateChecklist, validatePublish],
-    // afterRead: [resolveFields], // temporarily disabled to debug blank page
+    // beforeChange: [calculateChecklist, validatePublish], // temporarily disabled
+    // afterRead: [resolveFields], // temporarily disabled
   },
   versions: {
     drafts: true,

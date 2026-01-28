@@ -1,6 +1,6 @@
 import type { CollectionConfig, AccessArgs } from 'payload'
 import { authenticated } from '../../access/authenticated'
-import { calculateChecklist, resolveFields, validatePublish } from './hooks'
+import { resolveFields, validatePublish } from './hooks'
 
 // Allow authenticated users OR API key access for Lambda pipeline
 const authenticatedOrApiKey = ({ req }: AccessArgs) => {
@@ -34,7 +34,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   slug: 'itineraries',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', '_status', 'updatedAt'],
+    defaultColumns: ['title', 'slug', 'overview.nights', '_status', 'updatedAt'],
     description:
       'Safari itineraries imported from iTrvl. To import a new itinerary, use the "Import Itinerary" button in the sidebar or go to /admin/scrape',
     hideAPIURL: true,
@@ -46,50 +46,50 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     delete: authenticated,
   },
   hooks: {
-    // beforeChange: [calculateChecklist, validatePublish], // temporarily disabled
-    // afterRead: [resolveFields], // temporarily disabled
+    beforeChange: [validatePublish],
+    afterRead: [resolveFields],
   },
   versions: {
     drafts: true,
   },
   fields: [
-    // === ADMIN UI COMPONENTS (temporarily disabled to debug blank page) ===
-    // {
-    //   name: 'sideNavUI',
-    //   type: 'ui',
-    //   admin: {
-    //     components: {
-    //       Field: '@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav',
-    //     },
-    //   },
-    // },
-    // {
-    //   name: 'enhanceAllUI',
-    //   type: 'ui',
-    //   admin: {
-    //     components: {
-    //       Field: '@/collections/Itineraries/components/EnhanceAll#EnhanceAll',
-    //     },
-    //   },
-    // },
-    // {
-    //   name: 'imageStatusUI',
-    //   type: 'ui',
-    //   admin: {
-    //     components: {
-    //       Field: '@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid',
-    //     },
-    //   },
-    // },
-    // {
-    //   name: 'publishChecklistUI',
-    //   type: 'ui',
-    //   admin: {
-    //     components: {
-    //       Field: '@/collections/Itineraries/components/PublishChecklist#PublishChecklist',
-    //     },
-    //   },
-    // },
+    // === ADMIN UI COMPONENTS ===
+    {
+      name: 'sideNavUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav',
+        },
+      },
+    },
+    {
+      name: 'enhanceAllUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/collections/Itineraries/components/EnhanceAll#EnhanceAll',
+        },
+      },
+    },
+    {
+      name: 'imageStatusUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/collections/Itineraries/components/ImageStatusGrid#ImageStatusGrid',
+        },
+      },
+    },
+    {
+      name: 'publishChecklistUI',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/collections/Itineraries/components/PublishChecklist#PublishChecklist',
+        },
+      },
+    },
 
     // === BASIC INFO ===
     {
@@ -290,23 +290,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       defaultValue: false,
       admin: {
         description: 'Include hero video on the published page (when frontend is built)',
-      },
-    },
-    {
-      name: 'videoScrapedFromSource',
-      type: 'checkbox',
-      defaultValue: false,
-      admin: {
-        readOnly: true,
-        description: 'Whether videos were found during iTrvl scraping (set by pipeline)',
-      },
-    },
-    {
-      name: 'videoScrapingError',
-      type: 'text',
-      admin: {
-        readOnly: true,
-        description: 'Error message if video scraping failed',
       },
     },
 
@@ -1252,14 +1235,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           defaultValue: false,
           admin: {
             description: 'Meta title and description are set',
-          },
-        },
-        {
-          name: 'tripTypesSelected',
-          type: 'checkbox',
-          defaultValue: false,
-          admin: {
-            description: 'At least one trip type has been selected',
           },
         },
       ],

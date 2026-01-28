@@ -73,15 +73,6 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       },
     },
     {
-      name: 'rescrapeUI',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '@/collections/Itineraries/components/RescrapeButton#RescrapeButton',
-        },
-      },
-    },
-    {
       name: 'imageStatusUI',
       type: 'ui',
       admin: {

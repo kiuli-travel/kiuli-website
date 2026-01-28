@@ -58,9 +58,9 @@ export const RescrapeButton: React.FC = () => {
 
       // Confirmation dialog
       const confirmed = window.confirm(
-        `This will re-scrape the itinerary from iTrvl and update the existing data.\n\n` +
+        `This will re-scrape the itinerary from iTrvl and update all content including images and videos.\n\n` +
           `Last scraped: ${lastScrapedDate}\n\n` +
-          `Locked hero image/video and enhanced content will be preserved.\n\n` +
+          `AI-enhanced text will be preserved in their separate fields.\n\n` +
           `Continue?`,
       )
 

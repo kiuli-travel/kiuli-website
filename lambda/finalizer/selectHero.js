@@ -58,9 +58,10 @@ function selectHeroImage(mediaRecords) {
  *
  * Priority:
  * 1. Videos with videoContext 'hero' and matching sourceItinerary
- * 2. Videos with videoContext 'hero' (any source)
- * 3. Any video with matching sourceItinerary
- * 4. First available video
+ * 2. Any video with matching sourceItinerary
+ *
+ * Returns null if no videos from this itinerary are found.
+ * IMPORTANT: Never select videos from other itineraries as fallback.
  *
  * @param {Array} mediaRecords - Media records from this job's ImageStatuses
  * @param {string|number} itineraryId - Current itinerary ID for source matching
@@ -77,28 +78,28 @@ function selectHeroVideo(mediaRecords, itineraryId = null) {
     return null;
   }
 
-  const itinIdStr = itineraryId ? String(itineraryId) : null;
+  // If no itineraryId provided, we cannot safely select a video
+  if (!itineraryId) {
+    console.log('[selectHeroVideo] No itineraryId provided, cannot select video');
+    return null;
+  }
+
+  const itinIdStr = String(itineraryId);
 
   // 1. Look for hero videos from this itinerary
-  if (itinIdStr) {
-    const heroFromThisItinerary = videos.find(v =>
-      v.videoContext === 'hero' && v.sourceItinerary === itinIdStr
-    );
-    if (heroFromThisItinerary) return heroFromThisItinerary.id;
-  }
+  const heroFromThisItinerary = videos.find(v =>
+    v.videoContext === 'hero' && v.sourceItinerary === itinIdStr
+  );
+  if (heroFromThisItinerary) return heroFromThisItinerary.id;
 
   // 2. Look for any videos from this itinerary
-  if (itinIdStr) {
-    const fromThisItinerary = videos.find(v => v.sourceItinerary === itinIdStr);
-    if (fromThisItinerary) return fromThisItinerary.id;
-  }
+  const fromThisItinerary = videos.find(v => v.sourceItinerary === itinIdStr);
+  if (fromThisItinerary) return fromThisItinerary.id;
 
-  // 3. Look for videos marked as hero context (any source)
-  const heroVideo = videos.find(v => v.videoContext === 'hero');
-  if (heroVideo) return heroVideo.id;
-
-  // 4. Fallback to first video
-  return videos[0].id;
+  // No videos from this itinerary found - return null
+  // NEVER fall back to videos from other itineraries
+  console.log(`[selectHeroVideo] No videos found for itinerary ${itinIdStr}`);
+  return null;
 }
 
 module.exports = { selectHeroImage, selectHeroVideo };

@@ -1,61 +1,74 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Button, useDocumentInfo, useForm } from '@payloadcms/ui'
+import { Button, useDocumentInfo } from '@payloadcms/ui'
 
 export const RescrapeButton: React.FC = () => {
   const { id } = useDocumentInfo()
-  const form = useForm()
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error' | 'warning'>('success')
   const [jobId, setJobId] = useState<string | null>(null)
 
-  // Don't render if document isn't saved yet or no form context
-  if (!id || !form) {
+  // Don't render if document isn't saved yet
+  if (!id) {
     return null
   }
 
-  const { getDataByPath } = form
-
   const handleRescrape = async () => {
-    // Read source data from form
-    const itrvlUrl = getDataByPath('source.itrvlUrl') as string | undefined
-    const lastScrapedAt = getDataByPath('source.lastScrapedAt') as string | undefined
-
-    // Validate URL exists
-    if (!itrvlUrl) {
-      setMessage('No iTrvl URL found. This itinerary cannot be re-scraped.')
-      setMessageType('error')
-      return
-    }
-
-    // Format last scrape date for display
-    const lastScrapedDate = lastScrapedAt
-      ? new Date(lastScrapedAt).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : 'Unknown'
-
-    // Confirmation dialog
-    const confirmed = window.confirm(
-      `This will re-scrape the itinerary from iTrvl and update the existing data.\n\n` +
-        `Last scraped: ${lastScrapedDate}\n\n` +
-        `Locked hero image/video and enhanced content will be preserved.\n\n` +
-        `Continue?`,
-    )
-
-    if (!confirmed) return
-
     setIsProcessing(true)
     setMessage('')
     setJobId(null)
 
     try {
+      // Fetch the itinerary data to get the source URL
+      const itineraryResponse = await fetch(`/api/itineraries/${id}`, {
+        credentials: 'include',
+      })
+
+      if (!itineraryResponse.ok) {
+        setMessage('Failed to load itinerary data')
+        setMessageType('error')
+        setIsProcessing(false)
+        return
+      }
+
+      const itinerary = await itineraryResponse.json()
+      const itrvlUrl = itinerary?.source?.itrvlUrl
+      const lastScrapedAt = itinerary?.source?.lastScrapedAt
+
+      // Validate URL exists
+      if (!itrvlUrl) {
+        setMessage('No iTrvl URL found. This itinerary cannot be re-scraped.')
+        setMessageType('error')
+        setIsProcessing(false)
+        return
+      }
+
+      // Format last scrape date for display
+      const lastScrapedDate = lastScrapedAt
+        ? new Date(lastScrapedAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'Unknown'
+
+      // Confirmation dialog
+      const confirmed = window.confirm(
+        `This will re-scrape the itinerary from iTrvl and update the existing data.\n\n` +
+          `Last scraped: ${lastScrapedDate}\n\n` +
+          `Locked hero image/video and enhanced content will be preserved.\n\n` +
+          `Continue?`,
+      )
+
+      if (!confirmed) {
+        setIsProcessing(false)
+        return
+      }
+
       const response = await fetch('/api/scrape-itinerary', {
         method: 'POST',
         headers: {
@@ -91,10 +104,6 @@ export const RescrapeButton: React.FC = () => {
       setIsProcessing(false)
     }
   }
-
-  // Get source info for display
-  const itrvlUrl = getDataByPath('source.itrvlUrl') as string | undefined
-  const lastScrapedAt = getDataByPath('source.lastScrapedAt') as string | undefined
 
   return (
     <div
@@ -136,54 +145,10 @@ export const RescrapeButton: React.FC = () => {
             Re-scrape this itinerary to pull latest changes from source
           </p>
         </div>
-        <Button
-          buttonStyle="secondary"
-          onClick={handleRescrape}
-          disabled={isProcessing || !itrvlUrl}
-        >
-          {isProcessing ? 'Starting...' : 'Rescrape Itinerary'}
+        <Button buttonStyle="secondary" onClick={handleRescrape} disabled={isProcessing}>
+          {isProcessing ? 'Processing...' : 'Rescrape Itinerary'}
         </Button>
       </div>
-
-      {/* Source info */}
-      {itrvlUrl && (
-        <div
-          style={{
-            fontSize: '0.75rem',
-            color: '#bf360c',
-            opacity: 0.7,
-            marginTop: '0.5rem',
-          }}
-        >
-          <div style={{ wordBreak: 'break-all' }}>
-            Source:{' '}
-            <a
-              href={itrvlUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'inherit' }}
-            >
-              {itrvlUrl}
-            </a>
-          </div>
-          {lastScrapedAt && (
-            <div>Last scraped: {new Date(lastScrapedAt).toLocaleString()}</div>
-          )}
-        </div>
-      )}
-
-      {!itrvlUrl && (
-        <div
-          style={{
-            fontSize: '0.875rem',
-            color: '#bf360c',
-            marginTop: '0.5rem',
-            fontStyle: 'italic',
-          }}
-        >
-          No iTrvl source URL found for this itinerary
-        </div>
-      )}
 
       {message && (
         <div

@@ -68,7 +68,7 @@ export function HeroVideoPlayer({ src, poster, className }: HeroVideoPlayerProps
 
   return (
     <div
-      className={`relative cursor-pointer ${className || ''}`}
+      className={`cursor-pointer ${className || ''}`}
       onClick={handlePlayPause}
       onMouseMove={handleMouseMove}
     >

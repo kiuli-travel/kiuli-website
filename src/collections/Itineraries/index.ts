@@ -1246,6 +1246,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
             description: 'Meta title and description are set',
           },
         },
+        {
+          name: 'tripTypesSelected',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: {
+            description: 'At least one trip type has been selected',
+          },
+        },
       ],
     },
 

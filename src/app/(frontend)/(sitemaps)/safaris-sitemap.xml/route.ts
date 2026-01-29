@@ -13,7 +13,7 @@ const getSafarisSitemap = unstable_cache(
 
     const results = await payload.find({
       collection: 'itineraries',
-      overrideAccess: false,
+      overrideAccess: true,
       draft: false,
       depth: 0,
       limit: 1000,

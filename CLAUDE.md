@@ -4,7 +4,24 @@
 
 ---
 
-## 1. Mission
+## 1. Project Overview
+
+Kiuli is a **luxury African safari platform** built with Next.js 15 and Payload CMS. It imports safari itineraries from iTrvl via an AWS Lambda pipeline, enhances content with AI, and presents curated experiences to high-net-worth travelers.
+
+**Key Systems:**
+- **Website** - Next.js 15 App Router with Payload CMS 3.63
+- **Admin Panel** - Payload CMS at admin.kiuli.com
+- **Scraper Pipeline** - 5 AWS Lambda functions for itinerary import
+- **AI Enhancement** - Claude 3.5 Sonnet for text, Nemotron for image labeling
+
+**Business Context:**
+The website qualifies prospects before they reach travel designers. Every page must build overwhelming value, then present investment level to filter for profitability.
+
+**The mission: Attract, qualify, convert — in that order.**
+
+---
+
+## 2. Mission
 
 Kiuli connects discerning travellers with high-margin African safaris. The website qualifies prospects before they reach travel designers. Every page must build overwhelming value, then present investment level to filter for profitability.
 
@@ -223,19 +240,109 @@ aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 1h --region eu-north-1
 
 ---
 
-## 10. Key Documentation Files
+## 10. Documentation Index
 
+### Root Level
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` | This file - project overview and rules |
-| `SYSTEM_ARCHITECTURE.md` | System overview and technology stack |
-| `DEPLOYMENT_CHECKLIST.md` | Deployment procedures and verification |
-| `KIULI_LAMBDA_ARCHITECTURE.md` | Complete pipeline documentation |
 | `README.md` | Public repository readme |
+| `SYSTEM_ARCHITECTURE.md` | System overview and technology stack |
+| `KIULI_LAMBDA_ARCHITECTURE.md` | Complete scraper pipeline documentation (26KB) |
+| `DEPLOYMENT_CHECKLIST.md` | Pre/post deployment procedures |
+
+### docs/ Directory
+| File | Purpose |
+|------|---------|
+| `docs/LOCAL_SETUP.md` | Local development environment setup |
+| `docs/API_REFERENCE.md` | Custom API endpoints documentation |
+| `docs/COLLECTIONS.md` | Payload CMS collection schemas |
+| `docs/V7_TWO_FIELD_PATTERN.md` | Content versioning pattern |
+| `docs/ADMIN_COMPONENTS.md` | Custom Payload admin components |
+| `docs/FRONTEND_COMPONENTS.md` | Customer-facing React components |
+| `docs/UTILITIES.md` | Utility functions reference |
+
+### Lambda
+| File | Purpose |
+|------|---------|
+| `lambda/DEPLOYMENT.md` | Lambda deployment procedures |
 
 ---
 
-## 11. Important Notes
+## 11. File Locations Quick Reference
+
+```
+/
+├── src/
+│   ├── app/
+│   │   ├── (frontend)/           # Customer pages
+│   │   │   ├── safaris/[slug]/   # Itinerary pages
+│   │   │   ├── posts/            # Blog
+│   │   │   └── [slug]/           # Static pages
+│   │   └── (payload)/            # Admin + API
+│   │       ├── admin/            # Payload admin UI
+│   │       └── api/              # API endpoints
+│   ├── collections/              # Payload CMS schemas
+│   │   ├── Itineraries/          # Main itinerary collection
+│   │   ├── Media.ts              # Images/videos
+│   │   └── ItineraryJobs/        # Pipeline jobs
+│   ├── components/
+│   │   ├── admin/                # Custom admin UI
+│   │   ├── itinerary/            # Safari page components
+│   │   └── layout/               # Header, Footer
+│   └── utilities/                # Helper functions
+├── lambda/                       # AWS Lambda functions
+│   ├── orchestrator/
+│   ├── image-processor/
+│   ├── labeler/
+│   ├── video-processor/
+│   └── finalizer/
+└── docs/                         # Documentation
+```
+
+---
+
+## 12. Common Tasks
+
+### Import an Itinerary
+1. Go to admin.kiuli.com
+2. Click "Import Itinerary" in sidebar
+3. Paste iTrvl portal URL
+4. Pipeline runs automatically (~3-5 minutes)
+
+### Enhance Content with AI
+1. Open itinerary in admin
+2. Navigate to field with "Enhance" button
+3. Click "AI Enhance"
+4. Review and mark as reviewed
+
+### Deploy Website Changes
+```bash
+git add -A && git commit -m "description"
+git push origin main
+vercel --prod
+```
+
+### Deploy Lambda Function
+```bash
+cd lambda/orchestrator
+zip -r deploy.zip handler.js transform.js shared/ node_modules/
+aws lambda update-function-code \
+  --function-name kiuli-v6-orchestrator \
+  --zip-file fileb://deploy.zip \
+  --region eu-north-1
+```
+
+### Regenerate Admin Components
+```bash
+npx payload generate:importmap
+git add src/app/\(payload\)/admin/importMap.js
+git commit -m "fix: regenerate importMap"
+```
+
+---
+
+## 13. Important Notes
 
 ### FAQ Generation
 FAQs are **auto-generated** by the orchestrator from segment data, NOT scraped from iTrvl.
@@ -252,4 +359,4 @@ Itinerary text fields use: `*Itrvl` (original scraped) + `*Enhanced` (AI improve
 
 ---
 
-*Last updated: January 26, 2026*
+*Last updated: January 29, 2026*

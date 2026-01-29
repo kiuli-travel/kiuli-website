@@ -53,14 +53,14 @@ export function ItineraryHero({ title, heroImage, heroVideo, showHeroVideo }: It
         )}
       </div>
 
-      {/* Gradient Overlay */}
+      {/* Gradient Overlay - pointer-events-none to allow video interaction */}
       <div
-        className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"
+        className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"
         aria-hidden="true"
       />
 
-      {/* Content Layer */}
-      <div className="absolute inset-0 flex flex-col justify-between">
+      {/* Content Layer - pointer-events-none to allow video interaction */}
+      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
         {/* Breadcrumb - Top Left */}
         <div className="px-6 pt-8 md:px-12 md:pt-12 lg:px-16 lg:pt-16">
           <p

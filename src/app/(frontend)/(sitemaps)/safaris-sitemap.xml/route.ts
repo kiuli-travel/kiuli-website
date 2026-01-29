@@ -6,10 +6,12 @@ import { unstable_cache } from 'next/cache'
 const getSafarisSitemap = unstable_cache(
   async () => {
     const payload = await getPayload({ config })
+    // NEXT_PUBLIC_SERVER_URL includes protocol, VERCEL_PROJECT_PRODUCTION_URL does not
     const SITE_URL =
       process.env.NEXT_PUBLIC_SERVER_URL ||
-      process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-      'https://kiuli.com'
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : 'https://kiuli.com')
 
     const results = await payload.find({
       collection: 'itineraries',

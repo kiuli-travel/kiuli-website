@@ -37,8 +37,6 @@ const getSafarisSitemap = unstable_cache(
           .map((itinerary) => ({
             loc: `${SITE_URL}/safaris/${itinerary?.slug}`,
             lastmod: itinerary.updatedAt || dateFallback,
-            changefreq: 'weekly' as const,
-            priority: 0.8,
           }))
       : []
 
@@ -47,7 +45,6 @@ const getSafarisSitemap = unstable_cache(
   ['safaris-sitemap'],
   {
     tags: ['safaris-sitemap'],
-    revalidate: 3600, // Revalidate every hour
   },
 )
 

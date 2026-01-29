@@ -25,7 +25,14 @@ const redirects = async () => {
     permanent: true,
   }
 
-  const redirects = [internetExplorerRedirect, adminRootRedirect]
+  // Redirect old /itineraries/ URLs to new /safaris/ URLs (SEO keyword optimization)
+  const itinerariesToSafarisRedirect = {
+    source: '/itineraries/:slug*',
+    destination: '/safaris/:slug*',
+    permanent: true, // 301 redirect for SEO
+  }
+
+  const redirects = [internetExplorerRedirect, adminRootRedirect, itinerariesToSafarisRedirect]
 
   return redirects
 }

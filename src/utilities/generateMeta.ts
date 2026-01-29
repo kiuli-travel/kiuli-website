@@ -8,12 +8,17 @@ import { getServerSideURL } from './getURL'
 const getImageURL = (image?: Media | Config['db']['defaultIDType'] | null) => {
   const serverUrl = getServerSideURL()
 
-  let url = serverUrl + '/website-template-OG.webp'
+  // Default to Kiuli OG image
+  let url = serverUrl + '/kiuli-og.jpg'
 
-  if (image && typeof image === 'object' && 'url' in image) {
-    const ogUrl = image.sizes?.og?.url
-
-    url = ogUrl ? serverUrl + ogUrl : serverUrl + image.url
+  if (image && typeof image === 'object') {
+    // Prefer imgix URL for optimized images
+    if ('imgixUrl' in image && image.imgixUrl) {
+      url = image.imgixUrl
+    } else if ('url' in image) {
+      const ogUrl = image.sizes?.og?.url
+      url = ogUrl ? serverUrl + ogUrl : serverUrl + image.url
+    }
   }
 
   return url
@@ -26,18 +31,25 @@ export const generateMeta = async (args: {
 
   const ogImage = getImageURL(doc?.meta?.image)
 
-  const title = doc?.meta?.title
-    ? doc?.meta?.title + ' | Payload Website Template'
-    : 'Payload Website Template'
+  // Build SEO-optimized title with Kiuli branding
+  const title = doc?.meta?.title ? `${doc.meta.title} | Kiuli` : 'Kiuli | Luxury African Safaris'
+
+  // Generate description with fallback
+  const description =
+    doc?.meta?.description ||
+    'Discover transformative African safari experiences with Kiuli. Handpicked luxury itineraries curated by expert travel designers.'
 
   return {
-    description: doc?.meta?.description,
+    description,
     openGraph: mergeOpenGraph({
-      description: doc?.meta?.description || '',
+      description,
       images: ogImage
         ? [
             {
               url: ogImage,
+              width: 1200,
+              height: 630,
+              alt: doc?.meta?.title || 'Kiuli Luxury Safari',
             },
           ]
         : undefined,

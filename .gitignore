@@ -9,7 +9,7 @@ node_modules
 # Payload default media upload directory
 public/media/
 
-public/robots.txt
+# Sitemaps are auto-generated (robots.txt is manually maintained)
 public/sitemap*.xml
 
 # Local pipeline output (test data)

@@ -17,10 +17,39 @@ const playfair = Playfair_Display({
   weight: ['400', '500', '600', '700'],
 })
 
+// Organization schema for brand authority and AI discoverability
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'TravelAgency',
+  name: 'Kiuli',
+  description:
+    'Kiuli connects discerning travellers with transformative African safari experiences. Handpicked luxury itineraries across Kenya, Tanzania, Botswana, Rwanda, and beyond.',
+  url: 'https://kiuli.com',
+  logo: 'https://kiuli.com/kiuli-logo.png',
+  sameAs: ['https://twitter.com/kiuli_travel', 'https://instagram.com/kiuli_travel'],
+  areaServed: [
+    { '@type': 'Country', name: 'Kenya' },
+    { '@type': 'Country', name: 'Tanzania' },
+    { '@type': 'Country', name: 'Botswana' },
+    { '@type': 'Country', name: 'Rwanda' },
+    { '@type': 'Country', name: 'Uganda' },
+    { '@type': 'Country', name: 'South Africa' },
+    { '@type': 'Country', name: 'Namibia' },
+    { '@type': 'Country', name: 'Zimbabwe' },
+  ],
+  priceRange: '$$$$',
+  serviceType: ['Safari Tours', 'Luxury Travel', 'Wildlife Experiences', 'Honeymoon Safaris'],
+}
+
 export default function FrontendLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="light" className={playfair.variable} suppressHydrationWarning>
       <head>
+        {/* Organization Schema for SEO and AI discoverability */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         {/* Preload critical Kiuli brand fonts */}
         <link
           rel="preload"

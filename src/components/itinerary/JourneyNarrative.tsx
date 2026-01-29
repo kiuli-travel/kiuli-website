@@ -47,13 +47,19 @@ function extractInsiderTip(description: string): { mainText: string; insiderTip:
   return { mainText: description, insiderTip: null }
 }
 
-// Get image data from Media relation
-function getImageData(image: number | Media): { imgixUrl: string; alt: string } | null {
+// Get image data from Media relation with context-aware alt text fallback
+function getImageData(
+  image: number | Media,
+  fallbackContext?: string,
+): { imgixUrl: string; alt: string } | null {
   if (typeof image === 'number') return null
   if (!image.imgixUrl) return null
   return {
     imgixUrl: image.imgixUrl,
-    alt: image.alt || image.altText || '',
+    alt:
+      image.alt ||
+      image.altText ||
+      (fallbackContext ? `Safari experience at ${fallbackContext}` : 'Luxury safari experience'),
   }
 }
 
@@ -143,11 +149,12 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
           segment.inclusionsEnhanced || segment.inclusionsItrvl || segment.inclusions
         const inclusionsText = extractTextFromRichText(rawInclusions)
 
-        // Get images
+        // Get images with context-aware alt text
         const images: Array<{ imgixUrl: string; alt: string }> = []
+        const propertyContext = segment.accommodationName || segment.location || 'lodge'
         if (segment.images) {
           for (const img of segment.images) {
-            const imageData = getImageData(img)
+            const imageData = getImageData(img, propertyContext)
             if (imageData) images.push(imageData)
           }
         }
@@ -171,11 +178,12 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
         const descriptionRichText = getDescription(segment as Record<string, unknown>)
         const title = getTitle(segment as Record<string, unknown>)
 
-        // Get images
+        // Get images with context-aware alt text
         const images: Array<{ imgixUrl: string; alt: string }> = []
+        const activityContext = title || 'activity'
         if (segment.images) {
           for (const img of segment.images) {
-            const imageData = getImageData(img)
+            const imageData = getImageData(img, activityContext)
             if (imageData) images.push(imageData)
           }
         }

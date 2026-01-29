@@ -67,7 +67,7 @@ export function ItineraryHero({ title, heroImage, heroVideo, showHeroVideo }: It
             className="text-white text-xs tracking-widest font-medium"
             style={{ fontSize: '12px', letterSpacing: '1px' }}
           >
-            <span className="opacity-70">ITINERARIES</span>
+            <span className="opacity-70">SAFARIS</span>
             <span className="mx-2 opacity-50">&gt;</span>
             <span className="uppercase">{title}</span>
           </p>

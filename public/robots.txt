@@ -1,0 +1,14 @@
+# Kiuli - Luxury African Safaris
+User-agent: *
+Disallow: /admin/*
+Disallow: /api/*
+Allow: /api/search
+
+# Host
+Host: https://kiuli.com
+
+# Sitemaps
+Sitemap: https://kiuli.com/sitemap.xml
+Sitemap: https://kiuli.com/pages-sitemap.xml
+Sitemap: https://kiuli.com/posts-sitemap.xml
+Sitemap: https://kiuli.com/safaris-sitemap.xml

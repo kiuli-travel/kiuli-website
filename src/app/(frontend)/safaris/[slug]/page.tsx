@@ -164,6 +164,110 @@ function extractFAQs(itinerary: Itinerary): Array<{ question: string; answer: st
     .filter((item): item is { question: string; answer: string } => item !== null)
 }
 
+// Helper: Generate TravelService JSON-LD schema
+function generateTravelServiceSchema(
+  itinerary: Itinerary,
+  destinations: string[],
+  totalNights: number,
+  heroImage: { imgixUrl: string; alt: string } | null,
+  slug: string,
+) {
+  const price = itinerary.investmentLevel?.fromPrice
+  const currency = itinerary.investmentLevel?.currency || 'USD'
+  // Use V7 pattern fields - prefer enhanced, fallback to itrvl, then default
+  const description =
+    itinerary.metaDescription ||
+    itinerary.metaDescriptionEnhanced ||
+    itinerary.metaDescriptionItrvl ||
+    `${totalNights}-night luxury safari in ${destinations.join(', ')}. Experience the best of African wildlife with Kiuli.`
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: itinerary.title,
+    description,
+    image: heroImage?.imgixUrl,
+    url: `https://kiuli.com/safaris/${slug}`,
+    brand: {
+      '@type': 'Brand',
+      name: 'Kiuli',
+    },
+    category: 'Safari Tours',
+    ...(price && {
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: currency,
+        price: price,
+        priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        availability: 'https://schema.org/InStock',
+        seller: {
+          '@type': 'TravelAgency',
+          name: 'Kiuli',
+          url: 'https://kiuli.com',
+        },
+      },
+    }),
+    additionalProperty: [
+      {
+        '@type': 'PropertyValue',
+        name: 'Duration',
+        value: `${totalNights} nights`,
+      },
+      {
+        '@type': 'PropertyValue',
+        name: 'Destinations',
+        value: destinations.join(', '),
+      },
+    ],
+  }
+}
+
+// Helper: Generate FAQ JSON-LD schema
+function generateFAQSchema(faqs: Array<{ question: string; answer: string }>) {
+  if (faqs.length === 0) return null
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  }
+}
+
+// Helper: Generate Breadcrumb JSON-LD schema
+function generateBreadcrumbSchema(title: string, slug: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://kiuli.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Safaris',
+        item: 'https://kiuli.com/safaris',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: title,
+        item: `https://kiuli.com/safaris/${slug}`,
+      },
+    ],
+  }
+}
+
 export default async function ItineraryPage({ params: paramsPromise }: Args) {
   const { slug } = await paramsPromise
   const decodedSlug = decodeURIComponent(slug)
@@ -190,8 +294,35 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
     itinerary.investmentLevel?.includes
   const includesText = extractTextFromRichText(includesRichText)
 
+  // Generate JSON-LD schemas for SEO and AI discoverability
+  const travelServiceSchema = generateTravelServiceSchema(
+    itinerary,
+    destinations,
+    totalNights,
+    heroImage,
+    decodedSlug,
+  )
+  const faqSchema = generateFAQSchema(faqs)
+  const breadcrumbSchema = generateBreadcrumbSchema(itinerary.title, decodedSlug)
+
   return (
     <article>
+      {/* JSON-LD Structured Data for SEO and AI */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(travelServiceSchema) }}
+      />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       <ItineraryHero
         title={itinerary.title}
         heroImage={heroImage}

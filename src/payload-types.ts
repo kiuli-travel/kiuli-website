@@ -628,14 +628,6 @@ export interface Itinerary {
    */
   showHeroVideo?: boolean | null;
   /**
-   * Whether videos were found during iTrvl scraping (set by pipeline)
-   */
-  videoScrapedFromSource?: boolean | null;
-  /**
-   * Error message if video scraping failed
-   */
-  videoScrapingError?: string | null;
-  /**
    * Countries, regions, and parks featured in this itinerary
    */
   destinations?: (number | Destination)[] | null;
@@ -2931,8 +2923,6 @@ export interface ItinerariesSelect<T extends boolean = true> {
   heroVideoLocked?: T;
   heroVideoReviewed?: T;
   showHeroVideo?: T;
-  videoScrapedFromSource?: T;
-  videoScrapingError?: T;
   destinations?: T;
   tripTypes?: T;
   overview?:

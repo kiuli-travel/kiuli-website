@@ -1,14 +1,19 @@
 # Kiuli - Luxury African Safaris
+# TEMPORARY: Site under development - blocking all indexing
+# Remove these restrictions when ready to launch
+
 User-agent: *
-Disallow: /admin/*
-Disallow: /api/*
-Allow: /api/search
+Disallow: /
 
-# Host
-Host: https://kiuli.com
-
-# Sitemaps
-Sitemap: https://kiuli.com/sitemap.xml
-Sitemap: https://kiuli.com/pages-sitemap.xml
-Sitemap: https://kiuli.com/posts-sitemap.xml
-Sitemap: https://kiuli.com/safaris-sitemap.xml
+# When ready to launch, replace with:
+# User-agent: *
+# Disallow: /admin/*
+# Disallow: /api/*
+# Allow: /api/search
+#
+# Host: https://kiuli.com
+#
+# Sitemap: https://kiuli.com/sitemap.xml
+# Sitemap: https://kiuli.com/pages-sitemap.xml
+# Sitemap: https://kiuli.com/posts-sitemap.xml
+# Sitemap: https://kiuli.com/safaris-sitemap.xml

@@ -91,6 +91,16 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
 
 export const metadata: Metadata = {
   metadataBase: new URL(getServerSideURL()),
+  // TEMPORARY: Block indexing until site is ready for launch
+  // Remove this line when ready to go live
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
   openGraph: mergeOpenGraph(),
   twitter: {
     card: 'summary_large_image',

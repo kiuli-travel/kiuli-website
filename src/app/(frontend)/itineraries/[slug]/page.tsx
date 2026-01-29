@@ -14,6 +14,10 @@ import { JourneyNarrative } from '@/components/itinerary/JourneyNarrative'
 import { InvestmentLevel } from '@/components/itinerary/InvestmentLevel'
 import { FAQSection } from '@/components/itinerary/FAQSection'
 
+// Enable Incremental Static Regeneration - pages revalidate every 10 minutes
+export const revalidate = 600
+export const dynamic = 'force-static'
+
 export async function generateStaticParams() {
   const payload = await getPayload({ config: configPromise })
   const itineraries = await payload.find({

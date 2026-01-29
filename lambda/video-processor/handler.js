@@ -52,12 +52,29 @@ exports.handler = async (event) => {
     if (existing) {
       console.log(`[VideoProcessor] Dedup hit: ${existing.id}`);
 
-      // Check if video belongs to a different itinerary - don't link cross-itinerary videos
       const itineraryIdStr = String(itineraryId);
-      if (existing.sourceItinerary && existing.sourceItinerary !== itineraryIdStr) {
+
+      // CRITICAL: Validate sourceItinerary to prevent cross-itinerary linking
+      if (!existing.sourceItinerary) {
+        // Video has no sourceItinerary - this is a data integrity issue
+        console.warn(`[VideoProcessor] Video ${existing.id} has no sourceItinerary set. Skipping link to prevent cross-itinerary contamination.`);
+
+        if (statusId) {
+          await updateVideoStatus(statusId, 'skipped', existing.id, null, new Date().toISOString());
+        }
+
+        return {
+          success: true,
+          mediaId: existing.id,
+          skipped: true,
+          reason: 'no-source-itinerary'
+        };
+      }
+
+      // Check if video belongs to a different itinerary - don't link cross-itinerary videos
+      if (existing.sourceItinerary !== itineraryIdStr) {
         console.log(`[VideoProcessor] Cross-itinerary video: belongs to ${existing.sourceItinerary}, not ${itineraryIdStr}. Skipping link.`);
 
-        // Update status to skipped with reason
         if (statusId) {
           await updateVideoStatus(statusId, 'skipped', existing.id, null, new Date().toISOString());
         }
@@ -70,13 +87,11 @@ exports.handler = async (event) => {
         };
       }
 
-      // Same itinerary or no sourceItinerary set - proceed with linking
-      // Update status to skipped (dedup)
+      // Same itinerary - proceed with linking (dedup)
       if (statusId) {
         await updateVideoStatus(statusId, 'skipped', existing.id, null, new Date().toISOString());
       }
 
-      // Note: usedInItineraries is readOnly, video will be linked via itinerary.videos
       // Link video to itinerary if not already linked
       const itineraryIdNum = typeof itineraryId === 'number' ? itineraryId : parseInt(itineraryId, 10);
       const itinerary = await payload.getItinerary(itineraryIdNum);

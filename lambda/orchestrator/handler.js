@@ -106,19 +106,6 @@ exports.handler = async (event) => {
       if (existingItinerary && mode === 'create') {
         console.log(`[Orchestrator] Itinerary exists (${existingItinerary.id}), switching to update mode`);
       }
-
-      // Validate: If we have an existing itinerary from existingItineraryId, ensure scraped data matches
-      // This prevents scraping wrong itinerary when source.itrvlUrl is corrupted
-      if (existingItineraryId && existingItinerary && existingItinerary.id !== existingItineraryId) {
-        const errorMsg = `Itinerary ID mismatch: URL scraped itinerary ${itineraryId} (Kiuli ID ${existingItinerary.id}) but expected Kiuli ID ${existingItineraryId}. Check source.itrvlUrl is correct.`;
-        console.error(`[Orchestrator] ${errorMsg}`);
-        await payload.updateJob(jobId, {
-          status: 'failed',
-          currentPhase: 'Validation Error',
-          error: errorMsg
-        });
-        throw new Error(errorMsg);
-      }
     }
 
     // 4. Transform raw data (without media mapping yet - that happens after image processing)

@@ -52,7 +52,26 @@ exports.handler = async (event) => {
     if (existing) {
       console.log(`[VideoProcessor] Dedup hit: ${existing.id}`);
 
-      // Update status to skipped
+      // Check if video belongs to a different itinerary - don't link cross-itinerary videos
+      const itineraryIdStr = String(itineraryId);
+      if (existing.sourceItinerary && existing.sourceItinerary !== itineraryIdStr) {
+        console.log(`[VideoProcessor] Cross-itinerary video: belongs to ${existing.sourceItinerary}, not ${itineraryIdStr}. Skipping link.`);
+
+        // Update status to skipped with reason
+        if (statusId) {
+          await updateVideoStatus(statusId, 'skipped', existing.id, null, new Date().toISOString());
+        }
+
+        return {
+          success: true,
+          mediaId: existing.id,
+          skipped: true,
+          reason: 'cross-itinerary'
+        };
+      }
+
+      // Same itinerary or no sourceItinerary set - proceed with linking
+      // Update status to skipped (dedup)
       if (statusId) {
         await updateVideoStatus(statusId, 'skipped', existing.id, null, new Date().toISOString());
       }

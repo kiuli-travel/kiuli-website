@@ -314,6 +314,7 @@ exports.handler = async (event) => {
           dayIndex: vid.dayIndex,
           segmentIndex: vid.segmentIndex,
           country: vid.country,
+          sourceItinerary: String(payloadItinerary.id), // Track which itinerary this video belongs to
         });
       }
       console.log(`[Orchestrator] VideoStatus records created`);

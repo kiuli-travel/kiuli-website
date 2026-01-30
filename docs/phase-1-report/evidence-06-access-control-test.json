@@ -1,0 +1,27 @@
+{
+  "_metadata": {
+    "description": "Access Control Test - GET without authentication",
+    "endpoint": "GET http://localhost:3001/api/inquiries/1",
+    "timestamp": "2026-01-30T18:50:54Z",
+    "http_status": 403,
+    "purpose": "Verify that read access is restricted to authenticated users only"
+  },
+  "request": {
+    "method": "GET",
+    "url": "http://localhost:3001/api/inquiries/1",
+    "headers": {},
+    "authentication": "none"
+  },
+  "response": {
+    "errors": [
+      {
+        "message": "You are not allowed to perform this action."
+      }
+    ]
+  },
+  "_notes": {
+    "result": "PASS - Access control working as expected",
+    "expected_behavior": "Unauthenticated requests to read inquiries should be denied",
+    "actual_behavior": "403 Forbidden returned with appropriate error message"
+  }
+}

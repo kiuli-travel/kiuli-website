@@ -1,0 +1,24 @@
+================================================================================
+EVIDENCE 08: Git Commit
+================================================================================
+
+Command: git add -A && git commit -m "Add Inquiries collection for inquiry form"
+Timestamp: 2026-01-30T18:56:XX
+
+================================================================================
+
+[main 01b1883] Add Inquiries collection for inquiry form
+ 3 files changed, 515 insertions(+), 1 deletion(-)
+ create mode 100644 src/collections/Inquiries.ts
+
+================================================================================
+COMMIT DETAILS:
+- Commit Hash: 01b1883
+- Branch: main
+- Files Changed: 3
+- Insertions: 515 lines
+- Deletions: 1 line
+- New File: src/collections/Inquiries.ts (378 lines)
+- Modified: src/payload.config.ts (+2 lines)
+- Modified: src/payload-types.ts (+135 lines auto-generated)
+================================================================================

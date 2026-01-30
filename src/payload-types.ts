@@ -79,6 +79,7 @@ export interface Config {
     'voice-configuration': VoiceConfiguration;
     destinations: Destination;
     'trip-types': TripType;
+    inquiries: Inquiry;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -108,6 +109,7 @@ export interface Config {
     'voice-configuration': VoiceConfigurationSelect<false> | VoiceConfigurationSelect<true>;
     destinations: DestinationsSelect<false> | DestinationsSelect<true>;
     'trip-types': TripTypesSelect<false> | TripTypesSelect<true>;
+    inquiries: InquiriesSelect<false> | InquiriesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -2263,6 +2265,83 @@ export interface VoiceConfiguration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "inquiries".
+ */
+export interface Inquiry {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  phoneCountryCode: string;
+  destinations: {
+    code: string;
+    id?: string | null;
+  }[];
+  timingType: 'specific' | 'flexible' | 'exploring';
+  travelDateStart?: string | null;
+  travelDateEnd?: string | null;
+  /**
+   * Format: YYYY-MM
+   */
+  travelWindowEarliest?: string | null;
+  /**
+   * Format: YYYY-MM
+   */
+  travelWindowLatest?: string | null;
+  partyType: 'solo' | 'couple' | 'family' | 'multigenerational' | 'friends' | 'multiple_families' | 'other';
+  totalTravelers: number;
+  childrenCount: number;
+  primaryInterest:
+    | 'migration'
+    | 'gorillas'
+    | 'luxury_camp'
+    | 'big_cats'
+    | 'walking'
+    | 'celebration'
+    | 'ultimate'
+    | 'other';
+  budgetRange: '15k-25k' | '25k-40k' | '40k-60k' | '60k-80k' | '80k-100k' | '100k+' | 'unsure';
+  /**
+   * Budget midpoint in cents
+   */
+  statedBudgetCents: number;
+  /**
+   * 20% of stated budget
+   */
+  projectedProfitCents: number;
+  howHeard: 'google' | 'ai' | 'referral' | 'advisor' | 'press' | 'social' | 'podcast' | 'returning' | 'other';
+  message?: string | null;
+  marketingConsent?: boolean | null;
+  sessionId?: string | null;
+  /**
+   * Google Click ID
+   */
+  gclid?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
+  referrer?: string | null;
+  landingPage?: string | null;
+  pageUrl?: string | null;
+  /**
+   * If submitted from an itinerary page
+   */
+  itinerarySlug?: string | null;
+  hubspotContactId?: string | null;
+  hubspotDealId?: string | null;
+  inquiryType: 'form' | 'phone' | 'email' | 'chat';
+  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+  assignedDesigner?: string | null;
+  formStartedAt?: string | null;
+  timeToCompleteSeconds?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -2498,6 +2577,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'trip-types';
         value: number | TripType;
+      } | null)
+    | ({
+        relationTo: 'inquiries';
+        value: number | Inquiry;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -3251,6 +3334,58 @@ export interface TripTypesSelect<T extends boolean = true> {
   metaDescription?: T;
   sortOrder?: T;
   featured?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "inquiries_select".
+ */
+export interface InquiriesSelect<T extends boolean = true> {
+  firstName?: T;
+  lastName?: T;
+  email?: T;
+  phone?: T;
+  phoneCountryCode?: T;
+  destinations?:
+    | T
+    | {
+        code?: T;
+        id?: T;
+      };
+  timingType?: T;
+  travelDateStart?: T;
+  travelDateEnd?: T;
+  travelWindowEarliest?: T;
+  travelWindowLatest?: T;
+  partyType?: T;
+  totalTravelers?: T;
+  childrenCount?: T;
+  primaryInterest?: T;
+  budgetRange?: T;
+  statedBudgetCents?: T;
+  projectedProfitCents?: T;
+  howHeard?: T;
+  message?: T;
+  marketingConsent?: T;
+  sessionId?: T;
+  gclid?: T;
+  utmSource?: T;
+  utmMedium?: T;
+  utmCampaign?: T;
+  utmContent?: T;
+  utmTerm?: T;
+  referrer?: T;
+  landingPage?: T;
+  pageUrl?: T;
+  itinerarySlug?: T;
+  hubspotContactId?: T;
+  hubspotDealId?: T;
+  inquiryType?: T;
+  status?: T;
+  assignedDesigner?: T;
+  formStartedAt?: T;
+  timeToCompleteSeconds?: T;
   updatedAt?: T;
   createdAt?: T;
 }

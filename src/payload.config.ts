@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url'
 import { Categories } from './collections/Categories'
 import { Destinations } from './collections/Destinations'
 import { ImageStatuses } from './collections/ImageStatuses'
+import { Inquiries } from './collections/Inquiries'
 import { Itineraries } from './collections/Itineraries'
 import { ItineraryJobs } from './collections/ItineraryJobs'
 import { Media } from './collections/Media'
@@ -76,7 +77,7 @@ export default buildConfig({
       connectionString: process.env.POSTGRES_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [

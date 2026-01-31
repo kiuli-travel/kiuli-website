@@ -9,9 +9,10 @@ interface HubSpotContactProperties {
   phone?: string
   lifecyclestage?: string
   kiuli_gclid?: string
-  kiuli_traffic_source?: string
-  kiuli_landing_page?: string
+  traffic_source?: string
+  landing_page_url?: string
   kiuli_session_id?: string
+  inquiry_type?: string
 }
 
 interface HubSpotDealProperties {
@@ -19,8 +20,7 @@ interface HubSpotDealProperties {
   dealstage: string
   pipeline: string
   amount: string
-  kiuli_projected_profit?: string
-  kiuli_inquiry_type?: string
+  projected_profit?: string
 }
 
 interface HubSpotContact {
@@ -75,7 +75,7 @@ export async function searchContactByEmail(email: string): Promise<HubSpotContac
             ],
           },
         ],
-        properties: ['email', 'firstname', 'lastname', 'kiuli_gclid', 'kiuli_traffic_source'],
+        properties: ['email', 'firstname', 'lastname', 'kiuli_gclid', 'traffic_source'],
       }),
     })
 
@@ -177,14 +177,15 @@ export async function createOrUpdateContactAndDeal(
         lastname: data.lastName,
         phone: data.phone,
         kiuli_session_id: data.sessionId || undefined,
+        inquiry_type: data.inquiryType,
       }
 
       // Only set attribution if not already set
       if (!existingContact.properties.kiuli_gclid && data.gclid) {
         updateProps.kiuli_gclid = data.gclid
       }
-      if (!existingContact.properties.kiuli_traffic_source && (data.gclid || data.utmSource)) {
-        updateProps.kiuli_traffic_source = mapTrafficSource(data.gclid, data.utmSource)
+      if (!existingContact.properties.traffic_source && (data.gclid || data.utmSource)) {
+        updateProps.traffic_source = mapTrafficSource(data.gclid, data.utmSource)
       }
 
       await updateContact(existingContact.id, updateProps)
@@ -199,9 +200,10 @@ export async function createOrUpdateContactAndDeal(
         phone: data.phone,
         lifecyclestage: 'lead',
         kiuli_gclid: data.gclid || undefined,
-        kiuli_traffic_source: mapTrafficSource(data.gclid, data.utmSource),
-        kiuli_landing_page: data.landingPage || undefined,
+        traffic_source: mapTrafficSource(data.gclid, data.utmSource),
+        landing_page_url: data.landingPage || undefined,
         kiuli_session_id: data.sessionId || undefined,
+        inquiry_type: data.inquiryType,
       })
       contactId = contact.id
       console.log(`HubSpot: Created new contact ${contactId}`)
@@ -212,15 +214,14 @@ export async function createOrUpdateContactAndDeal(
     const deal = await createDeal(
       {
         dealname: `${data.firstName} ${data.lastName} - Safari Inquiry`,
-        dealstage: '4690609358',  // First Contact stage
-        pipeline: '3425899755',   // Kiuli Funnel pipeline
+        dealstage: '4690609358', // First Contact stage
+        pipeline: '3425899755', // Kiuli Funnel pipeline
         amount: String(dealAmount),
-        kiuli_projected_profit: String(dealAmount),
-        kiuli_inquiry_type: data.inquiryType,
+        projected_profit: String(dealAmount),
       },
       contactId
     )
-    console.log(`HubSpot: Created deal ${deal.id} with amount ${dealAmount}`)
+    console.log(`HubSpot: Created deal ${deal.id} with amount $${dealAmount}`)
 
     return {
       contactId,

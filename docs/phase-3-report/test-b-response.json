@@ -1,0 +1,59 @@
+{
+  "test": "Test B: Duplicate Contact (Same Email, Different Details)",
+  "endpoint": "POST https://kiuli.com/api/inquiry",
+  "timestamp": "2026-01-31T09:35:30Z",
+  "request": {
+    "destinations": ["KE", "TZ"],
+    "timing_type": "flexible",
+    "travel_window_earliest": "2026-08",
+    "travel_window_latest": "2026-10",
+    "party_type": "family",
+    "total_travelers": 4,
+    "children_count": 2,
+    "primary_interest": "big_cats",
+    "budget_range": "60k-80k",
+    "stated_budget_cents": 7000000,
+    "projected_profit_cents": 1400000,
+    "first_name": "HubSpot",
+    "last_name": "TestOne",
+    "email": "hubspot-test1@kiuli.com",
+    "phone": "+12025552222",
+    "phone_country_code": "US",
+    "how_heard": "referral",
+    "marketing_consent": true,
+    "session_id": "session-hs-002",
+    "gclid": "different-gclid-should-not-overwrite",
+    "utm_source": "referral"
+  },
+  "response": {
+    "success": true,
+    "inquiry_id": 8,
+    "message": "Inquiry received"
+  },
+  "http_status": 201,
+  "expected_hubspot": {
+    "contact_behavior": "UPDATE existing contact, NOT create duplicate",
+    "attribution_preservation": {
+      "kiuli_gclid": "test-gclid-phase3 (original preserved, NOT overwritten)",
+      "traffic_source": "google_ads (original preserved, NOT overwritten)"
+    },
+    "updated_fields": {
+      "phone": "+12025552222 (updated to latest)",
+      "kiuli_session_id": "session-hs-002 (updated to latest)",
+      "inquiry_type": "form (updated to latest)"
+    },
+    "new_deal": {
+      "dealname": "HubSpot TestOne - Safari Inquiry",
+      "amount": 14000,
+      "pipeline": "3425899755",
+      "dealstage": "4690609358"
+    }
+  },
+  "verification_notes": {
+    "contact_should_have_two_deals": true,
+    "deal_1_amount": 10000,
+    "deal_2_amount": 14000,
+    "same_hubspot_contact_id": "Both Payload inquiries (7 and 8) should have SAME hubspotContactId",
+    "different_hubspot_deal_ids": "Each Payload inquiry should have DIFFERENT hubspotDealId"
+  }
+}

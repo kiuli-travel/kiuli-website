@@ -1,0 +1,49 @@
+Changes to src/app/(payload)/api/inquiry/route.ts for Phase 3:
+
+=== Added Import ===
+Line 4:
++ import { createOrUpdateContactAndDeal } from '@/lib/hubspot'
+
+=== Added HubSpot Integration Block (after payload.create, before return) ===
+Lines 251-290:
+
+    // HubSpot integration (non-blocking)
+    let hubspotContactId: string | null = null
+    let hubspotDealId: string | null = null
+
+    try {
+      const hubspotResult = await createOrUpdateContactAndDeal({
+        firstName: payloadData.firstName,
+        lastName: payloadData.lastName,
+        email: payloadData.email,
+        phone: payloadData.phone,
+        projectedProfitCents: payloadData.projectedProfitCents,
+        sessionId: payloadData.sessionId,
+        gclid: payloadData.gclid,
+        utmSource: payloadData.utmSource,
+        landingPage: payloadData.landingPage,
+        inquiryType: payloadData.inquiryType,
+      })
+
+      hubspotContactId = hubspotResult.contactId
+      hubspotDealId = hubspotResult.dealId
+
+      // Update inquiry with HubSpot IDs
+      if (hubspotContactId || hubspotDealId) {
+        await payload.update({
+          collection: 'inquiries',
+          id: inquiry.id,
+          data: {
+            hubspotContactId: hubspotContactId || undefined,
+            hubspotDealId: hubspotDealId || undefined,
+          },
+        })
+      }
+
+      if (hubspotResult.error) {
+        console.error('HubSpot partial failure:', hubspotResult.error)
+      }
+    } catch (hubspotError) {
+      // Log but don't fail the request
+      console.error('HubSpot integration failed:', hubspotError)
+    }

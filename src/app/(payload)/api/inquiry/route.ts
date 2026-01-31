@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { createOrUpdateContactAndDeal } from '@/lib/hubspot'
 
 // Rate limiting store (in-memory, resets on cold start)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
@@ -246,6 +247,47 @@ export async function POST(request: NextRequest) {
       collection: 'inquiries',
       data: payloadData,
     })
+
+    // HubSpot integration (non-blocking)
+    let hubspotContactId: string | null = null
+    let hubspotDealId: string | null = null
+
+    try {
+      const hubspotResult = await createOrUpdateContactAndDeal({
+        firstName: payloadData.firstName,
+        lastName: payloadData.lastName,
+        email: payloadData.email,
+        phone: payloadData.phone,
+        projectedProfitCents: payloadData.projectedProfitCents,
+        sessionId: payloadData.sessionId,
+        gclid: payloadData.gclid,
+        utmSource: payloadData.utmSource,
+        landingPage: payloadData.landingPage,
+        inquiryType: payloadData.inquiryType,
+      })
+
+      hubspotContactId = hubspotResult.contactId
+      hubspotDealId = hubspotResult.dealId
+
+      // Update inquiry with HubSpot IDs
+      if (hubspotContactId || hubspotDealId) {
+        await payload.update({
+          collection: 'inquiries',
+          id: inquiry.id,
+          data: {
+            hubspotContactId: hubspotContactId || undefined,
+            hubspotDealId: hubspotDealId || undefined,
+          },
+        })
+      }
+
+      if (hubspotResult.error) {
+        console.error('HubSpot partial failure:', hubspotResult.error)
+      }
+    } catch (hubspotError) {
+      // Log but don't fail the request
+      console.error('HubSpot integration failed:', hubspotError)
+    }
 
     return NextResponse.json(
       {

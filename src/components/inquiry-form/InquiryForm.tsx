@@ -2414,7 +2414,7 @@ case "phone":
         // Construct submission payload with E.164 phone format
         const e164Phone = formatPhoneE164(state.phone, state.phone_country_code)
         const payload = {
-          destinations: state.destinations.map((d: string) => ({ code: d })),
+          destinations: state.destinations,
           timing_type: state.timing_type,
           travel_date_start: state.travel_date_start,
           travel_date_end: state.travel_date_end,

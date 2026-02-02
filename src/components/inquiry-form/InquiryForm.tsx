@@ -2271,6 +2271,9 @@ export default function InquiryForm() {
   // Aria live region for screen reader announcements
   const [announcement, setAnnouncement] = useState("")
 
+  // Submission error for user-visible display
+  const [submitError, setSubmitError] = useState("")
+
   // Focus management on slide change
   useEffect(() => {
     if (slideRef.current) {
@@ -2398,46 +2401,47 @@ case "phone":
 
         // Collect attribution from browser
         const attribution = typeof window !== 'undefined' ? {
-          page_url: window.location.href,
+          pageUrl: window.location.href,
           referrer: document.referrer || undefined,
           gclid: new URLSearchParams(window.location.search).get('gclid') || undefined,
-          utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
-          utm_medium: new URLSearchParams(window.location.search).get('utm_medium') || undefined,
-          utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
-          utm_content: new URLSearchParams(window.location.search).get('utm_content') || undefined,
-          utm_term: new URLSearchParams(window.location.search).get('utm_term') || undefined,
+          utmSource: new URLSearchParams(window.location.search).get('utm_source') || undefined,
+          utmMedium: new URLSearchParams(window.location.search).get('utm_medium') || undefined,
+          utmCampaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
+          utmContent: new URLSearchParams(window.location.search).get('utm_content') || undefined,
+          utmTerm: new URLSearchParams(window.location.search).get('utm_term') || undefined,
         } : {}
 
         // Construct submission payload with E.164 phone format
         const e164Phone = formatPhoneE164(state.phone, state.phone_country_code)
         const payload = {
-          destinations: state.destinations,
-          timing_type: state.timing_type,
-          travel_date_start: state.travel_date_start,
-          travel_date_end: state.travel_date_end,
-          travel_window_earliest: state.travel_window_earliest,
-          travel_window_latest: state.travel_window_latest,
-          party_type: state.party_type,
-          total_travelers: state.total_travelers,
-          children_count: state.children_count,
+          destinations: state.destinations.map((d: string) => ({ code: d })),
+          timingType: state.timing_type,
+          travelDateStart: state.travel_date_start,
+          travelDateEnd: state.travel_date_end,
+          travelWindowEarliest: state.travel_window_earliest,
+          travelWindowLatest: state.travel_window_latest,
+          partyType: state.party_type,
+          totalTravelers: state.total_travelers,
+          childrenCount: state.children_count,
           interests: state.interests,
-          budget_range: state.budget_range,
-          stated_budget_cents: state.stated_budget_cents,
-          projected_profit_cents: state.projected_profit_cents,
-          first_name: state.first_name,
-          last_name: state.last_name,
+          budgetRange: state.budget_range,
+          statedBudgetCents: state.stated_budget_cents,
+          projectedProfitCents: state.projected_profit_cents,
+          firstName: state.first_name,
+          lastName: state.last_name,
           email: state.email,
           phone: e164Phone,
-          how_heard: state.how_heard,
+          howHeard: state.how_heard,
           message: state.message || undefined,
-          contact_consent: state.contact_consent,
-          marketing_consent: state.marketing_consent,
-          form_started_at: new Date().toISOString(),
-          inquiry_type: 'form',
+          contactConsent: state.contact_consent,
+          marketingConsent: state.marketing_consent,
+          formStartedAt: new Date().toISOString(),
+          inquiryType: 'form',
           ...attribution,
         }
 
         try {
+          setSubmitError("")
           const res = await fetch('/api/inquiry', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2450,12 +2454,16 @@ case "phone":
             setAnnouncement("Your inquiry has been submitted successfully.")
           } else {
             dispatch({ type: "SET_SUBMITTING", payload: false })
-            setAnnouncement(data.message || "Please check your information and try again.")
+            const errorMsg = data.message || "Please check your information and try again."
+            setSubmitError(errorMsg)
+            setAnnouncement(errorMsg)
           }
         } catch (err) {
           console.error('Submission failed:', err)
           dispatch({ type: "SET_SUBMITTING", payload: false })
-          setAnnouncement("Connection error. Please try again.")
+          const errorMsg = "Connection error. Please check your internet and try again."
+          setSubmitError(errorMsg)
+          setAnnouncement(errorMsg)
         }
       } else {
         setAnnouncement("Please correct the errors before submitting.")
@@ -2568,6 +2576,13 @@ case "phone":
           {renderSlide()}
         </div>
       </div>
+
+      {/* Submission error display */}
+      {submitError && (
+        <div className="text-red-600 text-sm text-center mb-4" role="alert">
+          {submitError}
+        </div>
+      )}
 
       {/* Navigation */}
       <div

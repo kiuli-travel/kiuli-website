@@ -11,8 +11,11 @@ const RATE_WINDOW_MS = 60 * 1000
 // Valid enum values
 const VALID_TIMING_TYPES = ['specific', 'flexible', 'exploring'] as const
 const VALID_PARTY_TYPES = ['solo', 'couple', 'family', 'multigenerational', 'friends', 'multiple_families', 'other'] as const
-const VALID_INTERESTS = ['migration', 'gorillas', 'luxury_camp', 'big_cats', 'walking', 'celebration', 'ultimate', 'other'] as const
-const VALID_BUDGET_RANGES = ['15k-25k', '25k-40k', '40k-60k', '60k-80k', '80k-100k', '100k+', 'unsure'] as const
+const VALID_INTERESTS = [
+  'migration', 'gorillas', 'big_cats', 'beach', 'culture', 'walking',
+  'wine_culinary', 'luxury_camp', 'celebration', 'photography', 'horse_riding', 'other'
+] as const
+const VALID_BUDGET_RANGES = ['10k-15k', '15k-25k', '25k-40k', '40k-60k', '60k-80k', '80k-100k', '100k+', 'unsure'] as const
 const VALID_HOW_HEARD = ['google', 'ai', 'referral', 'advisor', 'press', 'social', 'podcast', 'returning', 'other'] as const
 const VALID_INQUIRY_TYPES = ['form', 'phone', 'email', 'chat'] as const
 
@@ -66,6 +69,20 @@ function isValidISODate(value: string): boolean {
   return !isNaN(date.getTime())
 }
 
+function isValidE164(phone: string): boolean {
+  if (!phone || !phone.startsWith('+')) return false
+  const digits = phone.substring(1)
+  if (!/^\d+$/.test(digits)) return false
+  return phone.length >= 8 && phone.length <= 16
+}
+
+function capitalizeName(name: string): string {
+  if (!name) return ''
+  return name.trim().split(/\s+/).map(part =>
+    part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+  ).join(' ')
+}
+
 function validateRequest(body: any): ValidationErrors {
   const errors: ValidationErrors = {}
 
@@ -108,9 +125,11 @@ function validateRequest(body: any): ValidationErrors {
     errors.children_count = 'Please enter number of children'
   }
 
-  // Interest
-  if (!body.primary_interest || !VALID_INTERESTS.includes(body.primary_interest)) {
-    errors.primary_interest = 'Please select what interests you most'
+  // Interests (multi-select array)
+  if (!body.interests || !Array.isArray(body.interests) || body.interests.length === 0) {
+    errors.interests = 'Please select at least one experience'
+  } else if (!body.interests.every((i: string) => VALID_INTERESTS.includes(i as typeof VALID_INTERESTS[number]))) {
+    errors.interests = 'Invalid experience selection'
   }
 
   // Budget
@@ -134,12 +153,10 @@ function validateRequest(body: any): ValidationErrors {
   if (!body.email || !isValidEmail(body.email)) {
     errors.email = 'Please enter a valid email address'
   }
-  if (!body.phone || typeof body.phone !== 'string' || body.phone.trim().length === 0) {
-    errors.phone = 'Please enter your phone number'
+  if (!body.phone || !isValidE164(body.phone)) {
+    errors.phone = 'Please enter a valid phone number'
   }
-  if (!body.phone_country_code || typeof body.phone_country_code !== 'string' || body.phone_country_code.length !== 2) {
-    errors.phone_country_code = 'Please select your country code'
-  }
+  // phone_country_code is now optional (E.164 phone includes country code)
   if (!body.how_heard || !VALID_HOW_HEARD.includes(body.how_heard)) {
     errors.how_heard = 'Please select how you heard about us'
   }
@@ -169,20 +186,20 @@ function transformToPayload(body: any): any {
     totalTravelers: body.total_travelers,
     childrenCount: body.children_count,
 
-    // Interest
-    primaryInterest: body.primary_interest,
+    // Interests (multi-select)
+    interests: body.interests,
 
     // Budget
     budgetRange: body.budget_range,
     statedBudgetCents: body.stated_budget_cents,
     projectedProfitCents: body.projected_profit_cents,
 
-    // Contact
-    firstName: body.first_name.trim(),
-    lastName: body.last_name.trim(),
+    // Contact (names capitalized server-side)
+    firstName: capitalizeName(body.first_name),
+    lastName: capitalizeName(body.last_name),
     email: body.email.toLowerCase().trim(),
     phone: body.phone,
-    phoneCountryCode: body.phone_country_code.toUpperCase(),
+    phoneCountryCode: body.phone_country_code?.toUpperCase() || null,
     howHeard: body.how_heard,
     message: body.message || null,
     marketingConsent: body.marketing_consent === true,
@@ -264,6 +281,22 @@ export async function POST(request: NextRequest) {
         utmSource: payloadData.utmSource,
         landingPage: payloadData.landingPage,
         inquiryType: payloadData.inquiryType,
+        // Full form data for HubSpot Note
+        destinations: payloadData.destinations,
+        timingType: payloadData.timingType,
+        travelDateStart: payloadData.travelDateStart,
+        travelDateEnd: payloadData.travelDateEnd,
+        travelWindowEarliest: payloadData.travelWindowEarliest,
+        travelWindowLatest: payloadData.travelWindowLatest,
+        partyType: payloadData.partyType,
+        totalTravelers: payloadData.totalTravelers,
+        childrenCount: payloadData.childrenCount,
+        interests: payloadData.interests,
+        budgetRange: payloadData.budgetRange,
+        howHeard: payloadData.howHeard,
+        message: payloadData.message,
+        marketingConsent: payloadData.marketingConsent,
+        pageUrl: payloadData.pageUrl,
       })
 
       hubspotContactId = hubspotResult.contactId

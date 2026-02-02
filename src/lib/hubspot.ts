@@ -131,6 +131,121 @@ export async function createDeal(
   })
 }
 
+// Build HTML Note body with full form data for travel designers
+function buildInquiryNote(data: {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  destinations: Array<{ code: string }>
+  timingType: string
+  travelDateStart?: string | null
+  travelDateEnd?: string | null
+  travelWindowEarliest?: string | null
+  travelWindowLatest?: string | null
+  partyType: string
+  totalTravelers: number
+  childrenCount: number
+  interests: string[]
+  budgetRange: string
+  howHeard: string
+  message?: string | null
+  marketingConsent: boolean
+  pageUrl?: string | null
+  gclid?: string | null
+  createdAt: string
+}): string {
+  const DESTINATION_LABELS: Record<string, string> = {
+    TZ: 'Tanzania', KE: 'Kenya', BW: 'Botswana', RW: 'Rwanda',
+    UG: 'Uganda', ZA: 'South Africa', NA: 'Namibia', ZM: 'Zambia',
+    ZW: 'Zimbabwe', UNDECIDED: 'Not sure yet',
+  }
+  const INTEREST_LABELS: Record<string, string> = {
+    migration: 'The Great Migration', gorillas: 'Gorilla & primate trekking',
+    big_cats: 'Big cats & wildlife', beach: 'Beach & island escape',
+    culture: 'Cultural immersion', walking: 'Walking & hiking safaris',
+    wine_culinary: 'Wine & culinary', luxury_camp: 'Luxury lodges & camps',
+    celebration: 'Honeymoon or celebration', photography: 'Photography safari',
+    horse_riding: 'Horse riding safari', other: 'Something else',
+  }
+  const PARTY_LABELS: Record<string, string> = {
+    solo: 'Solo', couple: 'Couple', family: 'Family',
+    multigenerational: 'Multi-generational', friends: 'Friends',
+    multiple_families: 'Multiple families', other: 'Other',
+  }
+  const BUDGET_LABELS: Record<string, string> = {
+    '10k-15k': '$10,000 – $15,000', '15k-25k': '$15,000 – $25,000',
+    '25k-40k': '$25,000 – $40,000', '40k-60k': '$40,000 – $60,000',
+    '60k-80k': '$60,000 – $80,000', '80k-100k': '$80,000 – $100,000',
+    '100k+': '$100,000+', unsure: 'Not sure yet',
+  }
+  const HOW_HEARD_LABELS: Record<string, string> = {
+    google: 'Google search', ai: 'ChatGPT / AI',
+    referral: 'Friend or family', advisor: 'Travel advisor',
+    press: 'Magazine/publication', social: 'Social media',
+    podcast: 'Podcast', returning: 'Returning customer', other: 'Other',
+  }
+
+  const destinations = data.destinations.map(d => DESTINATION_LABELS[d.code] || d.code).join(', ')
+  const interests = data.interests.map(i => INTEREST_LABELS[i] || i).join(', ')
+
+  let timing = ''
+  if (data.timingType === 'specific' && data.travelDateStart) {
+    timing = `${data.travelDateStart} to ${data.travelDateEnd || 'TBD'}`
+  } else if (data.timingType === 'flexible' && data.travelWindowEarliest) {
+    timing = `${data.travelWindowEarliest} to ${data.travelWindowLatest || 'TBD'}`
+  } else {
+    timing = 'Just exploring'
+  }
+
+  const party = PARTY_LABELS[data.partyType] || data.partyType
+  const childrenNote = data.childrenCount > 0 ? ` (${data.childrenCount} under 18)` : ''
+  const date = new Date(data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
+  let html = `<h3>Safari Inquiry — ${date}</h3><table>`
+  html += `<tr><td><strong>Destinations:</strong></td><td>${destinations}</td></tr>`
+  html += `<tr><td><strong>Timing:</strong></td><td>${timing}</td></tr>`
+  html += `<tr><td><strong>Party:</strong></td><td>${party} — ${data.totalTravelers} travelers${childrenNote}</td></tr>`
+  html += `<tr><td><strong>Experiences:</strong></td><td>${interests}</td></tr>`
+  html += `<tr><td><strong>Investment:</strong></td><td>${BUDGET_LABELS[data.budgetRange] || data.budgetRange} per person</td></tr>`
+  html += `<tr><td><strong>How heard:</strong></td><td>${HOW_HEARD_LABELS[data.howHeard] || data.howHeard}</td></tr>`
+  html += `</table>`
+  if (data.message) html += `<br/><strong>Message:</strong><br/>${data.message}`
+  if (data.gclid || data.pageUrl) {
+    html += `<br/><br/><small><strong>Attribution</strong><br/>`
+    if (data.pageUrl) html += `Page: ${data.pageUrl}<br/>`
+    if (data.gclid) html += `GCLID: ${data.gclid}<br/>`
+    html += `Marketing consent: ${data.marketingConsent ? 'Yes' : 'No'}</small>`
+  }
+  return html
+}
+
+// Create a HubSpot Note attached to contact and deal
+async function createNote(
+  noteBody: string,
+  contactId: string,
+  dealId: string
+): Promise<{ id: string } | null> {
+  try {
+    return await hubspotRequest('/crm/v3/objects/notes', {
+      method: 'POST',
+      body: JSON.stringify({
+        properties: {
+          hs_note_body: noteBody,
+          hs_timestamp: new Date().toISOString(),
+        },
+        associations: [
+          { to: { id: contactId }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] },
+          { to: { id: dealId }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 214 }] },
+        ],
+      }),
+    })
+  } catch (error) {
+    console.error('HubSpot Note creation failed:', error)
+    return null
+  }
+}
+
 function mapTrafficSource(gclid?: string | null, utmSource?: string | null): string {
   if (gclid) return 'google_ads'
   if (!utmSource) return 'direct'
@@ -153,6 +268,22 @@ export interface InquiryData {
   utmSource?: string | null
   landingPage?: string | null
   inquiryType: string
+  // Full form data for HubSpot Note
+  destinations?: Array<{ code: string }>
+  timingType?: string
+  travelDateStart?: string | null
+  travelDateEnd?: string | null
+  travelWindowEarliest?: string | null
+  travelWindowLatest?: string | null
+  partyType?: string
+  totalTravelers?: number
+  childrenCount?: number
+  interests?: string[]
+  budgetRange?: string
+  howHeard?: string
+  message?: string | null
+  marketingConsent?: boolean
+  pageUrl?: string | null
 }
 
 export interface HubSpotResult {
@@ -221,6 +352,41 @@ export async function createOrUpdateContactAndDeal(
       contactId
     )
     console.log(`HubSpot: Created deal ${deal.id} with amount ${dealAmount}`)
+
+    // 4. Create Note with full form data (non-blocking)
+    if (data.destinations && data.interests) {
+      try {
+        const noteBody = buildInquiryNote({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          destinations: data.destinations,
+          timingType: data.timingType || 'exploring',
+          travelDateStart: data.travelDateStart,
+          travelDateEnd: data.travelDateEnd,
+          travelWindowEarliest: data.travelWindowEarliest,
+          travelWindowLatest: data.travelWindowLatest,
+          partyType: data.partyType || 'other',
+          totalTravelers: data.totalTravelers || 1,
+          childrenCount: data.childrenCount || 0,
+          interests: data.interests,
+          budgetRange: data.budgetRange || 'unsure',
+          howHeard: data.howHeard || 'other',
+          message: data.message,
+          marketingConsent: data.marketingConsent || false,
+          pageUrl: data.pageUrl || data.landingPage,
+          gclid: data.gclid,
+          createdAt: new Date().toISOString(),
+        })
+        const note = await createNote(noteBody, contactId, deal.id)
+        if (note) {
+          console.log(`HubSpot: Created Note ${note.id} attached to contact and deal`)
+        }
+      } catch (noteError) {
+        console.error('HubSpot Note creation failed (non-blocking):', noteError)
+      }
+    }
 
     return {
       contactId,

@@ -53,8 +53,8 @@ export const Inquiries: CollectionConfig = {
         {
           name: 'phoneCountryCode',
           type: 'text',
-          required: true,
-          admin: { width: '30%' },
+          required: false,
+          admin: { width: '30%', description: 'Deprecated - phone now includes country code' },
         },
       ],
     },
@@ -166,20 +166,25 @@ export const Inquiries: CollectionConfig = {
       ],
     },
 
-    // Interest
+    // Interests (multi-select)
     {
-      name: 'primaryInterest',
+      name: 'interests',
       type: 'select',
+      hasMany: true,
       required: true,
       options: [
-        { label: 'Great Migration', value: 'migration' },
-        { label: 'Mountain Gorillas', value: 'gorillas' },
-        { label: 'Luxury Camp Experience', value: 'luxury_camp' },
-        { label: 'Big Cats', value: 'big_cats' },
-        { label: 'Walking Safari', value: 'walking' },
-        { label: 'Special Celebration', value: 'celebration' },
-        { label: 'Ultimate Safari', value: 'ultimate' },
-        { label: 'Other', value: 'other' },
+        { label: 'The Great Migration', value: 'migration' },
+        { label: 'Gorilla & primate trekking', value: 'gorillas' },
+        { label: 'Big cats & wildlife', value: 'big_cats' },
+        { label: 'Beach & island escape', value: 'beach' },
+        { label: 'Cultural immersion', value: 'culture' },
+        { label: 'Walking & hiking safaris', value: 'walking' },
+        { label: 'Wine & culinary experiences', value: 'wine_culinary' },
+        { label: 'Luxury lodges & camps', value: 'luxury_camp' },
+        { label: 'Honeymoon or celebration', value: 'celebration' },
+        { label: 'Photography safari', value: 'photography' },
+        { label: 'Horse riding safari', value: 'horse_riding' },
+        { label: 'Something else', value: 'other' },
       ],
     },
 
@@ -189,13 +194,14 @@ export const Inquiries: CollectionConfig = {
       type: 'select',
       required: true,
       options: [
+        { label: '$10,000 - $15,000', value: '10k-15k' },
         { label: '$15,000 - $25,000', value: '15k-25k' },
         { label: '$25,000 - $40,000', value: '25k-40k' },
         { label: '$40,000 - $60,000', value: '40k-60k' },
         { label: '$60,000 - $80,000', value: '60k-80k' },
         { label: '$80,000 - $100,000', value: '80k-100k' },
         { label: '$100,000+', value: '100k+' },
-        { label: 'Help me understand', value: 'unsure' },
+        { label: 'Not sure yet', value: 'unsure' },
       ],
     },
     {
@@ -240,6 +246,11 @@ export const Inquiries: CollectionConfig = {
     },
     {
       name: 'marketingConsent',
+      type: 'checkbox',
+      defaultValue: false,
+    },
+    {
+      name: 'contactConsent',
       type: 'checkbox',
       defaultValue: false,
     },

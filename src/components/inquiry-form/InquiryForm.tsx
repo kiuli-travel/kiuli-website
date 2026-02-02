@@ -19,7 +19,7 @@ interface FormState {
   party_type: string | null
   total_travelers: number | null
   children_count: number | null
-  primary_interest: string | null
+  interests: string[]
   budget_range: string | null
   stated_budget_cents: number | null
   projected_profit_cents: number | null
@@ -48,6 +48,7 @@ type FormAction =
   | { type: "SET_PARTY_TYPE"; payload: string }
   | { type: "SET_TOTAL_TRAVELERS"; payload: number }
   | { type: "SET_CHILDREN_COUNT"; payload: number }
+  | { type: "SET_INTERESTS"; payload: string[] }
   | { type: "SET_PRIMARY_INTEREST"; payload: string }
   | { type: "SET_BUDGET"; payload: { range: string; budget: number; profit: number } }
   | { type: "SET_FIELD"; payload: { field: string; value: string | boolean } }
@@ -132,25 +133,30 @@ const CHILDREN_OPTIONS = [
   { label: "10+", value: 11 },
 ]
 
-const PRIORITY_OPTIONS = [
-  { label: "Witnessing the Great Migration", value: "migration" },
-  { label: "Coming face to face with mountain gorillas", value: "gorillas" },
-  { label: "Waking up surrounded by wildlife at a luxury camp", value: "luxury_camp" },
-  { label: "Tracking big cats with an expert guide", value: "big_cats" },
-  { label: "Experiencing Africa's wilderness on foot", value: "walking" },
-  { label: "Celebrating a special occasion in extraordinary style", value: "celebration" },
-  { label: "I want it all — design me the ultimate safari", value: "ultimate" },
-  { label: "Something else entirely", value: "other" },
+const EXPERIENCES_OPTIONS = [
+  { label: "The Great Migration", value: "migration", description: "Witness millions of wildebeest crossing the Serengeti" },
+  { label: "Gorilla & primate trekking", value: "gorillas", description: "Track mountain gorillas in Rwanda or Uganda" },
+  { label: "Big cats & wildlife", value: "big_cats", description: "Expert-guided game drives focused on predators" },
+  { label: "Beach & island escape", value: "beach", description: "Zanzibar, Mozambique, Seychelles or coastal retreats" },
+  { label: "Cultural immersion", value: "culture", description: "Meet local communities, visit villages, learn traditions" },
+  { label: "Walking & hiking safaris", value: "walking", description: "Explore the bush on foot with armed rangers" },
+  { label: "Wine & culinary experiences", value: "wine_culinary", description: "South African wine regions and fine dining" },
+  { label: "Luxury lodges & camps", value: "luxury_camp", description: "Focus on the world's finest safari accommodations" },
+  { label: "Honeymoon or celebration", value: "celebration", description: "Anniversary, birthday, milestone or romantic getaway" },
+  { label: "Photography safari", value: "photography", description: "Specialist vehicles and guides for serious photographers" },
+  { label: "Horse riding safari", value: "horse_riding", description: "Ride alongside wildlife in Botswana, Kenya or South Africa" },
+  { label: "Something else", value: "other", description: "We'll discuss your unique interests" },
 ]
 
 const BUDGET_OPTIONS = [
+  { label: "$10,000 – $15,000 per person", value: "10k-15k", budget: 1250000, profit: 250000 },
   { label: "$15,000 – $25,000 per person", value: "15k-25k", budget: 2000000, profit: 400000 },
   { label: "$25,000 – $40,000 per person", value: "25k-40k", budget: 3250000, profit: 650000 },
   { label: "$40,000 – $60,000 per person", value: "40k-60k", budget: 5000000, profit: 1000000 },
   { label: "$60,000 – $80,000 per person", value: "60k-80k", budget: 7000000, profit: 1400000 },
   { label: "$80,000 – $100,000 per person", value: "80k-100k", budget: 9000000, profit: 1800000 },
   { label: "$100,000+ per person", value: "100k+", budget: 12500000, profit: 2500000 },
-  { label: "Help me understand what's possible", value: "unsure", budget: 5000000, profit: 1000000 },
+  { label: "I'm not sure yet", value: "unsure", budget: 5000000, profit: 1000000 },
 ]
 
 const HOW_HEARD_OPTIONS = [
@@ -202,7 +208,7 @@ const initialState: FormState = {
   party_type: null,
   total_travelers: null,
   children_count: null,
-  primary_interest: null,
+  interests: [],
   budget_range: null,
   stated_budget_cents: null,
   projected_profit_cents: null,
@@ -262,8 +268,8 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return { ...state, total_travelers: action.payload }
     case "SET_CHILDREN_COUNT":
       return { ...state, children_count: action.payload }
-    case "SET_PRIMARY_INTEREST":
-      return { ...state, primary_interest: action.payload }
+    case "SET_INTERESTS":
+      return { ...state, interests: action.payload }
     case "SET_BUDGET":
       return {
         ...state,
@@ -329,6 +335,34 @@ function getFirstDayOfMonth(year: number, month: number): number {
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+// Format phone number to E.164 format
+function formatPhoneE164(phone: string, countryCode: string): string {
+  // Get the dial code for the country
+  const country = COUNTRIES.find((c) => c.code === countryCode)
+  const dialCode = country?.dial || "+1"
+  
+  // Remove all non-digit characters from phone
+  let digits = phone.replace(/\D/g, "")
+  
+  // If phone starts with 0 (common in UK, etc.), strip the leading zero
+  if (digits.startsWith("0")) {
+    digits = digits.substring(1)
+  }
+  
+  // Return E.164 format: dialCode + digits
+  return dialCode + digits
+}
+
+// Validate E.164 phone number format
+function isValidE164Phone(phone: string): boolean {
+  // Must start with +, followed by 7-15 digits (total 8-16 chars including +)
+  if (!phone.startsWith("+")) return false
+  const digitsAfterPlus = phone.substring(1)
+  if (!/^\d+$/.test(digitsAfterPlus)) return false
+  if (phone.length < 8 || phone.length > 16) return false
+  return true
 }
 
 // ============================================================================
@@ -1959,36 +1993,64 @@ function TravelersSlide({
   )
 }
 
-// Slide 4: Priority
-function PrioritySlide({
-  priority,
+// Slide 4: Experiences (multi-select)
+function ExperiencesSlide({
+  interests,
   onChange,
 }: {
-  priority: string | null
-  onChange: (priority: string) => void
+  interests: string[]
+  onChange: (interests: string[]) => void
 }) {
+  const toggleInterest = (value: string) => {
+    if (interests.includes(value)) {
+      onChange(interests.filter((i) => i !== value))
+    } else {
+      onChange([...interests, value])
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 text-center">
-        <Headline>What would make this trip unforgettable?</Headline>
-        <Subtext>Choose the ONE experience that matters most to you</Subtext>
+        <Headline>What experiences interest you?</Headline>
+        <Subtext>{"Select all that appeal — we'll design around your passions"}</Subtext>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2" style={{ alignItems: "stretch" }}>
-        {PRIORITY_OPTIONS.map((option) => (
-          <SelectableCard key={option.value} selected={priority === option.value} onSelect={() => onChange(option.value)} className="h-full">
-            <div className="flex items-center gap-3">
-              <RadioIndicator checked={priority === option.value} />
-              <span
-                style={{
-                  fontFamily: "'Satoshi', system-ui, sans-serif",
-                  fontWeight: 400,
-                  fontSize: "16px",
-                  color: COLORS.charcoal,
-                }}
-              >
-                {option.label}
-              </span>
+        {EXPERIENCES_OPTIONS.map((option) => (
+          <SelectableCard
+            key={option.value}
+            selected={interests.includes(option.value)}
+            onSelect={() => toggleInterest(option.value)}
+            type="checkbox"
+            className="h-full"
+          >
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5">
+                <CheckboxIndicator checked={interests.includes(option.value)} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span
+                  style={{
+                    fontFamily: "'Satoshi', system-ui, sans-serif",
+                    fontWeight: 400,
+                    fontSize: "16px",
+                    color: COLORS.charcoal,
+                  }}
+                >
+                  {option.label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'Satoshi', system-ui, sans-serif",
+                    fontWeight: 400,
+                    fontSize: "14px",
+                    color: COLORS.descriptionGray,
+                  }}
+                >
+                  {option.description}
+                </span>
+              </div>
             </div>
           </SelectableCard>
         ))}
@@ -2010,7 +2072,7 @@ function BudgetSlide({
       <div className="flex flex-col gap-4 text-center">
         <Headline>What investment level feels right?</Headline>
         <Subtext>
-          Luxury African safaris typically range from $15,000 to $100,000+ per person. This helps us tailor
+          Luxury African safaris typically range from $10,000 to $100,000+ per person. This helps us tailor
           recommendations to your expectations.
         </Subtext>
       </div>
@@ -2247,16 +2309,16 @@ export default function InquiryForm() {
             error = "Please enter a valid email address"
           }
           break
-        case "phone":
-          if (!state.phone) {
-            error = "Phone number is required"
-          } else {
-            const digits = state.phone.replace(/\D/g, "")
-            if (digits.length < 7 || digits.length > 15) {
-              error = "Please enter a valid phone number"
-            }
-          }
-          break
+case "phone":
+  if (!state.phone) {
+  error = "Phone number is required"
+  } else {
+  const e164Phone = formatPhoneE164(state.phone, state.phone_country_code)
+  if (!isValidE164Phone(e164Phone)) {
+  error = "Please enter a valid phone number"
+  }
+  }
+  break
         case "how_heard":
           if (!state.how_heard) {
             error = "Please select how you heard about us"
@@ -2304,7 +2366,7 @@ export default function InquiryForm() {
         }
         return true
       case 3:
-        return !!state.primary_interest
+        return state.interests.length > 0
       case 4:
         return !!state.budget_range
       case 5:
@@ -2346,6 +2408,8 @@ export default function InquiryForm() {
           utm_term: new URLSearchParams(window.location.search).get('utm_term') || undefined,
         } : {}
 
+        // Construct submission payload with E.164 phone format
+        const e164Phone = formatPhoneE164(state.phone, state.phone_country_code)
         const payload = {
           destinations: state.destinations,
           timing_type: state.timing_type,
@@ -2356,20 +2420,20 @@ export default function InquiryForm() {
           party_type: state.party_type,
           total_travelers: state.total_travelers,
           children_count: state.children_count,
-          primary_interest: state.primary_interest,
+          interests: state.interests,
           budget_range: state.budget_range,
           stated_budget_cents: state.stated_budget_cents,
           projected_profit_cents: state.projected_profit_cents,
           first_name: state.first_name,
           last_name: state.last_name,
           email: state.email,
-          phone: state.phone,
-          phone_country_code: state.phone_country_code,
+          phone: e164Phone,
           how_heard: state.how_heard,
           message: state.message || undefined,
+          contact_consent: state.contact_consent,
           marketing_consent: state.marketing_consent,
           form_started_at: new Date().toISOString(),
-          inquiry_type: 'form' as const,
+          inquiry_type: 'form',
           ...attribution,
         }
 
@@ -2379,9 +2443,7 @@ export default function InquiryForm() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           })
-
           const data = await res.json()
-
           if (res.ok && data.success) {
             dispatch({ type: "SET_SUBMITTING", payload: false })
             dispatch({ type: "SET_COMPLETE" })
@@ -2447,9 +2509,9 @@ export default function InquiryForm() {
         )
       case 3:
         return (
-          <PrioritySlide
-            priority={state.primary_interest}
-            onChange={(p) => dispatch({ type: "SET_PRIMARY_INTEREST", payload: p })}
+          <ExperiencesSlide
+            interests={state.interests}
+            onChange={(i) => dispatch({ type: "SET_INTERESTS", payload: i })}
           />
         )
       case 4:

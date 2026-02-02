@@ -2273,7 +2273,10 @@ export interface Inquiry {
   lastName: string;
   email: string;
   phone: string;
-  phoneCountryCode: string;
+  /**
+   * Deprecated - phone now includes country code
+   */
+  phoneCountryCode?: string | null;
   destinations: {
     code: string;
     id?: string | null;
@@ -2292,16 +2295,21 @@ export interface Inquiry {
   partyType: 'solo' | 'couple' | 'family' | 'multigenerational' | 'friends' | 'multiple_families' | 'other';
   totalTravelers: number;
   childrenCount: number;
-  primaryInterest:
+  interests: (
     | 'migration'
     | 'gorillas'
-    | 'luxury_camp'
     | 'big_cats'
+    | 'beach'
+    | 'culture'
     | 'walking'
+    | 'wine_culinary'
+    | 'luxury_camp'
     | 'celebration'
-    | 'ultimate'
-    | 'other';
-  budgetRange: '15k-25k' | '25k-40k' | '40k-60k' | '60k-80k' | '80k-100k' | '100k+' | 'unsure';
+    | 'photography'
+    | 'horse_riding'
+    | 'other'
+  )[];
+  budgetRange: '10k-15k' | '15k-25k' | '25k-40k' | '40k-60k' | '60k-80k' | '80k-100k' | '100k+' | 'unsure';
   /**
    * Budget midpoint in cents
    */
@@ -2313,6 +2321,7 @@ export interface Inquiry {
   howHeard: 'google' | 'ai' | 'referral' | 'advisor' | 'press' | 'social' | 'podcast' | 'returning' | 'other';
   message?: string | null;
   marketingConsent?: boolean | null;
+  contactConsent?: boolean | null;
   sessionId?: string | null;
   /**
    * Google Click ID
@@ -3361,13 +3370,14 @@ export interface InquiriesSelect<T extends boolean = true> {
   partyType?: T;
   totalTravelers?: T;
   childrenCount?: T;
-  primaryInterest?: T;
+  interests?: T;
   budgetRange?: T;
   statedBudgetCents?: T;
   projectedProfitCents?: T;
   howHeard?: T;
   message?: T;
   marketingConsent?: T;
+  contactConsent?: T;
   sessionId?: T;
   gclid?: T;
   utmSource?: T;

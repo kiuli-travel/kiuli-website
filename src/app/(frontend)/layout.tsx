@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import React from 'react'
+import Script from 'next/script'
 import { Playfair_Display } from 'next/font/google'
 
 import './globals.css'
@@ -84,6 +85,25 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
 
           <Footer />
         </Providers>
+
+        {/* GA4 + Google Ads gtag.js */}
+        {process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}', { send_page_view: true });
+                gtag('config', 'AW-17918105806');
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   )

@@ -2,6 +2,14 @@
 
 import * as React from "react"
 import { useReducer, useRef, useEffect, useState, useCallback } from "react"
+import {
+  trackFormStart,
+  trackStepView,
+  trackStepComplete,
+  trackFormAbandon,
+  trackEngagedVisitor,
+  trackInquirySubmitted,
+} from '@/lib/analytics'
 
 // ============================================================================
 // TYPES
@@ -2274,6 +2282,10 @@ export default function InquiryForm() {
   // Submission error for user-visible display
   const [submitError, setSubmitError] = useState("")
 
+  // Analytics tracking refs (fire-once guards)
+  const hasStarted = useRef(false)
+  const engagedFired = useRef(false)
+
   // Focus management on slide change
   useEffect(() => {
     if (slideRef.current) {
@@ -2286,6 +2298,32 @@ export default function InquiryForm() {
     }
     setSlideKey((k) => k + 1)
   }, [state.currentSlide])
+
+  // Analytics: form_start, form_step_view, engaged_visitor
+  useEffect(() => {
+    if (!hasStarted.current) {
+      trackFormStart()
+      hasStarted.current = true
+    }
+    trackStepView(state.currentSlide)
+
+    // Fire engaged_visitor conversion once when user reaches slide 3 (experiences)
+    if (state.currentSlide >= 3 && !engagedFired.current) {
+      trackEngagedVisitor()
+      engagedFired.current = true
+    }
+  }, [state.currentSlide])
+
+  // Analytics: form_abandon on page hide
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && !state.isComplete && state.currentSlide < 6) {
+        trackFormAbandon(state.currentSlide)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [state.currentSlide, state.isComplete])
 
   // Validation functions
   const validateField = useCallback(
@@ -2386,6 +2424,19 @@ case "phone":
   }, [state])
 
   const handleNext = useCallback(async () => {
+    // Analytics: track step completion (non-submission slides)
+    if (state.currentSlide < 5) {
+      let sel: Record<string, string> = {}
+      switch (state.currentSlide) {
+        case 0: sel = { destinations: state.destinations.join(',') }; break
+        case 1: sel = { timing_type: state.timing_type || '' }; break
+        case 2: sel = { party_type: state.party_type || '', total_travelers: String(state.total_travelers || '') }; break
+        case 3: sel = { interests: state.interests.join(',') }; break
+        case 4: sel = { budget_range: state.budget_range || '' }; break
+      }
+      trackStepComplete(state.currentSlide, sel)
+    }
+
     if (state.currentSlide === 5) {
       // Validate all fields on submit
       const fields = ["first_name", "last_name", "email", "phone", "how_heard", "contact_consent"]
@@ -2452,6 +2503,10 @@ case "phone":
             dispatch({ type: "SET_SUBMITTING", payload: false })
             dispatch({ type: "SET_COMPLETE" })
             setAnnouncement("Your inquiry has been submitted successfully.")
+            trackInquirySubmitted(
+              state.projected_profit_cents ? Math.round(state.projected_profit_cents / 100) : 0,
+              state.email
+            )
           } else {
             dispatch({ type: "SET_SUBMITTING", payload: false })
             const errorMsg = data.message || "Please check your information and try again."

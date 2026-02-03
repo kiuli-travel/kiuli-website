@@ -25,6 +25,7 @@ import * as migration_20260121_seed_why_kiuli_voice from './20260121_seed_why_ki
 import * as migration_20260128_add_video_scraping_tracking from './20260128_add_video_scraping_tracking';
 import * as migration_20260202_add_contact_consent from './20260202_add_contact_consent';
 import * as migration_20260202_make_phone_country_code_nullable from './20260202_make_phone_country_code_nullable';
+import * as migration_20260202_make_primary_interest_nullable from './20260202_make_primary_interest_nullable';
 
 export const migrations = [
   {
@@ -161,5 +162,10 @@ export const migrations = [
     up: migration_20260202_make_phone_country_code_nullable.up,
     down: migration_20260202_make_phone_country_code_nullable.down,
     name: '20260202_make_phone_country_code_nullable'
+  },
+  {
+    up: migration_20260202_make_primary_interest_nullable.up,
+    down: migration_20260202_make_primary_interest_nullable.down,
+    name: '20260202_make_primary_interest_nullable'
   },
 ];

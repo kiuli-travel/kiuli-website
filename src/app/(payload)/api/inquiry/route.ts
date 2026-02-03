@@ -203,6 +203,7 @@ function transformToPayload(body: any): any {
     howHeard: body.how_heard,
     message: body.message || null,
     marketingConsent: body.marketing_consent === true,
+    contactConsent: body.contact_consent === true,
 
     // Attribution
     sessionId: body.session_id || null,

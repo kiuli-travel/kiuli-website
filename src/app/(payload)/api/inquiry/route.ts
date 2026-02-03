@@ -297,6 +297,7 @@ export async function POST(request: NextRequest) {
         howHeard: payloadData.howHeard,
         message: payloadData.message,
         marketingConsent: payloadData.marketingConsent,
+        contactConsent: payloadData.contactConsent,
         pageUrl: payloadData.pageUrl,
       })
 

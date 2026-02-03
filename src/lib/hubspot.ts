@@ -151,6 +151,7 @@ function buildInquiryNote(data: {
   howHeard: string
   message?: string | null
   marketingConsent: boolean
+  contactConsent: boolean
   pageUrl?: string | null
   gclid?: string | null
   createdAt: string
@@ -211,11 +212,13 @@ function buildInquiryNote(data: {
   html += `<tr><td><strong>How heard:</strong></td><td>${HOW_HEARD_LABELS[data.howHeard] || data.howHeard}</td></tr>`
   html += `</table>`
   if (data.message) html += `<br/><strong>Message:</strong><br/>${data.message}`
+  html += `<br/><br/><strong>Consent</strong><br/>`
+  html += `Contact consent: ${data.contactConsent ? 'Yes' : 'No'}<br/>`
+  html += `Marketing consent: ${data.marketingConsent ? 'Yes' : 'No'}`
   if (data.gclid || data.pageUrl) {
     html += `<br/><br/><small><strong>Attribution</strong><br/>`
     if (data.pageUrl) html += `Page: ${data.pageUrl}<br/>`
-    if (data.gclid) html += `GCLID: ${data.gclid}<br/>`
-    html += `Marketing consent: ${data.marketingConsent ? 'Yes' : 'No'}</small>`
+    if (data.gclid) html += `GCLID: ${data.gclid}</small>`
   }
   return html
 }
@@ -283,6 +286,7 @@ export interface InquiryData {
   howHeard?: string
   message?: string | null
   marketingConsent?: boolean
+  contactConsent?: boolean
   pageUrl?: string | null
 }
 
@@ -375,6 +379,7 @@ export async function createOrUpdateContactAndDeal(
           howHeard: data.howHeard || 'other',
           message: data.message,
           marketingConsent: data.marketingConsent || false,
+          contactConsent: data.contactConsent || false,
           pageUrl: data.pageUrl || data.landingPage,
           gclid: data.gclid,
           createdAt: new Date().toISOString(),

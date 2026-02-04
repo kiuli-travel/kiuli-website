@@ -2364,6 +2364,7 @@ case "phone":
 
       if (error) {
         dispatch({ type: "SET_ERROR", payload: { field, error } })
+        trackFormError('validation', error, state.currentSlide)
       } else {
         dispatch({ type: "CLEAR_ERROR", payload: field })
       }
@@ -2535,7 +2536,6 @@ case "phone":
         }
       } else {
         setAnnouncement("Please correct the errors before submitting.")
-        trackFormError('validation', 'Required fields missing on contact slide', state.currentSlide)
       }
     } else {
       dispatch({ type: "NEXT_SLIDE" })

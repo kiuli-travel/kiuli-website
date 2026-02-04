@@ -23,7 +23,7 @@ async function initSession(): Promise<void> {
 
   if (!existingSessionId) {
     // First visit: create session
-    await fetch('/api/sessions', {
+    await fetch('/api/session-init', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
@@ -45,7 +45,7 @@ async function initSession(): Promise<void> {
 
   // Existing session: only update if new click IDs found
   if (gclid || gbraid || wbraid) {
-    await fetch('/api/sessions', {
+    await fetch('/api/session-init', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',

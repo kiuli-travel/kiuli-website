@@ -13,6 +13,7 @@ import {
   trackGenerateLead,
   trackInquiryConversion,
 } from '@/lib/analytics'
+import { getSessionCookie } from '@/components/SessionProvider'
 
 // ============================================================================
 // TYPES
@@ -2455,17 +2456,27 @@ case "phone":
         dispatch({ type: "SET_SUBMITTING", payload: true })
         setAnnouncement("Submitting your inquiry...")
 
-        // Collect attribution from browser
-        const attribution = typeof window !== 'undefined' ? {
-          page_url: window.location.href,
-          referrer: document.referrer || undefined,
-          gclid: new URLSearchParams(window.location.search).get('gclid') || undefined,
-          utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
-          utm_medium: new URLSearchParams(window.location.search).get('utm_medium') || undefined,
-          utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
-          utm_content: new URLSearchParams(window.location.search).get('utm_content') || undefined,
-          utm_term: new URLSearchParams(window.location.search).get('utm_term') || undefined,
-        } : {}
+        // Collect attribution from session cookie (preferred) or URL fallback
+        const sessionCookieId = getSessionCookie()
+        let attribution: Record<string, string | undefined> = {
+          session_id: sessionCookieId || undefined,
+          page_url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }
+        // Fallback: if no session, capture from current URL
+        if (!sessionCookieId && typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search)
+          attribution = {
+            ...attribution,
+            gclid: params.get('gclid') || undefined,
+            utm_source: params.get('utm_source') || undefined,
+            utm_medium: params.get('utm_medium') || undefined,
+            utm_campaign: params.get('utm_campaign') || undefined,
+            utm_content: params.get('utm_content') || undefined,
+            utm_term: params.get('utm_term') || undefined,
+            referrer: document.referrer || undefined,
+            landing_page: window.location.pathname,
+          }
+        }
 
         // Construct submission payload with E.164 phone format
         const e164Phone = formatPhoneE164(state.phone, state.phone_country_code)

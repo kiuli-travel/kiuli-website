@@ -10,6 +10,7 @@ import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 import { Providers } from '@/providers'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
+import { SessionProvider } from '@/components/SessionProvider'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -100,9 +101,11 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
 
           <Header />
 
-          <main id="main-content" className="pt-20 flex-1">
-            {children}
-          </main>
+          <SessionProvider>
+            <main id="main-content" className="pt-20 flex-1">
+              {children}
+            </main>
+          </SessionProvider>
 
           <Footer />
         </Providers>

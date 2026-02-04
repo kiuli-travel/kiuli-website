@@ -1,5 +1,7 @@
 // src/lib/hubspot.ts
 
+import { detectTrafficSource } from '@/lib/traffic-source'
+
 const HUBSPOT_API_BASE = 'https://api.hubapi.com'
 
 interface HubSpotContactProperties {
@@ -12,6 +14,9 @@ interface HubSpotContactProperties {
   kiuli_traffic_source?: string
   kiuli_landing_page?: string
   kiuli_session_id?: string
+  kiuli_utm_source?: string
+  kiuli_utm_medium?: string
+  kiuli_utm_campaign?: string
 }
 
 interface HubSpotDealProperties {
@@ -249,17 +254,6 @@ async function createNote(
   }
 }
 
-function mapTrafficSource(gclid?: string | null, utmSource?: string | null): string {
-  if (gclid) return 'google_ads'
-  if (!utmSource) return 'direct'
-
-  const source = utmSource.toLowerCase()
-  if (source === 'google') return 'organic_search'
-  if (['chatgpt', 'perplexity', 'claude', 'ai'].includes(source)) return 'ai_search'
-  if (source === 'partner') return 'partner_referral'
-  return 'direct'
-}
-
 export interface InquiryData {
   firstName: string
   lastName: string
@@ -268,8 +262,13 @@ export interface InquiryData {
   projectedProfitCents: number
   sessionId?: string | null
   gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
   utmSource?: string | null
+  utmMedium?: string | null
+  utmCampaign?: string | null
   landingPage?: string | null
+  referrer?: string | null
   inquiryType: string
   // Full form data for HubSpot Note
   destinations?: Array<{ code: string }>
@@ -318,9 +317,22 @@ export async function createOrUpdateContactAndDeal(
       if (!existingContact.properties.kiuli_gclid && data.gclid) {
         updateProps.kiuli_gclid = data.gclid
       }
-      if (!existingContact.properties.kiuli_traffic_source && (data.gclid || data.utmSource)) {
-        updateProps.kiuli_traffic_source = mapTrafficSource(data.gclid, data.utmSource)
+      if (!existingContact.properties.kiuli_traffic_source && (data.gclid || data.utmSource || data.referrer)) {
+        updateProps.kiuli_traffic_source = detectTrafficSource({
+          gclid: data.gclid,
+          gbraid: data.gbraid,
+          wbraid: data.wbraid,
+          utmSource: data.utmSource,
+          utmMedium: data.utmMedium,
+          referrer: data.referrer,
+        })
       }
+      if (data.landingPage) {
+        updateProps.kiuli_landing_page = data.landingPage
+      }
+      if (data.utmSource) updateProps.kiuli_utm_source = data.utmSource
+      if (data.utmMedium) updateProps.kiuli_utm_medium = data.utmMedium
+      if (data.utmCampaign) updateProps.kiuli_utm_campaign = data.utmCampaign
 
       await updateContact(existingContact.id, updateProps)
       contactId = existingContact.id
@@ -334,9 +346,19 @@ export async function createOrUpdateContactAndDeal(
         phone: data.phone,
         lifecyclestage: 'lead',
         kiuli_gclid: data.gclid || undefined,
-        kiuli_traffic_source: mapTrafficSource(data.gclid, data.utmSource),
+        kiuli_traffic_source: detectTrafficSource({
+          gclid: data.gclid,
+          gbraid: data.gbraid,
+          wbraid: data.wbraid,
+          utmSource: data.utmSource,
+          utmMedium: data.utmMedium,
+          referrer: data.referrer,
+        }),
         kiuli_landing_page: data.landingPage || undefined,
         kiuli_session_id: data.sessionId || undefined,
+        kiuli_utm_source: data.utmSource || undefined,
+        kiuli_utm_medium: data.utmMedium || undefined,
+        kiuli_utm_campaign: data.utmCampaign || undefined,
       })
       contactId = contact.id
       console.log(`HubSpot: Created new contact ${contactId}`)

@@ -80,6 +80,7 @@ export interface Config {
     destinations: Destination;
     'trip-types': TripType;
     inquiries: Inquiry;
+    sessions: Session;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -110,6 +111,7 @@ export interface Config {
     destinations: DestinationsSelect<false> | DestinationsSelect<true>;
     'trip-types': TripTypesSelect<false> | TripTypesSelect<true>;
     inquiries: InquiriesSelect<false> | InquiriesSelect<true>;
+    sessions: SessionsSelect<false> | SessionsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -2327,6 +2329,14 @@ export interface Inquiry {
    * Google Click ID
    */
   gclid?: string | null;
+  /**
+   * Google Ads iOS attribution
+   */
+  gbraid?: string | null;
+  /**
+   * Google Ads iOS attribution
+   */
+  wbraid?: string | null;
   utmSource?: string | null;
   utmMedium?: string | null;
   utmCampaign?: string | null;
@@ -2339,6 +2349,10 @@ export interface Inquiry {
    * If submitted from an itinerary page
    */
   itinerarySlug?: string | null;
+  /**
+   * Browser user agent string
+   */
+  userAgent?: string | null;
   hubspotContactId?: string | null;
   hubspotDealId?: string | null;
   inquiryType: 'form' | 'phone' | 'email' | 'chat';
@@ -2346,6 +2360,61 @@ export interface Inquiry {
   assignedDesigner?: string | null;
   formStartedAt?: string | null;
   timeToCompleteSeconds?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessions".
+ */
+export interface Session {
+  id: number;
+  /**
+   * UUID v4, generated server-side
+   */
+  sessionId: string;
+  /**
+   * Output of detectTrafficSource()
+   */
+  trafficSource: string;
+  /**
+   * Google Click ID
+   */
+  gclid?: string | null;
+  /**
+   * Google Ads iOS attribution
+   */
+  gbraid?: string | null;
+  /**
+   * Google Ads iOS attribution
+   */
+  wbraid?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
+  /**
+   * Full referrer URL
+   */
+  referrer?: string | null;
+  /**
+   * Path only (no domain, no query string)
+   */
+  landingPage: string;
+  /**
+   * From request User-Agent header
+   */
+  userAgent?: string | null;
+  /**
+   * From x-forwarded-for header
+   */
+  ipAddress?: string | null;
+  /**
+   * createdAt + 90 days
+   */
+  expiresAt: string;
+  status: 'active' | 'expired';
   updatedAt: string;
   createdAt: string;
 }
@@ -2590,6 +2659,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'inquiries';
         value: number | Inquiry;
+      } | null)
+    | ({
+        relationTo: 'sessions';
+        value: number | Session;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -3380,6 +3453,8 @@ export interface InquiriesSelect<T extends boolean = true> {
   contactConsent?: T;
   sessionId?: T;
   gclid?: T;
+  gbraid?: T;
+  wbraid?: T;
   utmSource?: T;
   utmMedium?: T;
   utmCampaign?: T;
@@ -3389,6 +3464,7 @@ export interface InquiriesSelect<T extends boolean = true> {
   landingPage?: T;
   pageUrl?: T;
   itinerarySlug?: T;
+  userAgent?: T;
   hubspotContactId?: T;
   hubspotDealId?: T;
   inquiryType?: T;
@@ -3396,6 +3472,30 @@ export interface InquiriesSelect<T extends boolean = true> {
   assignedDesigner?: T;
   formStartedAt?: T;
   timeToCompleteSeconds?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessions_select".
+ */
+export interface SessionsSelect<T extends boolean = true> {
+  sessionId?: T;
+  trafficSource?: T;
+  gclid?: T;
+  gbraid?: T;
+  wbraid?: T;
+  utmSource?: T;
+  utmMedium?: T;
+  utmCampaign?: T;
+  utmContent?: T;
+  utmTerm?: T;
+  referrer?: T;
+  landingPage?: T;
+  userAgent?: T;
+  ipAddress?: T;
+  expiresAt?: T;
+  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }

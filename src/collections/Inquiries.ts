@@ -271,6 +271,16 @@ export const Inquiries: CollectionConfig = {
           admin: { description: 'Google Click ID' },
         },
         {
+          name: 'gbraid',
+          type: 'text',
+          admin: { description: 'Google Ads iOS attribution' },
+        },
+        {
+          name: 'wbraid',
+          type: 'text',
+          admin: { description: 'Google Ads iOS attribution' },
+        },
+        {
           type: 'row',
           fields: [
             { name: 'utmSource', type: 'text', admin: { width: '33%' } },
@@ -301,6 +311,11 @@ export const Inquiries: CollectionConfig = {
           name: 'itinerarySlug',
           type: 'text',
           admin: { description: 'If submitted from an itinerary page' },
+        },
+        {
+          name: 'userAgent',
+          type: 'textarea',
+          admin: { description: 'Browser user agent string' },
         },
       ],
     },

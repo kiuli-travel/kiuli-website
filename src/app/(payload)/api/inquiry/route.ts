@@ -208,6 +208,9 @@ function transformToPayload(body: any): any {
     // Attribution
     sessionId: body.session_id || null,
     gclid: body.gclid || null,
+    gbraid: body.gbraid || null,
+    wbraid: body.wbraid || null,
+    userAgent: null, // populated from session lookup
     utmSource: body.utm_source || null,
     utmMedium: body.utm_medium || null,
     utmCampaign: body.utm_campaign || null,
@@ -261,6 +264,43 @@ export async function POST(request: NextRequest) {
 
     // Create via Payload
     const payload = await getPayload({ config })
+
+    // Session lookup — populate attribution from server-side session
+    if (payloadData.sessionId) {
+      try {
+        const sessionResult = await payload.find({
+          collection: 'sessions',
+          where: { sessionId: { equals: payloadData.sessionId } },
+          limit: 1,
+        })
+        if (sessionResult.docs.length > 0) {
+          const session = sessionResult.docs[0] as any
+          // Session data is authoritative — overrides client data
+          payloadData.gclid = session.gclid || payloadData.gclid
+          payloadData.gbraid = session.gbraid || payloadData.gbraid
+          payloadData.wbraid = session.wbraid || payloadData.wbraid
+          payloadData.utmSource = session.utmSource || payloadData.utmSource
+          payloadData.utmMedium = session.utmMedium || payloadData.utmMedium
+          payloadData.utmCampaign = session.utmCampaign || payloadData.utmCampaign
+          payloadData.utmContent = session.utmContent || payloadData.utmContent
+          payloadData.utmTerm = session.utmTerm || payloadData.utmTerm
+          payloadData.referrer = session.referrer || payloadData.referrer
+          payloadData.landingPage = session.landingPage || payloadData.landingPage
+          payloadData.userAgent = session.userAgent || null
+        }
+      } catch (sessionError) {
+        console.warn('Session lookup failed, proceeding with client data:', sessionError)
+      }
+    }
+
+    // Calculate timeToCompleteSeconds from form_started_at
+    if (payloadData.formStartedAt) {
+      const startTime = new Date(payloadData.formStartedAt).getTime()
+      if (!isNaN(startTime)) {
+        payloadData.timeToCompleteSeconds = Math.round((Date.now() - startTime) / 1000)
+      }
+    }
+
     const inquiry = await payload.create({
       collection: 'inquiries',
       data: payloadData,
@@ -279,8 +319,13 @@ export async function POST(request: NextRequest) {
         projectedProfitCents: payloadData.projectedProfitCents,
         sessionId: payloadData.sessionId,
         gclid: payloadData.gclid,
+        gbraid: payloadData.gbraid,
+        wbraid: payloadData.wbraid,
         utmSource: payloadData.utmSource,
+        utmMedium: payloadData.utmMedium,
+        utmCampaign: payloadData.utmCampaign,
         landingPage: payloadData.landingPage,
+        referrer: payloadData.referrer,
         inquiryType: payloadData.inquiryType,
         // Full form data for HubSpot Note
         destinations: payloadData.destinations,

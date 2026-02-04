@@ -3,12 +3,15 @@
 import * as React from "react"
 import { useReducer, useRef, useEffect, useState, useCallback } from "react"
 import {
-  trackFormStart,
-  trackStepView,
-  trackStepComplete,
-  trackFormAbandon,
+  trackFormViewed,
+  trackSlideViewed,
+  trackSlideCompleted,
+  trackFormAbandoned,
+  trackFormError,
   trackEngagedVisitor,
-  trackInquirySubmitted,
+  trackFormSubmitted,
+  trackGenerateLead,
+  trackInquiryConversion,
 } from '@/lib/analytics'
 
 // ============================================================================
@@ -2282,10 +2285,6 @@ export default function InquiryForm() {
   // Submission error for user-visible display
   const [submitError, setSubmitError] = useState("")
 
-  // Analytics tracking refs (fire-once guards)
-  const hasStarted = useRef(false)
-  const engagedFired = useRef(false)
-
   // Focus management on slide change
   useEffect(() => {
     if (slideRef.current) {
@@ -2299,26 +2298,17 @@ export default function InquiryForm() {
     setSlideKey((k) => k + 1)
   }, [state.currentSlide])
 
-  // Analytics: form_start, form_step_view, engaged_visitor
+  // Analytics: form_viewed (once) + slide_viewed (every slide change)
   useEffect(() => {
-    if (!hasStarted.current) {
-      trackFormStart()
-      hasStarted.current = true
-    }
-    trackStepView(state.currentSlide)
-
-    // Fire engaged_visitor conversion once when user reaches slide 3 (experiences)
-    if (state.currentSlide >= 3 && !engagedFired.current) {
-      trackEngagedVisitor()
-      engagedFired.current = true
-    }
+    trackFormViewed()
+    trackSlideViewed(state.currentSlide)
   }, [state.currentSlide])
 
-  // Analytics: form_abandon on page hide
+  // Analytics: form_abandoned on page hide (fires once via module flag)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && !state.isComplete && state.currentSlide < 6) {
-        trackFormAbandon(state.currentSlide)
+      if (document.visibilityState === 'hidden' && !state.isComplete) {
+        trackFormAbandoned(state.currentSlide)
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -2424,17 +2414,31 @@ case "phone":
   }, [state])
 
   const handleNext = useCallback(async () => {
-    // Analytics: track step completion (non-submission slides)
+    // Analytics: slide_completed with full selections (slides 0-4 internal = 1-5 spec)
     if (state.currentSlide < 5) {
-      let sel: Record<string, string> = {}
+      let selectionsObj: Record<string, unknown> = {}
       switch (state.currentSlide) {
-        case 0: sel = { destinations: state.destinations.join(',') }; break
-        case 1: sel = { timing_type: state.timing_type || '' }; break
-        case 2: sel = { party_type: state.party_type || '', total_travelers: String(state.total_travelers || '') }; break
-        case 3: sel = { interests: state.interests.join(',') }; break
-        case 4: sel = { budget_range: state.budget_range || '' }; break
+        case 0: selectionsObj = { destinations: state.destinations }; break
+        case 1:
+          selectionsObj = { timing_type: state.timing_type }
+          if (state.timing_type === 'specific') {
+            selectionsObj.date_start = state.travel_date_start
+            selectionsObj.date_end = state.travel_date_end
+          } else if (state.timing_type === 'flexible') {
+            selectionsObj.window_earliest = state.travel_window_earliest
+            selectionsObj.window_latest = state.travel_window_latest
+          }
+          break
+        case 2: selectionsObj = { party_type: state.party_type, total_travelers: state.total_travelers, children_count: state.children_count }; break
+        case 3: selectionsObj = { experiences: state.interests }; break
+        case 4: selectionsObj = { budget_range: state.budget_range }; break
       }
-      trackStepComplete(state.currentSlide, sel)
+      trackSlideCompleted(state.currentSlide, JSON.stringify(selectionsObj))
+
+      // Engaged Visitor conversion: fires when LEAVING experiences slide (internal 3 = spec 4)
+      if (state.currentSlide === 3) {
+        trackEngagedVisitor()
+      }
     }
 
     if (state.currentSlide === 5) {
@@ -2503,15 +2507,23 @@ case "phone":
             dispatch({ type: "SET_SUBMITTING", payload: false })
             dispatch({ type: "SET_COMPLETE" })
             setAnnouncement("Your inquiry has been submitted successfully.")
-            trackInquirySubmitted(
-              state.projected_profit_cents ? Math.round(state.projected_profit_cents / 100) : 0,
-              state.email
-            )
+
+            // Analytics: form_submitted + generate_lead + Inquiry Submitted conversion
+            const inquiryId = String(data.inquiry_id)
+            const profitDollars = state.projected_profit_cents
+              ? Math.round(state.projected_profit_cents / 100) : 0
+            const destinationsStr = state.destinations.join(',')
+            const budgetStr = state.budget_range || ''
+
+            trackFormSubmitted(inquiryId, destinationsStr, budgetStr, profitDollars)
+            trackGenerateLead(profitDollars, destinationsStr, budgetStr)
+            trackInquiryConversion(profitDollars, inquiryId, state.email)
           } else {
             dispatch({ type: "SET_SUBMITTING", payload: false })
             const errorMsg = data.message || "Please check your information and try again."
             setSubmitError(errorMsg)
             setAnnouncement(errorMsg)
+            trackFormError('submission', errorMsg.slice(0, 100), state.currentSlide)
           }
         } catch (err) {
           console.error('Submission failed:', err)
@@ -2519,9 +2531,11 @@ case "phone":
           const errorMsg = "Connection error. Please check your internet and try again."
           setSubmitError(errorMsg)
           setAnnouncement(errorMsg)
+          trackFormError('network', errorMsg.slice(0, 100), state.currentSlide)
         }
       } else {
         setAnnouncement("Please correct the errors before submitting.")
+        trackFormError('validation', 'Required fields missing on contact slide', state.currentSlide)
       }
     } else {
       dispatch({ type: "NEXT_SLIDE" })

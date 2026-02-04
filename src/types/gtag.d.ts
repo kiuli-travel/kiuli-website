@@ -4,7 +4,7 @@ interface GtagEventParams {
 
 interface Window {
   gtag: (
-    command: 'config' | 'event' | 'js' | 'set',
+    command: 'config' | 'event' | 'js' | 'set' | 'consent',
     targetId: string | Date,
     params?: GtagEventParams
   ) => void

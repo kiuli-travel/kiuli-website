@@ -66,6 +66,27 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        {/* GA4 + Google Ads: dataLayer, gtag function, Consent Mode v2 defaults, config */}
+        {process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('consent', 'default', {
+                  'ad_storage': 'granted',
+                  'ad_user_data': 'granted',
+                  'ad_personalization': 'granted',
+                  'analytics_storage': 'granted',
+                  'wait_for_update': 500
+                });
+                gtag('js', new Date());
+                gtag('config', '${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}', { send_page_view: true });
+                gtag('config', 'AW-17918105806');
+              `,
+            }}
+          />
+        )}
       </head>
       <body>
         <Providers>
@@ -86,23 +107,12 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
           <Footer />
         </Providers>
 
-        {/* GA4 + Google Ads gtag.js */}
+        {/* GA4 + Google Ads: async gtag.js loader */}
         {process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="gtag-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}', { send_page_view: true });
-                gtag('config', 'AW-17918105806');
-              `}
-            </Script>
-          </>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}`}
+            strategy="afterInteractive"
+          />
         )}
       </body>
     </html>

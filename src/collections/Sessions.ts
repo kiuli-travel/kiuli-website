@@ -12,7 +12,7 @@ export const Sessions: CollectionConfig = {
     listSearchableFields: ['sessionId', 'gclid'],
   },
   access: {
-    read: ({ req: { user } }) => Boolean(user),
+    read: () => true, // Public read - Payload admin handles auth display
     create: () => true, // Public - API will create sessions
     update: ({ req: { user } }) => Boolean(user),
     delete: ({ req: { user } }) => Boolean(user),

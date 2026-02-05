@@ -28,6 +28,7 @@ import * as migration_20260202_make_phone_country_code_nullable from './20260202
 import * as migration_20260202_make_primary_interest_nullable from './20260202_make_primary_interest_nullable';
 import * as migration_20260202_create_interests_select from './20260202_create_interests_select';
 import * as migration_20260204_create_sessions_and_inquiry_fields from './20260204_create_sessions_and_inquiry_fields';
+import * as migration_20260205_drop_primary_interest from './20260205_drop_primary_interest';
 
 export const migrations = [
   {
@@ -179,5 +180,10 @@ export const migrations = [
     up: migration_20260204_create_sessions_and_inquiry_fields.up,
     down: migration_20260204_create_sessions_and_inquiry_fields.down,
     name: '20260204_create_sessions_and_inquiry_fields'
+  },
+  {
+    up: migration_20260205_drop_primary_interest.up,
+    down: migration_20260205_drop_primary_interest.down,
+    name: '20260205_drop_primary_interest'
   },
 ];

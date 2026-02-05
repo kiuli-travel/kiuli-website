@@ -12,8 +12,8 @@ export const Sessions: CollectionConfig = {
     listSearchableFields: ['sessionId', 'gclid'],
   },
   access: {
-    read: () => true, // Public read - Payload admin handles auth display
-    create: () => true, // Public - API will create sessions
+    read: ({ req: { user } }) => Boolean(user),
+    create: () => true, // Public - local API bypasses access control
     update: ({ req: { user } }) => Boolean(user),
     delete: ({ req: { user } }) => Boolean(user),
   },

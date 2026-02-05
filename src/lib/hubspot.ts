@@ -428,3 +428,41 @@ export async function createOrUpdateContactAndDeal(
     }
   }
 }
+
+/**
+ * Update deal owner in HubSpot
+ */
+export async function updateDealOwner(
+  dealId: string,
+  hubspotUserId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/deals/${dealId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${process.env.HUBSPOT_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          properties: {
+            hubspot_owner_id: hubspotUserId,
+          },
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('HubSpot deal owner update failed:', error)
+      return { success: false, error }
+    }
+
+    return { success: true }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('HubSpot deal owner update error:', errorMessage)
+    return { success: false, error: errorMessage }
+  }
+}

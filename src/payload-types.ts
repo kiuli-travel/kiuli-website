@@ -81,6 +81,7 @@ export interface Config {
     'trip-types': TripType;
     inquiries: Inquiry;
     sessions: Session;
+    designers: Designer;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -112,6 +113,7 @@ export interface Config {
     'trip-types': TripTypesSelect<false> | TripTypesSelect<true>;
     inquiries: InquiriesSelect<false> | InquiriesSelect<true>;
     sessions: SessionsSelect<false> | SessionsSelect<true>;
+    designers: DesignersSelect<false> | DesignersSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -2358,6 +2360,10 @@ export interface Inquiry {
   inquiryType: 'form' | 'phone' | 'email' | 'chat';
   status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
   assignedDesigner?: string | null;
+  /**
+   * ID of designer assigned to this inquiry
+   */
+  assignedDesignerId?: string | null;
   formStartedAt?: string | null;
   timeToCompleteSeconds?: number | null;
   updatedAt: string;
@@ -2415,6 +2421,39 @@ export interface Session {
    */
   expiresAt: string;
   status: 'active' | 'expired';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "designers".
+ */
+export interface Designer {
+  id: number;
+  /**
+   * Full name (e.g., "Catherine Miller")
+   */
+  name: string;
+  /**
+   * Email address for notifications
+   */
+  email: string;
+  /**
+   * Only active designers receive new inquiries
+   */
+  active: boolean;
+  /**
+   * HubSpot user ID for deal owner assignment (optional)
+   */
+  hubspotUserId?: string | null;
+  /**
+   * Last time an inquiry was assigned to this designer
+   */
+  lastAssignedAt?: string | null;
+  /**
+   * Total number of inquiries assigned
+   */
+  totalAssigned: number;
   updatedAt: string;
   createdAt: string;
 }
@@ -2663,6 +2702,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'sessions';
         value: number | Session;
+      } | null)
+    | ({
+        relationTo: 'designers';
+        value: number | Designer;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -3470,6 +3513,7 @@ export interface InquiriesSelect<T extends boolean = true> {
   inquiryType?: T;
   status?: T;
   assignedDesigner?: T;
+  assignedDesignerId?: T;
   formStartedAt?: T;
   timeToCompleteSeconds?: T;
   updatedAt?: T;
@@ -3496,6 +3540,20 @@ export interface SessionsSelect<T extends boolean = true> {
   ipAddress?: T;
   expiresAt?: T;
   status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "designers_select".
+ */
+export interface DesignersSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  active?: T;
+  hubspotUserId?: T;
+  lastAssignedAt?: T;
+  totalAssigned?: T;
   updatedAt?: T;
   createdAt?: T;
 }

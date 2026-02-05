@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { createOrUpdateContactAndDeal } from '@/lib/hubspot'
+import { createOrUpdateContactAndDeal, updateDealOwner } from '@/lib/hubspot'
+import { assignDesigner } from '@/lib/designers'
+import { sendCustomerConfirmation, sendDesignerNotification } from '@/lib/email'
 
 // Rate limiting store (in-memory, resets on cold start)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
@@ -367,6 +369,81 @@ export async function POST(request: NextRequest) {
     } catch (hubspotError) {
       // Log but don't fail the request
       console.error('HubSpot integration failed:', hubspotError)
+    }
+
+    // Designer assignment and email notifications (non-blocking)
+    try {
+      const designer = await assignDesigner()
+
+      // Update inquiry with assigned designer
+      await payload.update({
+        collection: 'inquiries',
+        id: inquiry.id,
+        data: {
+          assignedDesignerId: designer.id,
+          assignedDesigner: designer.name,
+        },
+      })
+
+      // Update HubSpot deal owner if designer has HubSpot account
+      if (designer.hubspotUserId && hubspotDealId) {
+        await updateDealOwner(hubspotDealId, designer.hubspotUserId)
+      }
+
+      // Get destination names for email (convert codes to readable names)
+      const destinationNames = payloadData.destinations.map((d: { code: string }) => d.code)
+
+      // Send customer confirmation email
+      const confirmationResult = await sendCustomerConfirmation({
+        id: String(inquiry.id),
+        firstName: payloadData.firstName,
+        lastName: payloadData.lastName,
+        email: payloadData.email,
+        phone: payloadData.phone,
+        destinations: destinationNames,
+        timingType: payloadData.timingType,
+        travelWindowEarliest: payloadData.travelWindowEarliest || undefined,
+        travelWindowLatest: payloadData.travelWindowLatest || undefined,
+        partyType: payloadData.partyType,
+        totalTravelers: payloadData.totalTravelers,
+        interests: payloadData.interests,
+        budgetRange: payloadData.budgetRange,
+        hubspotDealId: hubspotDealId || '',
+        trafficSource: payloadData.trafficSource,
+      })
+
+      if (!confirmationResult.success) {
+        console.error('Customer confirmation failed:', confirmationResult.error)
+      }
+
+      // Send designer notification email
+      const notificationResult = await sendDesignerNotification(
+        {
+          id: String(inquiry.id),
+          firstName: payloadData.firstName,
+          lastName: payloadData.lastName,
+          email: payloadData.email,
+          phone: payloadData.phone,
+          destinations: destinationNames,
+          timingType: payloadData.timingType,
+          travelWindowEarliest: payloadData.travelWindowEarliest || undefined,
+          travelWindowLatest: payloadData.travelWindowLatest || undefined,
+          partyType: payloadData.partyType,
+          totalTravelers: payloadData.totalTravelers,
+          interests: payloadData.interests,
+          budgetRange: payloadData.budgetRange,
+          hubspotDealId: hubspotDealId || '',
+          trafficSource: payloadData.trafficSource,
+        },
+        designer
+      )
+
+      if (!notificationResult.success) {
+        console.error('Designer notification failed:', notificationResult.error)
+      }
+    } catch (designerError) {
+      console.error('Designer assignment or email failed:', designerError)
+      // Don't fail the request - inquiry is already created
     }
 
     return NextResponse.json(

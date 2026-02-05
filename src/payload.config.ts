@@ -20,6 +20,7 @@ import { Posts } from './collections/Posts'
 import { TripTypes } from './collections/TripTypes'
 import { Users } from './collections/Users'
 import { VoiceConfiguration } from './collections/VoiceConfiguration'
+import { Designers } from './collections/Designers'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { plugins } from './plugins'
@@ -78,7 +79,7 @@ export default buildConfig({
       connectionString: process.env.POSTGRES_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],
   plugins: [

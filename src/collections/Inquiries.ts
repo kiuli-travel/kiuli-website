@@ -380,6 +380,15 @@ export const Inquiries: CollectionConfig = {
           type: 'text',
           admin: { width: '34%' },
         },
+        {
+          name: 'assignedDesignerId',
+          type: 'text',
+          admin: {
+            width: '33%',
+            description: 'ID of designer assigned to this inquiry',
+            readOnly: true,
+          },
+        },
       ],
     },
 

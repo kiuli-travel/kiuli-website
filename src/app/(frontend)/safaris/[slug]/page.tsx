@@ -13,6 +13,7 @@ import { TripOverview } from '@/components/itinerary/TripOverview'
 import { JourneyNarrative } from '@/components/itinerary/JourneyNarrative'
 import { InvestmentLevel } from '@/components/itinerary/InvestmentLevel'
 import { FAQSection } from '@/components/itinerary/FAQSection'
+import { InquiryCTA } from '@/components/itinerary/InquiryCTA'
 
 // Enable Incremental Static Regeneration - pages revalidate every 10 minutes
 export const revalidate = 600
@@ -355,6 +356,8 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
       )}
 
       {faqs.length > 0 && <FAQSection faqs={faqs} />}
+
+      <InquiryCTA />
     </article>
   )
 }

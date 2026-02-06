@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useInquiryModal } from '@/components/inquiry-modal/InquiryModalProvider'
 
 const navLinks = [
   { href: '#', label: 'Safaris' },
@@ -13,6 +14,7 @@ const navLinks = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { openModal } = useInquiryModal()
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-20 bg-white border-b border-kiuli-gray">
@@ -51,12 +53,13 @@ export function Header() {
         </nav>
 
         {/* Desktop CTA */}
-        <Link
-          href="#"
+        <button
+          type="button"
+          onClick={openModal}
           className="hidden md:inline-flex px-6 py-2.5 bg-kiuli-clay text-white text-sm font-medium rounded transition-colors hover:bg-kiuli-clay-hover"
         >
           Begin a Conversation
-        </Link>
+        </button>
 
         {/* Mobile Menu Toggle */}
         <button
@@ -92,13 +95,16 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="#"
+            <button
+              type="button"
               className="mt-4 px-6 py-2.5 bg-kiuli-clay text-white text-sm font-medium rounded text-center transition-colors hover:bg-kiuli-clay-hover"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => {
+                setMobileMenuOpen(false)
+                openModal()
+              }}
             >
               Begin a Conversation
-            </Link>
+            </button>
           </nav>
         </div>
       )}

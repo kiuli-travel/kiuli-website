@@ -11,6 +11,8 @@ import { Providers } from '@/providers'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { SessionProvider } from '@/components/SessionProvider'
+import { InquiryModalProvider } from '@/components/inquiry-modal/InquiryModalProvider'
+import { InquiryModal } from '@/components/inquiry-modal/InquiryModal'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -91,23 +93,28 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
       </head>
       <body>
         <Providers>
-          {/* Skip link for keyboard navigation - WCAG accessibility */}
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-kiuli-teal focus:text-white focus:rounded"
-          >
-            Skip to content
-          </a>
+          <InquiryModalProvider>
+            {/* Skip link for keyboard navigation - WCAG accessibility */}
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-kiuli-teal focus:text-white focus:rounded"
+            >
+              Skip to content
+            </a>
 
-          <Header />
+            <Header />
 
-          <SessionProvider>
-            <main id="main-content" className="pt-20 flex-1">
-              {children}
-            </main>
-          </SessionProvider>
+            <SessionProvider>
+              <main id="main-content" className="pt-20 flex-1">
+                {children}
+              </main>
+            </SessionProvider>
 
-          <Footer />
+            <Footer />
+
+            {/* Inquiry Form Modal - rendered at root level */}
+            <InquiryModal />
+          </InquiryModalProvider>
         </Providers>
 
         {/* GA4 + Google Ads: async gtag.js loader */}

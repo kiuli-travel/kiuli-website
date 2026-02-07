@@ -364,9 +364,8 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
     }
   }
 
-  // Build title from itinerary fields (metaTitle or title fallback)
-  const titleText = itinerary.metaTitle || itinerary.title || 'Safari Itinerary'
-  const title = `${titleText} | Kiuli`
+  // Build title: use metaTitle as-is if set (editor controls full title), otherwise fallback
+  const title = itinerary.metaTitle || `${itinerary.title} | Kiuli`
 
   // Build description from itinerary fields
   const description =
@@ -395,7 +394,7 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
           url: ogImageUrl.startsWith('http') ? ogImageUrl : `https://kiuli.com${ogImageUrl}`,
           width: 1200,
           height: 630,
-          alt: titleText,
+          alt: itinerary.title || 'Kiuli Safari',
         },
       ],
     }),

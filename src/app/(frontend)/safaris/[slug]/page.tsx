@@ -7,7 +7,7 @@ import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
 import React, { cache } from 'react'
 
-import { generateMeta } from '@/utilities/generateMeta'
+import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 import { ItineraryHero } from '@/components/itinerary/ItineraryHero'
 import { TripOverview } from '@/components/itinerary/TripOverview'
 import { JourneyNarrative } from '@/components/itinerary/JourneyNarrative'
@@ -364,16 +364,41 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
     }
   }
 
-  const baseMeta = await generateMeta({ doc: itinerary })
+  // Build title from itinerary fields (metaTitle or title fallback)
+  const titleText = itinerary.metaTitle || itinerary.title || 'Safari Itinerary'
+  const title = `${titleText} | Kiuli`
 
-  // Add canonical URL - use override if set, otherwise default to /safaris/{slug}
+  // Build description from itinerary fields
+  const description =
+    itinerary.metaDescription ||
+    'Discover transformative African safari experiences with Kiuli. Handpicked luxury itineraries curated by expert travel designers.'
+
+  // Get hero image URL for Open Graph
+  const heroImage = itinerary.heroImage as Media | null
+  const ogImageUrl = heroImage?.imgixUrl || heroImage?.url || '/kiuli-og.jpg'
+
+  // Canonical URL - use override if set, otherwise default to /safaris/{slug}
   const canonical = itinerary.canonicalUrl || `https://kiuli.com/safaris/${decodedSlug}`
 
   return {
-    ...baseMeta,
+    title,
+    description,
     alternates: {
       canonical,
     },
+    openGraph: mergeOpenGraph({
+      title,
+      description,
+      url: `https://kiuli.com/safaris/${decodedSlug}`,
+      images: [
+        {
+          url: ogImageUrl.startsWith('http') ? ogImageUrl : `https://kiuli.com${ogImageUrl}`,
+          width: 1200,
+          height: 630,
+          alt: titleText,
+        },
+      ],
+    }),
   }
 }
 

@@ -14,6 +14,7 @@ import { JourneyNarrative } from '@/components/itinerary/JourneyNarrative'
 import { InvestmentLevel } from '@/components/itinerary/InvestmentLevel'
 import { FAQSection } from '@/components/itinerary/FAQSection'
 import { InquiryCTA } from '@/components/itinerary/InquiryCTA'
+import Breadcrumb from '@/components/Breadcrumb'
 
 // Enable Incremental Static Regeneration - pages revalidate every 10 minutes
 export const revalidate = 600
@@ -314,6 +315,16 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
+
+      <div className="mx-auto max-w-6xl px-6 pt-4 pb-2 md:px-8">
+        <Breadcrumb
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'Safaris', href: '/safaris' },
+            { label: itinerary.title },
+          ]}
+        />
+      </div>
 
       <ItineraryHero
         title={itinerary.title}

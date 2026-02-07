@@ -22,7 +22,7 @@ export const Destinations: CollectionConfig = {
     useAsTitle: 'name',
     group: 'Content',
     description: 'Countries, regions, and parks for itinerary cross-linking',
-    defaultColumns: ['name', 'type', 'country', 'updatedAt'],
+    defaultColumns: ['name', 'type', 'updatedAt'],
   },
   access: {
     read: () => true,

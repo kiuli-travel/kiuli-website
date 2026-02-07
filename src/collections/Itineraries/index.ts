@@ -399,6 +399,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           type: 'richText',
           admin: {
             description: 'Original summary from scrape (legacy)',
+            condition: () => false,
           },
         },
         {
@@ -1206,6 +1207,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       type: 'richText',
       admin: {
         description: 'Original "Why Kiuli" content (legacy)',
+        condition: () => false,
       },
     },
     {

@@ -11,9 +11,11 @@ module.exports = {
     '/posts-sitemap.xml',
     '/pages-sitemap.xml',
     '/safaris-sitemap.xml',
+    '/destinations-sitemap.xml',
     '/*',
     '/posts/*',
     '/safaris/*',
+    '/destinations/*',
   ],
   robotsTxtOptions: {
     policies: [
@@ -26,6 +28,7 @@ module.exports = {
       `${SITE_URL}/pages-sitemap.xml`,
       `${SITE_URL}/posts-sitemap.xml`,
       `${SITE_URL}/safaris-sitemap.xml`,
+      `${SITE_URL}/destinations-sitemap.xml`,
     ],
   },
 }

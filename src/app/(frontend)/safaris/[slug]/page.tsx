@@ -15,6 +15,7 @@ import { InvestmentLevel } from '@/components/itinerary/InvestmentLevel'
 import { FAQSection } from '@/components/itinerary/FAQSection'
 import { InquiryCTA } from '@/components/itinerary/InquiryCTA'
 import Breadcrumb from '@/components/Breadcrumb'
+import AnswerCapsule from '@/components/AnswerCapsule'
 
 // Enable Incremental Static Regeneration - pages revalidate every 10 minutes
 export const revalidate = 600
@@ -346,6 +347,13 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
             : null
         }
       />
+
+      {itinerary.answerCapsule && (
+        <AnswerCapsule
+          text={itinerary.answerCapsule}
+          focusKeyword={itinerary.focusKeyword || undefined}
+        />
+      )}
 
       <JourneyNarrative days={itinerary.days} />
 

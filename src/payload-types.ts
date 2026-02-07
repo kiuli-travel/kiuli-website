@@ -606,6 +606,26 @@ export interface Itinerary {
    */
   metaDescriptionReviewed?: boolean | null;
   /**
+   * Optional override. Leave empty to use default: https://kiuli.com/safaris/{slug}
+   */
+  canonicalUrl?: string | null;
+  /**
+   * Summary optimized for AI extraction (40-60 words)
+   */
+  answerCapsule?: string | null;
+  /**
+   * Primary SEO keyword this itinerary targets
+   */
+  focusKeyword?: string | null;
+  /**
+   * Auto-updated on every save (used for sitemap lastmod)
+   */
+  lastModified?: string | null;
+  /**
+   * Cross-linked itineraries for 'You Might Also Like' section
+   */
+  relatedItineraries?: (number | Itinerary)[] | null;
+  /**
    * Primary hero image for the itinerary page
    */
   heroImage?: (number | null) | Media;
@@ -3232,6 +3252,11 @@ export interface ItinerariesSelect<T extends boolean = true> {
   metaDescriptionItrvl?: T;
   metaDescriptionEnhanced?: T;
   metaDescriptionReviewed?: T;
+  canonicalUrl?: T;
+  answerCapsule?: T;
+  focusKeyword?: T;
+  lastModified?: T;
+  relatedItineraries?: T;
   heroImage?: T;
   heroImageLocked?: T;
   heroImageReviewed?: T;

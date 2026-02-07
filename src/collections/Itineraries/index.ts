@@ -1,6 +1,6 @@
 import type { CollectionConfig, AccessArgs } from 'payload'
 import { authenticated } from '../../access/authenticated'
-import { calculateChecklist, resolveFields, validatePublish } from './hooks'
+import { calculateChecklist, resolveFields, updateLastModified, validatePublish } from './hooks'
 
 // Allow authenticated users OR API key access for Lambda pipeline
 const authenticatedOrApiKey = ({ req }: AccessArgs) => {
@@ -46,7 +46,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     delete: authenticated,
   },
   hooks: {
-    beforeChange: [calculateChecklist, validatePublish],
+    beforeChange: [calculateChecklist, updateLastModified, validatePublish],
     afterRead: [resolveFields],
   },
   versions: {
@@ -219,6 +219,64 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       defaultValue: false,
       admin: {
         description: 'Meta description has been reviewed',
+      },
+    },
+    {
+      name: 'canonicalUrl',
+      type: 'text',
+      label: 'Canonical URL',
+      admin: {
+        description: 'Optional override. Leave empty to use default: https://kiuli.com/safaris/{slug}',
+      },
+    },
+    {
+      name: 'answerCapsule',
+      type: 'textarea',
+      label: 'Answer Capsule',
+      admin: {
+        description: 'Summary optimized for AI extraction (40-60 words)',
+      },
+      validate: (value: string | null | undefined) => {
+        if (!value || value.trim() === '') return true
+        const words = value.trim().split(/\s+/).filter((w) => w.length > 0)
+        const wordCount = words.length
+        if (wordCount < 40) {
+          return `Answer capsule must be at least 40 words. Current count: ${wordCount}`
+        }
+        if (wordCount > 60) {
+          return `Answer capsule must not exceed 60 words. Current count: ${wordCount}`
+        }
+        return true
+      },
+    },
+    {
+      name: 'focusKeyword',
+      type: 'text',
+      label: 'Focus Keyword',
+      admin: {
+        description: 'Primary SEO keyword this itinerary targets',
+      },
+    },
+    {
+      name: 'lastModified',
+      type: 'date',
+      label: 'Last Modified',
+      admin: {
+        readOnly: true,
+        description: 'Auto-updated on every save (used for sitemap lastmod)',
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+    },
+    {
+      name: 'relatedItineraries',
+      type: 'relationship',
+      relationTo: 'itineraries',
+      hasMany: true,
+      label: 'Related Itineraries',
+      admin: {
+        description: "Cross-linked itineraries for 'You Might Also Like' section",
       },
     },
 

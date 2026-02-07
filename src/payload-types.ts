@@ -1565,7 +1565,23 @@ export interface Destination {
    */
   metaDescription?: string | null;
   /**
-   * Key highlights of this destination
+   * Optional override. Leave empty to use default
+   */
+  canonicalUrl?: string | null;
+  /**
+   * Summary optimized for AI extraction (40-60 words)
+   */
+  answerCapsule?: string | null;
+  /**
+   * Primary SEO keyword this destination targets
+   */
+  focusKeyword?: string | null;
+  /**
+   * Auto-updated on every save
+   */
+  lastModified?: string | null;
+  /**
+   * Notable features of this destination (e.g., 'Home to the Great Migration', 'Year-round gorilla trekking')
    */
   highlights?:
     | {
@@ -1574,11 +1590,54 @@ export interface Destination {
       }[]
     | null;
   /**
-   * Best time to visit information
+   * Seasonal guide for visiting this destination
    */
-  bestTimeToVisit?: string | null;
+  bestTimeToVisit?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Frequently asked questions about this destination
+   */
+  faqItems?:
+    | {
+        question: string;
+        answer?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Curated itineraries for this destination. Supplements automatic reverse lookup.
+   */
+  relatedItineraries?: (number | Itinerary)[] | null;
   updatedAt: string;
   createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * Safari categories for filtering and recommendations
@@ -3573,6 +3632,10 @@ export interface DestinationsSelect<T extends boolean = true> {
   heroImage?: T;
   metaTitle?: T;
   metaDescription?: T;
+  canonicalUrl?: T;
+  answerCapsule?: T;
+  focusKeyword?: T;
+  lastModified?: T;
   highlights?:
     | T
     | {
@@ -3580,8 +3643,17 @@ export interface DestinationsSelect<T extends boolean = true> {
         id?: T;
       };
   bestTimeToVisit?: T;
+  faqItems?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
+  relatedItineraries?: T;
   updatedAt?: T;
   createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

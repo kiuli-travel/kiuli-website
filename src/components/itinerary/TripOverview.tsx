@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { MapPin, Users, Calendar, Moon } from 'lucide-react'
 
 interface TripOverviewProps {
@@ -20,6 +21,10 @@ function formatPrice(price: number, currency: string = 'USD'): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price)
+}
+
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '-')
 }
 
 export function TripOverview({
@@ -51,7 +56,17 @@ export function TripOverview({
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-kiuli-teal flex-shrink-0 mt-0.5" strokeWidth={1.5} />
                   <span className="text-base text-kiuli-charcoal md:text-lg">
-                    {destinations.join(', ')}
+                    {destinations.map((dest, index) => (
+                      <span key={dest}>
+                        {index > 0 && ', '}
+                        <Link
+                          href={`/destinations/${toSlug(dest)}`}
+                          className="hover:text-kiuli-teal hover:underline transition-colors"
+                        >
+                          {dest}
+                        </Link>
+                      </span>
+                    ))}
                   </span>
                 </div>
               )}

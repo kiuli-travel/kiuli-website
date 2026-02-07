@@ -364,7 +364,17 @@ export async function generateMetadata({ params: paramsPromise }: Args): Promise
     }
   }
 
-  return generateMeta({ doc: itinerary })
+  const baseMeta = await generateMeta({ doc: itinerary })
+
+  // Add canonical URL - use override if set, otherwise default to /safaris/{slug}
+  const canonical = itinerary.canonicalUrl || `https://kiuli.com/safaris/${decodedSlug}`
+
+  return {
+    ...baseMeta,
+    alternates: {
+      canonical,
+    },
+  }
 }
 
 const queryItineraryBySlug = cache(async ({ slug }: { slug: string }) => {

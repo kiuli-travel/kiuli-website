@@ -3,8 +3,11 @@
  *
  * Generates schema.org markup for SEO:
  * - Product schema for the itinerary
- * - FAQPage schema (separate, not nested)
+ * - FAQPage schema (separate)
  * - BreadcrumbList schema for navigation
+ *
+ * Returns an array of standalone schema objects, each valid for its own
+ * <script type="application/ld+json"> tag.
  */
 
 const SITE_URL = 'https://kiuli.com';
@@ -12,8 +15,7 @@ const SITE_URL = 'https://kiuli.com';
 /**
  * Generate all JSON-LD schemas for an itinerary
  *
- * Returns an object with separate schemas that should each be rendered
- * as individual <script type="application/ld+json"> blocks
+ * @returns {Array} Array of standalone schema objects
  */
 function generateSchema(itinerary, mediaRecords, heroImageId) {
   // Get hero image URL
@@ -52,8 +54,11 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
   const title = (itinerary.title || '').trim();
   const pageUrl = `${SITE_URL}/safaris/${slug}`;
 
+  // Build array of schemas
+  const schemas = [];
+
   // 1. Product schema
-  const productSchema = {
+  schemas.push({
     '@context': 'https://schema.org',
     '@type': 'Product',
     'name': title,
@@ -91,10 +96,9 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
         'value': countryList
       }
     ]
-  };
+  });
 
-  // 2. FAQ schema (separate from Product, per Google guidelines)
-  let faqSchema = null;
+  // 2. FAQPage schema (if FAQs exist)
   if (itinerary.faqItems && itinerary.faqItems.length > 0) {
     const validFaqItems = itinerary.faqItems.filter(faq => {
       const question = faq.question || '';
@@ -104,13 +108,8 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
       return !hasUnknown && answerText.trim().length > 0;
     });
 
-    const filteredCount = itinerary.faqItems.length - validFaqItems.length;
-    if (filteredCount > 0) {
-      console.log(`[Schema] Filtered ${filteredCount} FAQs with empty/invalid answers`);
-    }
-
     if (validFaqItems.length > 0) {
-      faqSchema = {
+      schemas.push({
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         'mainEntity': validFaqItems.map(faq => ({
@@ -121,12 +120,12 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
             'text': extractTextFromRichText(faq.answerEnhanced || faq.answerItrvl || faq.answerOriginal)
           }
         }))
-      };
+      });
     }
   }
 
-  // 3. Breadcrumb schema
-  const breadcrumbSchema = {
+  // 3. BreadcrumbList schema
+  schemas.push({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     'itemListElement': [
@@ -149,20 +148,9 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
         'item': pageUrl
       }
     ]
-  };
+  });
 
-  // Return all schemas
-  // The main 'product' schema is what the validator checks
-  // Additional schemas are stored for frontend rendering
-  return {
-    product: productSchema,
-    faq: faqSchema,
-    breadcrumbs: breadcrumbSchema,
-    // Legacy: keep '@context' and '@type' at root level for validator compatibility
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    ...productSchema
-  };
+  return schemas;
 }
 
 /**

@@ -1,14 +1,19 @@
 /**
- * Product JSON-LD Schema Generator
+ * JSON-LD Schema Generator
  *
- * Generates schema.org Product markup for SEO
+ * Generates schema.org markup for SEO:
+ * - Product schema for the itinerary
+ * - FAQPage schema (separate, not nested)
+ * - BreadcrumbList schema for navigation
  */
 
-const IMGIX_DOMAIN = process.env.IMGIX_DOMAIN || 'kiuli.imgix.net';
 const SITE_URL = 'https://kiuli.com';
 
 /**
- * Generate Product JSON-LD schema for an itinerary
+ * Generate all JSON-LD schemas for an itinerary
+ *
+ * Returns an object with separate schemas that should each be rendered
+ * as individual <script type="application/ld+json"> blocks
  */
 function generateSchema(itinerary, mediaRecords, heroImageId) {
   // Get hero image URL
@@ -37,51 +42,59 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
   const price = itinerary.investmentLevel?.fromPrice || 0;
   const currency = itinerary.investmentLevel?.currency || 'USD';
 
-  // Build schema
   // Deduplicate images: use Set to ensure no duplicates, hero image first
   const allImages = heroImageUrl
     ? [heroImageUrl, ...imageUrls.filter(url => url !== heroImageUrl)]
     : imageUrls;
   const uniqueImages = [...new Set(allImages)];
 
-  const schema = {
+  const slug = itinerary.slug;
+  const title = (itinerary.title || '').trim();
+  const pageUrl = `${SITE_URL}/safaris/${slug}`;
+
+  // 1. Product schema
+  const productSchema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    'name': (itinerary.title || '').trim(),  // Fix: trim whitespace
+    'name': title,
     'description': itinerary.metaDescription || `A ${nights}-night luxury safari through ${countryList}`,
-    'url': `${SITE_URL}/itineraries/${itinerary.slug}`,
+    'url': pageUrl,
     'brand': {
       '@type': 'Brand',
       'name': 'Kiuli',
       'url': SITE_URL
     },
-    'category': 'Luxury Safari',
-    'image': uniqueImages,  // Fix: deduplicated images
+    'category': 'Safari Tours',
+    'image': uniqueImages,
     'offers': {
       '@type': 'Offer',
       'priceCurrency': currency,
       'price': price,
       'priceValidUntil': getNextYear(),
       'availability': 'https://schema.org/InStock',
-      'url': `${SITE_URL}/itineraries/${itinerary.slug}`,
+      'url': pageUrl,
       'seller': {
-        '@type': 'Organization',
+        '@type': 'TravelAgency',
         'name': 'Kiuli',
         'url': SITE_URL
       }
-    }
+    },
+    'additionalProperty': [
+      {
+        '@type': 'PropertyValue',
+        'name': 'Duration',
+        'value': `${nights} nights`
+      },
+      {
+        '@type': 'PropertyValue',
+        'name': 'Destinations',
+        'value': countryList
+      }
+    ]
   };
 
-  // Add aggregate rating placeholder (to be filled with real reviews)
-  // schema.aggregateRating = {
-  //   '@type': 'AggregateRating',
-  //   'ratingValue': '5',
-  //   'reviewCount': '1'
-  // };
-
-  // Add FAQ schema if we have FAQ items
-  // Filter out FAQ items with placeholder text like "Unknown Country"
-  // V7: Use answerEnhanced ?? answerItrvl (falling back to answerOriginal for legacy)
+  // 2. FAQ schema (separate from Product, per Google guidelines)
+  let faqSchema = null;
   if (itinerary.faqItems && itinerary.faqItems.length > 0) {
     const validFaqItems = itinerary.faqItems.filter(faq => {
       const question = faq.question || '';
@@ -91,14 +104,14 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
       return !hasUnknown && answerText.trim().length > 0;
     });
 
-    // Log FAQ filtering for visibility
     const filteredCount = itinerary.faqItems.length - validFaqItems.length;
     if (filteredCount > 0) {
       console.log(`[Schema] Filtered ${filteredCount} FAQs with empty/invalid answers`);
     }
 
     if (validFaqItems.length > 0) {
-      schema.mainEntity = {
+      faqSchema = {
+        '@context': 'https://schema.org',
         '@type': 'FAQPage',
         'mainEntity': validFaqItems.map(faq => ({
           '@type': 'Question',
@@ -112,7 +125,44 @@ function generateSchema(itinerary, mediaRecords, heroImageId) {
     }
   }
 
-  return schema;
+  // 3. Breadcrumb schema
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      {
+        '@type': 'ListItem',
+        'position': 1,
+        'name': 'Home',
+        'item': SITE_URL
+      },
+      {
+        '@type': 'ListItem',
+        'position': 2,
+        'name': 'Safaris',
+        'item': `${SITE_URL}/safaris`
+      },
+      {
+        '@type': 'ListItem',
+        'position': 3,
+        'name': title,
+        'item': pageUrl
+      }
+    ]
+  };
+
+  // Return all schemas
+  // The main 'product' schema is what the validator checks
+  // Additional schemas are stored for frontend rendering
+  return {
+    product: productSchema,
+    faq: faqSchema,
+    breadcrumbs: breadcrumbSchema,
+    // Legacy: keep '@context' and '@type' at root level for validator compatibility
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    ...productSchema
+  };
 }
 
 /**

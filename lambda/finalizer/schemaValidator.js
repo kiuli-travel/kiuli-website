@@ -120,9 +120,13 @@ function validateSchema(schema) {
     }
   }
 
-  // FAQ schema validation (nested mainEntity)
-  if (schema.mainEntity && schema.mainEntity['@type'] === 'FAQPage') {
-    const faqItems = schema.mainEntity.mainEntity || [];
+  // FAQ schema validation (now separate, accessed via schema.faq)
+  if (schema.faq) {
+    const faqSchema = schema.faq;
+    if (faqSchema['@type'] !== 'FAQPage') {
+      errors.push('faq schema @type must be "FAQPage"');
+    }
+    const faqItems = faqSchema.mainEntity || [];
     if (faqItems.length === 0) {
       warnings.push('FAQPage has no questions');
     }
@@ -144,6 +148,17 @@ function validateSchema(schema) {
       if (faq.acceptedAnswer?.text && /unknown/i.test(faq.acceptedAnswer.text)) {
         warnings.push(`FAQ item ${i} contains "Unknown" in answer`);
       }
+    }
+  }
+
+  // Breadcrumb schema validation (accessed via schema.breadcrumbs)
+  if (schema.breadcrumbs) {
+    const bcSchema = schema.breadcrumbs;
+    if (bcSchema['@type'] !== 'BreadcrumbList') {
+      errors.push('breadcrumbs schema @type must be "BreadcrumbList"');
+    }
+    if (!bcSchema.itemListElement || bcSchema.itemListElement.length === 0) {
+      warnings.push('BreadcrumbList has no items');
     }
   }
 

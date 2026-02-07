@@ -327,6 +327,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       name: 'overview',
       type: 'group',
       fields: [
+        {
+          name: 'summary',
+          type: 'richText',
+          admin: {
+            description: 'Resolved summary (base field for two-field pattern)',
+            condition: () => false, // Hidden - resolved by hook from Enhanced/Itrvl
+          },
+        },
         // Legacy field (kept for backward compatibility)
         {
           name: 'summaryOriginal',
@@ -587,6 +595,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   },
                 },
                 {
+                  name: 'description',
+                  type: 'richText',
+                  admin: {
+                    description: 'Resolved description (base field for two-field pattern)',
+                    condition: () => false, // Hidden - resolved by hook from Enhanced/Itrvl
+                  },
+                },
+                {
                   name: 'descriptionEditor',
                   type: 'ui',
                   admin: {
@@ -778,6 +794,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   },
                 },
                 {
+                  name: 'description',
+                  type: 'richText',
+                  admin: {
+                    description: 'Resolved description (base field for two-field pattern)',
+                    condition: () => false, // Hidden - resolved by hook from Enhanced/Itrvl
+                  },
+                },
+                {
                   name: 'descriptionEditor',
                   type: 'ui',
                   admin: {
@@ -929,6 +953,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   type: 'text',
                 },
                 {
+                  name: 'description',
+                  type: 'richText',
+                  admin: {
+                    description: 'Resolved description (base field for two-field pattern)',
+                    condition: () => false, // Hidden - resolved by hook from Enhanced/Itrvl
+                  },
+                },
+                {
                   name: 'descriptionEditor',
                   type: 'ui',
                   admin: {
@@ -1050,6 +1082,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
           },
         },
         {
+          name: 'answer',
+          type: 'richText',
+          admin: {
+            description: 'Resolved answer (base field for two-field pattern)',
+            condition: () => false, // Hidden - resolved by hook from Enhanced/Itrvl
+          },
+        },
+        {
           name: 'answerEditor',
           type: 'ui',
           admin: {
@@ -1094,6 +1134,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     },
 
     // === WHY KIULI ===
+    {
+      name: 'whyKiuli',
+      type: 'richText',
+      admin: {
+        description: 'Resolved "Why Kiuli" content (base field for two-field pattern)',
+        condition: () => false, // Hidden - resolved by hook from Enhanced/Itrvl
+      },
+    },
     // Legacy fields (kept for backward compatibility)
     {
       name: 'whyKiuliOriginal',

@@ -149,14 +149,11 @@ function extractFAQs(itinerary: Itinerary): Array<{ question: string; answer: st
 
   return itinerary.faqItems
     .map((item) => {
-      // Get question - prefer enhanced
-      const question =
-        item.questionEnhanced || item.questionItrvl || item.question || ''
+      // Get resolved question from hook
+      const question = item.question || ''
 
-      // Get answer - prefer enhanced, convert richText to plain text
-      const rawAnswer =
-        item.answerEnhanced || item.answerItrvl || item.answerOriginal
-      const answer = extractTextFromRichText(rawAnswer)
+      // Get resolved answer from hook, convert richText to plain text
+      const answer = extractTextFromRichText(item.answer)
 
       if (!question || !answer) return null
 
@@ -175,11 +172,9 @@ function generateTravelServiceSchema(
 ) {
   const price = itinerary.investmentLevel?.fromPrice
   const currency = itinerary.investmentLevel?.currency || 'USD'
-  // Use V7 pattern fields - prefer enhanced, fallback to itrvl, then default
+  // Use resolved metaDescription from hook, with fallback
   const description =
     itinerary.metaDescription ||
-    itinerary.metaDescriptionEnhanced ||
-    itinerary.metaDescriptionItrvl ||
     `${totalNights}-night luxury safari in ${destinations.join(', ')}. Experience the best of African wildlife with Kiuli.`
 
   return {
@@ -288,12 +283,8 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
   // Get investment level data
   const hasInvestmentLevel = itinerary.investmentLevel?.fromPrice
 
-  // Get includes text (prefer enhanced, convert richText to plain text)
-  const includesRichText =
-    itinerary.investmentLevel?.includesEnhanced ||
-    itinerary.investmentLevel?.includesItrvl ||
-    itinerary.investmentLevel?.includes
-  const includesText = extractTextFromRichText(includesRichText)
+  // Get resolved includes from hook, convert richText to plain text
+  const includesText = extractTextFromRichText(itinerary.investmentLevel?.includes)
 
   // Generate JSON-LD schemas for SEO and AI discoverability
   const travelServiceSchema = generateTravelServiceSchema(

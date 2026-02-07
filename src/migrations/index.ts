@@ -30,6 +30,7 @@ import * as migration_20260202_create_interests_select from './20260202_create_i
 import * as migration_20260204_create_sessions_and_inquiry_fields from './20260204_create_sessions_and_inquiry_fields';
 import * as migration_20260205_drop_primary_interest from './20260205_drop_primary_interest';
 import * as migration_20260205_create_designers_and_seed from './20260205_create_designers_and_seed';
+import * as migration_20260207_add_base_fields_for_hook from './20260207_add_base_fields_for_hook';
 
 export const migrations = [
   {
@@ -191,5 +192,10 @@ export const migrations = [
     up: migration_20260205_create_designers_and_seed.up,
     down: migration_20260205_create_designers_and_seed.down,
     name: '20260205_create_designers_and_seed'
+  },
+  {
+    up: migration_20260207_add_base_fields_for_hook.up,
+    down: migration_20260207_add_base_fields_for_hook.down,
+    name: '20260207_add_base_fields_for_hook'
   },
 ];

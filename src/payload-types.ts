@@ -643,6 +643,24 @@ export interface Itinerary {
   tripTypes?: (number | TripType)[] | null;
   overview?: {
     /**
+     * Resolved summary (base field for two-field pattern)
+     */
+    summary?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
      * Original summary from scrape (legacy)
      */
     summaryOriginal?: {
@@ -834,6 +852,24 @@ export interface Itinerary {
                   accommodationNameEnhanced?: string | null;
                   accommodationNameReviewed?: boolean | null;
                   /**
+                   * Resolved description (base field for two-field pattern)
+                   */
+                  description?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
                    * Original description from scrape
                    */
                   descriptionOriginal?: {
@@ -972,6 +1008,24 @@ export interface Itinerary {
                   titleEnhanced?: string | null;
                   titleReviewed?: boolean | null;
                   /**
+                   * Resolved description (base field for two-field pattern)
+                   */
+                  description?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  /**
                    * Original description from scrape
                    */
                   descriptionOriginal?: {
@@ -1053,6 +1107,24 @@ export interface Itinerary {
                   titleReviewed?: boolean | null;
                   from?: string | null;
                   to?: string | null;
+                  /**
+                   * Resolved description (base field for two-field pattern)
+                   */
+                  description?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
                   /**
                    * Original description from scrape
                    */
@@ -1139,6 +1211,24 @@ export interface Itinerary {
         questionEnhanced?: string | null;
         questionReviewed?: boolean | null;
         /**
+         * Resolved answer (base field for two-field pattern)
+         */
+        answer?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        /**
          * Original answer from scrape
          */
         answerOriginal?: {
@@ -1196,6 +1286,24 @@ export interface Itinerary {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Resolved "Why Kiuli" content (base field for two-field pattern)
+   */
+  whyKiuli?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   /**
    * Original "Why Kiuli" content (legacy)
    */
@@ -3136,6 +3244,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
   overview?:
     | T
     | {
+        summary?: T;
         summaryOriginal?: T;
         summaryEnhanced?: T;
         summaryItrvl?: T;
@@ -3186,6 +3295,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
                     accommodationNameItrvl?: T;
                     accommodationNameEnhanced?: T;
                     accommodationNameReviewed?: T;
+                    description?: T;
                     descriptionOriginal?: T;
                     descriptionItrvl?: T;
                     descriptionEnhanced?: T;
@@ -3211,6 +3321,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
                     titleItrvl?: T;
                     titleEnhanced?: T;
                     titleReviewed?: T;
+                    description?: T;
                     descriptionOriginal?: T;
                     descriptionItrvl?: T;
                     descriptionEnhanced?: T;
@@ -3231,6 +3342,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
                     titleReviewed?: T;
                     from?: T;
                     to?: T;
+                    description?: T;
                     descriptionOriginal?: T;
                     descriptionItrvl?: T;
                     descriptionEnhanced?: T;
@@ -3251,12 +3363,14 @@ export interface ItinerariesSelect<T extends boolean = true> {
         questionItrvl?: T;
         questionEnhanced?: T;
         questionReviewed?: T;
+        answer?: T;
         answerOriginal?: T;
         answerItrvl?: T;
         answerEnhanced?: T;
         answerReviewed?: T;
         id?: T;
       };
+  whyKiuli?: T;
   whyKiuliOriginal?: T;
   whyKiuliEnhanced?: T;
   whyKiuliItrvl?: T;

@@ -39,6 +39,7 @@ async function seed() {
     const created_doc = await payload.create({
       collection: 'destinations',
       data: destination,
+      draft: true, // heroImage is required but not provided, so create as draft
     })
     console.log(`CREATE: ${destination.name} (id: ${created_doc.id})`)
     created++

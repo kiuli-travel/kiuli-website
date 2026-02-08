@@ -82,6 +82,7 @@ export interface Config {
     inquiries: Inquiry;
     sessions: Session;
     designers: Designer;
+    authors: Author;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -114,6 +115,7 @@ export interface Config {
     inquiries: InquiriesSelect<false> | InquiriesSelect<true>;
     sessions: SessionsSelect<false> | SessionsSelect<true>;
     designers: DesignersSelect<false> | DesignersSelect<true>;
+    authors: AuthorsSelect<false> | AuthorsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -1553,9 +1555,9 @@ export interface Destination {
     [k: string]: unknown;
   } | null;
   /**
-   * Hero image for destination landing page
+   * Hero image for destination landing page (required)
    */
-  heroImage?: (number | null) | Media;
+  heroImage: number | Media;
   /**
    * SEO meta title (max 60 chars)
    */
@@ -2646,6 +2648,83 @@ export interface Designer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors".
+ */
+export interface Author {
+  id: number;
+  /**
+   * Full display name
+   */
+  name: string;
+  /**
+   * URL slug
+   */
+  slug: string;
+  /**
+   * e.g., "Safari Specialist", "Travel Designer"
+   */
+  role?: string | null;
+  /**
+   * Full biography for author page
+   */
+  bio?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * 1-2 sentence bio for article bylines (max 200 chars)
+   */
+  shortBio?: string | null;
+  /**
+   * Professional credentials for E-E-A-T
+   */
+  credentials?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Headshot
+   */
+  photo?: (number | null) | Media;
+  /**
+   * Contact email (admin only, not displayed on frontend)
+   */
+  email?: string | null;
+  /**
+   * LinkedIn profile URL
+   */
+  linkedIn?: string | null;
+  /**
+   * SEO title override (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * Canonical URL override
+   */
+  canonicalUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -2893,6 +2972,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'designers';
         value: number | Designer;
+      } | null)
+    | ({
+        relationTo: 'authors';
+        value: number | Author;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -3767,6 +3850,32 @@ export interface DesignersSelect<T extends boolean = true> {
   totalAssigned?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors_select".
+ */
+export interface AuthorsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  role?: T;
+  bio?: T;
+  shortBio?: T;
+  credentials?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  photo?: T;
+  email?: T;
+  linkedIn?: T;
+  metaTitle?: T;
+  metaDescription?: T;
+  canonicalUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

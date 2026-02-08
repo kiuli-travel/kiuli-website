@@ -203,5 +203,14 @@ export const Destinations: CollectionConfig = {
         description: 'Curated itineraries for this destination. Supplements automatic reverse lookup.',
       },
     },
+    {
+      name: 'featuredProperties',
+      type: 'relationship',
+      relationTo: 'properties',
+      hasMany: true,
+      admin: {
+        description: 'Featured lodges/camps — renders as PropertyCards on the destination page',
+      },
+    },
   ],
 }

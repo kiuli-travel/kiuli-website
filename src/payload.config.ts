@@ -22,8 +22,10 @@ import { Users } from './collections/Users'
 import { VoiceConfiguration } from './collections/VoiceConfiguration'
 import { Designers } from './collections/Designers'
 import { Authors } from './collections/Authors'
+import { Properties } from './collections/Properties'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
+import { PropertyNameMappings } from './globals/PropertyNameMappings'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
@@ -80,9 +82,9 @@ export default buildConfig({
       connectionString: process.env.POSTGRES_URL || '',
     },
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer],
+  globals: [Header, Footer, PropertyNameMappings],
   plugins: [
     makeS3StoragePlugin(),
     ...plugins,

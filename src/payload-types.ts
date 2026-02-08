@@ -83,6 +83,7 @@ export interface Config {
     sessions: Session;
     designers: Designer;
     authors: Author;
+    properties: Property;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -116,6 +117,7 @@ export interface Config {
     sessions: SessionsSelect<false> | SessionsSelect<true>;
     designers: DesignersSelect<false> | DesignersSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
+    properties: PropertiesSelect<false> | PropertiesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -133,10 +135,12 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
+    'property-name-mappings': PropertyNameMapping;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
+    'property-name-mappings': PropertyNameMappingsSelect<false> | PropertyNameMappingsSelect<true>;
   };
   locale: null;
   user: User & {
@@ -1054,6 +1058,10 @@ export interface Itinerary {
                   } | null;
                   inclusionsReviewed?: boolean | null;
                   roomType?: string | null;
+                  /**
+                   * Links this stay to a Property record. Optional — can be populated manually or via Content System.
+                   */
+                  property?: (number | null) | Property;
                   id?: string | null;
                   blockName?: string | null;
                   blockType: 'stay';
@@ -1681,6 +1689,153 @@ export interface Destination {
    * Curated itineraries for this destination. Supplements automatic reverse lookup.
    */
   relatedItineraries?: (number | Itinerary)[] | null;
+  /**
+   * Featured lodges/camps — renders as PropertyCards on the destination page
+   */
+  featuredProperties?: (number | Property)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "properties".
+ */
+export interface Property {
+  id: number;
+  /**
+   * Display name: "Angama Mara", "Singita Grumeti"
+   */
+  name: string;
+  /**
+   * URL-friendly: "angama-mara"
+   */
+  slug: string;
+  /**
+   * Property type
+   */
+  type?: ('lodge' | 'camp' | 'hotel' | 'villa' | 'mobile_camp' | 'tented_camp') | null;
+  /**
+   * The park/region this property is in
+   */
+  destination: number | Destination;
+  /**
+   * Original text from iTrvl stay segments
+   */
+  description_itrvl?: string | null;
+  /**
+   * AI-enhanced version
+   */
+  description_enhanced?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Designer-reviewed final version (takes precedence)
+   */
+  description_reviewed?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * SEO meta title (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO meta description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * Canonical URL override
+   */
+  canonicalUrl?: string | null;
+  /**
+   * Summary optimized for AI extraction (40-60 words)
+   */
+  answerCapsule?: string | null;
+  /**
+   * Primary SEO keyword
+   */
+  focusKeyword?: string | null;
+  /**
+   * Auto-updated on every save
+   */
+  lastModified?: string | null;
+  /**
+   * Frequently asked questions about this property
+   */
+  faqItems?:
+    | {
+        question: string;
+        answer?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Hero image for property page
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * Property image gallery
+   */
+  gallery?:
+    | {
+        image: number | Media;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Which itineraries feature this property
+   */
+  relatedItineraries?: (number | Itinerary)[] | null;
+  /**
+   * Related articles
+   */
+  relatedArticles?: (number | Post)[] | null;
+  /**
+   * External link to property's own website
+   */
+  websiteUrl?: string | null;
+  /**
+   * Price tier classification
+   */
+  priceTier?: ('comfort' | 'premium' | 'luxury' | 'ultra_luxury') | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -3022,6 +3177,10 @@ export interface PayloadLockedDocument {
         value: number | Author;
       } | null)
     | ({
+        relationTo: 'properties';
+        value: number | Property;
+      } | null)
+    | ({
         relationTo: 'redirects';
         value: number | Redirect;
       } | null)
@@ -3527,6 +3686,7 @@ export interface ItinerariesSelect<T extends boolean = true> {
                     inclusionsEnhanced?: T;
                     inclusionsReviewed?: T;
                     roomType?: T;
+                    property?: T;
                     id?: T;
                     blockName?: T;
                   };
@@ -3784,6 +3944,7 @@ export interface DestinationsSelect<T extends boolean = true> {
         id?: T;
       };
   relatedItineraries?: T;
+  featuredProperties?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -3923,6 +4084,46 @@ export interface AuthorsSelect<T extends boolean = true> {
   metaTitle?: T;
   metaDescription?: T;
   canonicalUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "properties_select".
+ */
+export interface PropertiesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  type?: T;
+  destination?: T;
+  description_itrvl?: T;
+  description_enhanced?: T;
+  description_reviewed?: T;
+  metaTitle?: T;
+  metaDescription?: T;
+  canonicalUrl?: T;
+  answerCapsule?: T;
+  focusKeyword?: T;
+  lastModified?: T;
+  faqItems?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
+  heroImage?: T;
+  gallery?:
+    | T
+    | {
+        image?: T;
+        id?: T;
+      };
+  relatedItineraries?: T;
+  relatedArticles?: T;
+  websiteUrl?: T;
+  priceTier?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -4262,6 +4463,40 @@ export interface Footer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "property-name-mappings".
+ */
+export interface PropertyNameMapping {
+  id: number;
+  /**
+   * Maps iTrvl property names to canonical Properties records
+   */
+  mappings?:
+    | {
+        /**
+         * Name used in Properties collection
+         */
+        canonical: string;
+        /**
+         * JSON array of alternative names from iTrvl, e.g. ["One&Only Cape Town", "One and Only Cape Town"]
+         */
+        aliases?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        property: number | Property;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header_select".
  */
 export interface HeaderSelect<T extends boolean = true> {
@@ -4300,6 +4535,23 @@ export interface FooterSelect<T extends boolean = true> {
               url?: T;
               label?: T;
             };
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "property-name-mappings_select".
+ */
+export interface PropertyNameMappingsSelect<T extends boolean = true> {
+  mappings?:
+    | T
+    | {
+        canonical?: T;
+        aliases?: T;
+        property?: T;
         id?: T;
       };
   updatedAt?: T;

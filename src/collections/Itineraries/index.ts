@@ -785,6 +785,14 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
                   name: 'roomType',
                   type: 'text',
                 },
+                {
+                  name: 'property',
+                  type: 'relationship',
+                  relationTo: 'properties',
+                  admin: {
+                    description: 'Links this stay to a Property record. Optional — can be populated manually or via Content System.',
+                  },
+                },
               ],
             },
             // ACTIVITY BLOCK

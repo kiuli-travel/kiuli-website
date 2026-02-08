@@ -37,6 +37,7 @@ import * as migration_20260208_add_destinations_highlights_table from './2026020
 import * as migration_20260208_fix_destinations_versioning_schema from './20260208_fix_destinations_versioning_schema';
 import * as migration_20260208_create_authors_collection from './20260208_create_authors_collection';
 import * as migration_20260208_update_posts_for_articles from './20260208_update_posts_for_articles';
+import * as migration_20260208_add_properties_and_mappings from './20260208_add_properties_and_mappings';
 
 export const migrations = [
   {
@@ -233,5 +234,10 @@ export const migrations = [
     up: migration_20260208_update_posts_for_articles.up,
     down: migration_20260208_update_posts_for_articles.down,
     name: '20260208_update_posts_for_articles'
+  },
+  {
+    up: migration_20260208_add_properties_and_mappings.up,
+    down: migration_20260208_add_properties_and_mappings.down,
+    name: '20260208_add_properties_and_mappings'
   },
 ];

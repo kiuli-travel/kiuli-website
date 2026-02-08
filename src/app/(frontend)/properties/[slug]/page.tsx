@@ -19,6 +19,7 @@ import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 export const revalidate = 600
 export const dynamic = 'force-static'
+export const dynamicParams = false // Return 404 for slugs not in generateStaticParams
 
 type Args = {
   params: Promise<{

@@ -33,6 +33,7 @@ import * as migration_20260205_create_designers_and_seed from './20260205_create
 import * as migration_20260207_add_base_fields_for_hook from './20260207_add_base_fields_for_hook';
 import * as migration_20260207_add_seo_fields from './20260207_add_seo_fields';
 import * as migration_20260207_add_destination_fields from './20260207_add_destination_fields';
+import * as migration_20260208_add_destinations_highlights_table from './20260208_add_destinations_highlights_table';
 
 export const migrations = [
   {
@@ -209,5 +210,10 @@ export const migrations = [
     up: migration_20260207_add_destination_fields.up,
     down: migration_20260207_add_destination_fields.down,
     name: '20260207_add_destination_fields'
+  },
+  {
+    up: migration_20260208_add_destinations_highlights_table.up,
+    down: migration_20260208_add_destinations_highlights_table.down,
+    name: '20260208_add_destinations_highlights_table'
   },
 ];

@@ -23,6 +23,7 @@ export const Destinations: CollectionConfig = {
     group: 'Content',
     description: 'Countries, regions, and parks for itinerary cross-linking',
     defaultColumns: ['name', 'type', 'updatedAt'],
+    baseListFilter: () => ({}), // Show all documents including drafts
   },
   access: {
     read: () => true,

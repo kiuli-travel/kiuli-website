@@ -15,14 +15,15 @@ const authenticatedOrApiKey = ({ req }: AccessArgs) => {
 
 export const Destinations: CollectionConfig = {
   slug: 'destinations',
-  // versions: {
-  //   drafts: true,
-  // },
+  versions: {
+    drafts: true,
+  },
   admin: {
     useAsTitle: 'name',
     group: 'Content',
     description: 'Countries, regions, and parks for itinerary cross-linking',
     defaultColumns: ['name', 'type', 'updatedAt'],
+    baseListFilter: () => ({}),
   },
   access: {
     read: () => true,

@@ -34,6 +34,7 @@ import * as migration_20260207_add_base_fields_for_hook from './20260207_add_bas
 import * as migration_20260207_add_seo_fields from './20260207_add_seo_fields';
 import * as migration_20260207_add_destination_fields from './20260207_add_destination_fields';
 import * as migration_20260208_add_destinations_highlights_table from './20260208_add_destinations_highlights_table';
+import * as migration_20260208_fix_destinations_versioning_schema from './20260208_fix_destinations_versioning_schema';
 
 export const migrations = [
   {
@@ -215,5 +216,10 @@ export const migrations = [
     up: migration_20260208_add_destinations_highlights_table.up,
     down: migration_20260208_add_destinations_highlights_table.down,
     name: '20260208_add_destinations_highlights_table'
+  },
+  {
+    up: migration_20260208_fix_destinations_versioning_schema.up,
+    down: migration_20260208_fix_destinations_versioning_schema.down,
+    name: '20260208_fix_destinations_versioning_schema'
   },
 ];

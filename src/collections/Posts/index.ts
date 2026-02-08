@@ -15,8 +15,8 @@ import { Banner } from '../../blocks/Banner/config'
 import { Code } from '../../blocks/Code/config'
 import { MediaBlock } from '../../blocks/MediaBlock/config'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
-import { populateAuthors } from './hooks/populateAuthors'
 import { revalidateDelete, revalidatePost } from './hooks/revalidatePost'
+import { updateLastModified } from '../Itineraries/hooks/updateLastModified'
 
 import {
   MetaDescriptionField,
@@ -80,6 +80,18 @@ export const Posts: CollectionConfig<'posts'> = {
               name: 'heroImage',
               type: 'upload',
               relationTo: 'media',
+              required: true,
+              admin: {
+                description: 'Featured image for the article (required)',
+              },
+            },
+            {
+              name: 'excerpt',
+              type: 'textarea',
+              maxLength: 300,
+              admin: {
+                description: '1-2 sentence summary for cards and listings (max 300 chars)',
+              },
             },
             {
               name: 'content',
@@ -129,6 +141,35 @@ export const Posts: CollectionConfig<'posts'> = {
               hasMany: true,
               relationTo: 'categories',
             },
+            {
+              name: 'relatedItineraries',
+              type: 'relationship',
+              relationTo: 'itineraries',
+              hasMany: true,
+              label: 'Related Safaris',
+              admin: {
+                description: 'Link to safari itineraries mentioned in or related to this article',
+              },
+            },
+            {
+              name: 'faqItems',
+              type: 'array',
+              label: 'FAQ Items',
+              admin: {
+                description: 'Frequently asked questions related to this article (for structured data)',
+              },
+              fields: [
+                {
+                  name: 'question',
+                  type: 'text',
+                  required: true,
+                },
+                {
+                  name: 'answer',
+                  type: 'richText',
+                },
+              ],
+            },
           ],
           label: 'Meta',
         },
@@ -157,6 +198,39 @@ export const Posts: CollectionConfig<'posts'> = {
               titlePath: 'meta.title',
               descriptionPath: 'meta.description',
             }),
+            {
+              name: 'answerCapsule',
+              type: 'textarea',
+              label: 'Answer Capsule',
+              admin: {
+                description: 'Summary optimized for AI extraction (40-60 words)',
+              },
+              validate: (value: string | null | undefined) => {
+                if (!value || value.trim() === '') return true
+                const words = value.trim().split(/\s+/).filter((w) => w.length > 0)
+                const wordCount = words.length
+                if (wordCount < 40) return `Answer capsule must be at least 40 words. Current count: ${wordCount}`
+                if (wordCount > 60) return `Answer capsule must not exceed 60 words. Current count: ${wordCount}`
+                return true
+              },
+            },
+            {
+              name: 'focusKeyword',
+              type: 'text',
+              label: 'Focus Keyword',
+              admin: {
+                description: 'Primary SEO keyword this article targets',
+              },
+            },
+            {
+              name: 'lastModified',
+              type: 'date',
+              label: 'Last Modified',
+              admin: {
+                readOnly: true,
+                description: 'Auto-updated on every save',
+              },
+            },
           ],
         },
       ],
@@ -186,39 +260,16 @@ export const Posts: CollectionConfig<'posts'> = {
       type: 'relationship',
       admin: {
         position: 'sidebar',
+        description: 'Article author(s) from the Authors collection',
       },
       hasMany: true,
-      relationTo: 'users',
-    },
-    // This field is only used to populate the user data via the `populateAuthors` hook
-    // This is because the `user` collection has access control locked to protect user privacy
-    // GraphQL will also not return mutated user data that differs from the underlying schema
-    {
-      name: 'populatedAuthors',
-      type: 'array',
-      access: {
-        update: () => false,
-      },
-      admin: {
-        disabled: true,
-        readOnly: true,
-      },
-      fields: [
-        {
-          name: 'id',
-          type: 'text',
-        },
-        {
-          name: 'name',
-          type: 'text',
-        },
-      ],
+      relationTo: 'authors',
     },
     slugField(),
   ],
   hooks: {
+    beforeChange: [updateLastModified],
     afterChange: [revalidatePost],
-    afterRead: [populateAuthors],
     afterDelete: [revalidateDelete],
   },
   versions: {

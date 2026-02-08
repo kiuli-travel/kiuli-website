@@ -11,6 +11,7 @@ import { post2 } from './post-2'
 import { post3 } from './post-3'
 
 const collections: CollectionSlug[] = [
+  'authors',
   'categories',
   'media',
   'pages',
@@ -69,14 +70,15 @@ export const seed = async ({
       .map((collection) => payload.db.deleteVersions({ collection, req, where: {} })),
   )
 
-  payload.logger.info(`— Seeding demo author and user...`)
+  payload.logger.info(`— Seeding demo author...`)
 
+  // Delete any existing demo author from authors collection
   await payload.delete({
-    collection: 'users',
+    collection: 'authors',
     depth: 0,
     where: {
-      email: {
-        equals: 'demo-author@example.com',
+      slug: {
+        equals: 'demo-author',
       },
     },
   })
@@ -100,11 +102,12 @@ export const seed = async ({
 
   const [demoAuthor, image1Doc, image2Doc, image3Doc, imageHomeDoc] = await Promise.all([
     payload.create({
-      collection: 'users',
+      collection: 'authors',
       data: {
         name: 'Demo Author',
-        email: 'demo-author@example.com',
-        password: 'password',
+        slug: 'demo-author',
+        role: 'Safari Specialist',
+        shortBio: 'A passionate travel writer with years of experience exploring African safaris.',
       },
     }),
     payload.create({

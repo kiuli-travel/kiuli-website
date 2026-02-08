@@ -1,8 +1,8 @@
-import { Post } from '@/payload-types'
+import { Author, Post } from '@/payload-types'
 
 /**
- * Formats an array of populatedAuthors from Posts into a prettified string.
- * @param authors - The populatedAuthors array from a Post.
+ * Formats an array of authors from Posts into a prettified string.
+ * @param authors - The authors array from a Post (can be Author objects or IDs).
  * @returns A prettified string of authors.
  * @example
  *
@@ -10,11 +10,18 @@ import { Post } from '@/payload-types'
  * [Author1, Author2, Author3] becomes 'Author1, Author2, and Author3'
  *
  */
-export const formatAuthors = (
-  authors: NonNullable<NonNullable<Post['populatedAuthors']>[number]>[],
-) => {
-  // Ensure we don't have any authors without a name
-  const authorNames = authors.map((author) => author.name).filter(Boolean)
+export const formatAuthors = (authors: Post['authors']) => {
+  if (!authors || authors.length === 0) return ''
+
+  // Extract names from Author objects (skip IDs)
+  const authorNames = authors
+    .map((author) => {
+      if (typeof author === 'object' && author !== null) {
+        return (author as Author).name
+      }
+      return null
+    })
+    .filter(Boolean) as string[]
 
   if (authorNames.length === 0) return ''
   if (authorNames.length === 1) return authorNames[0]

@@ -247,7 +247,14 @@ export interface Page {
 export interface Post {
   id: number;
   title: string;
-  heroImage?: (number | null) | Media;
+  /**
+   * Featured image for the article (required)
+   */
+  heroImage: number | Media;
+  /**
+   * 1-2 sentence summary for cards and listings (max 300 chars)
+   */
+  excerpt?: string | null;
   content: {
     root: {
       type: string;
@@ -265,6 +272,34 @@ export interface Post {
   };
   relatedPosts?: (number | Post)[] | null;
   categories?: (number | Category)[] | null;
+  /**
+   * Link to safari itineraries mentioned in or related to this article
+   */
+  relatedItineraries?: (number | Itinerary)[] | null;
+  /**
+   * Frequently asked questions related to this article (for structured data)
+   */
+  faqItems?:
+    | {
+        question: string;
+        answer?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+      }[]
+    | null;
   meta?: {
     title?: string | null;
     /**
@@ -272,15 +307,24 @@ export interface Post {
      */
     image?: (number | null) | Media;
     description?: string | null;
+    /**
+     * Summary optimized for AI extraction (40-60 words)
+     */
+    answerCapsule?: string | null;
+    /**
+     * Primary SEO keyword this article targets
+     */
+    focusKeyword?: string | null;
+    /**
+     * Auto-updated on every save
+     */
+    lastModified?: string | null;
   };
   publishedAt?: string | null;
-  authors?: (number | User)[] | null;
-  populatedAuthors?:
-    | {
-        id?: string | null;
-        name?: string | null;
-      }[]
-    | null;
+  /**
+   * Article author(s) from the Authors collection
+   */
+  authors?: (number | Author)[] | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
@@ -1758,31 +1802,80 @@ export interface Category {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
+ * via the `definition` "authors".
  */
-export interface User {
+export interface Author {
   id: number;
-  name?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  enableAPIKey?: boolean | null;
-  apiKey?: string | null;
-  apiKeyIndex?: string | null;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
+  /**
+   * Full display name
+   */
+  name: string;
+  /**
+   * URL slug
+   */
+  slug: string;
+  /**
+   * e.g., "Safari Specialist", "Travel Designer"
+   */
+  role?: string | null;
+  /**
+   * Full biography for author page
+   */
+  bio?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * 1-2 sentence bio for article bylines (max 200 chars)
+   */
+  shortBio?: string | null;
+  /**
+   * Professional credentials for E-E-A-T
+   */
+  credentials?:
     | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
+        text: string;
+        id?: string | null;
       }[]
     | null;
-  password?: string | null;
+  /**
+   * Headshot
+   */
+  photo?: (number | null) | Media;
+  /**
+   * Contact email (admin only, not displayed on frontend)
+   */
+  email?: string | null;
+  /**
+   * LinkedIn profile URL
+   */
+  linkedIn?: string | null;
+  /**
+   * SEO title override (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * Canonical URL override
+   */
+  canonicalUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2125,6 +2218,34 @@ export interface Form {
     | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
 }
 /**
  * Manage iTrvl itinerary processing jobs. Use the Import Itinerary page to create new jobs.
@@ -2648,83 +2769,6 @@ export interface Designer {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "authors".
- */
-export interface Author {
-  id: number;
-  /**
-   * Full display name
-   */
-  name: string;
-  /**
-   * URL slug
-   */
-  slug: string;
-  /**
-   * e.g., "Safari Specialist", "Travel Designer"
-   */
-  role?: string | null;
-  /**
-   * Full biography for author page
-   */
-  bio?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * 1-2 sentence bio for article bylines (max 200 chars)
-   */
-  shortBio?: string | null;
-  /**
-   * Professional credentials for E-E-A-T
-   */
-  credentials?:
-    | {
-        text: string;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Headshot
-   */
-  photo?: (number | null) | Media;
-  /**
-   * Contact email (admin only, not displayed on frontend)
-   */
-  email?: string | null;
-  /**
-   * LinkedIn profile URL
-   */
-  linkedIn?: string | null;
-  /**
-   * SEO title override (max 60 chars)
-   */
-  metaTitle?: string | null;
-  /**
-   * SEO description (max 160 chars)
-   */
-  metaDescription?: string | null;
-  /**
-   * Canonical URL override
-   */
-  canonicalUrl?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -3181,24 +3225,30 @@ export interface FormBlockSelect<T extends boolean = true> {
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
   heroImage?: T;
+  excerpt?: T;
   content?: T;
   relatedPosts?: T;
   categories?: T;
+  relatedItineraries?: T;
+  faqItems?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
   meta?:
     | T
     | {
         title?: T;
         image?: T;
         description?: T;
+        answerCapsule?: T;
+        focusKeyword?: T;
+        lastModified?: T;
       };
   publishedAt?: T;
   authors?: T;
-  populatedAuthors?:
-    | T
-    | {
-        id?: T;
-        name?: T;
-      };
   generateSlug?: T;
   slug?: T;
   updatedAt?: T;

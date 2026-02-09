@@ -66,8 +66,36 @@ export default async function Page({ params: paramsPromise }: Args) {
 
   const { hero, layout } = page
 
+  // WebSite JSON-LD schema for homepage
+  const isHomepage = decodedSlug === 'home'
+  const websiteJsonLd = isHomepage
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'Kiuli',
+        url: 'https://kiuli.com',
+        description:
+          'Discover handcrafted luxury African safari itineraries. Kiuli curates extraordinary wildlife experiences across Kenya, Tanzania, Botswana, and beyond.',
+        publisher: {
+          '@type': 'Organization',
+          name: 'Kiuli',
+          url: 'https://kiuli.com',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://kiuli.com/kiuli-logo.png',
+          },
+        },
+      }
+    : null
+
   return (
     <article className="pt-16 pb-24">
+      {isHomepage && websiteJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+      )}
       <PageClient />
       {/* Allows redirects for valid pages too */}
       <PayloadRedirects disableNotFound url={url} />

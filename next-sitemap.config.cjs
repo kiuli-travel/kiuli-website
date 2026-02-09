@@ -13,11 +13,15 @@ module.exports = {
     '/safaris-sitemap.xml',
     '/destinations-sitemap.xml',
     '/properties-sitemap.xml',
+    '/articles-sitemap.xml',
+    '/authors-sitemap.xml',
     '/*',
     '/posts/*',
     '/safaris/*',
     '/destinations/*',
     '/properties/*',
+    '/articles/*',
+    '/authors/*',
   ],
   robotsTxtOptions: {
     policies: [
@@ -32,6 +36,8 @@ module.exports = {
       `${SITE_URL}/safaris-sitemap.xml`,
       `${SITE_URL}/destinations-sitemap.xml`,
       `${SITE_URL}/properties-sitemap.xml`,
+      `${SITE_URL}/articles-sitemap.xml`,
+      `${SITE_URL}/authors-sitemap.xml`,
     ],
   },
 }

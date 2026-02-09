@@ -38,6 +38,7 @@ import * as migration_20260208_fix_destinations_versioning_schema from './202602
 import * as migration_20260208_create_authors_collection from './20260208_create_authors_collection';
 import * as migration_20260208_update_posts_for_articles from './20260208_update_posts_for_articles';
 import * as migration_20260208_add_properties_and_mappings from './20260208_add_properties_and_mappings';
+import * as migration_20260209_add_homepage_blocks from './20260209_add_homepage_blocks';
 
 export const migrations = [
   {
@@ -239,5 +240,10 @@ export const migrations = [
     up: migration_20260208_add_properties_and_mappings.up,
     down: migration_20260208_add_properties_and_mappings.down,
     name: '20260208_add_properties_and_mappings'
+  },
+  {
+    up: migration_20260209_add_homepage_blocks.up,
+    down: migration_20260209_add_homepage_blocks.down,
+    name: '20260209_add_homepage_blocks'
   },
 ];

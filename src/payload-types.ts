@@ -225,7 +225,19 @@ export interface Page {
       | null;
     media?: (number | null) | Media;
   };
-  layout: (CallToActionBlock | ContentBlock | MediaBlock | ArchiveBlock | FormBlock)[];
+  layout: (
+    | HomeHeroBlock
+    | FeaturedItinerariesBlock
+    | DestinationHighlightsBlock
+    | ValuePropositionBlock
+    | TestimonialBlock
+    | FeaturedPropertiesBlock
+    | CallToActionBlock
+    | ContentBlock
+    | MediaBlock
+    | ArchiveBlock
+    | FormBlock
+  )[];
   meta?: {
     title?: string | null;
     /**
@@ -2034,6 +2046,170 @@ export interface Author {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HomeHeroBlock".
+ */
+export interface HomeHeroBlock {
+  /**
+   * Main headline, e.g. "Africa's Finest Safari Experiences"
+   */
+  heading: string;
+  /**
+   * Supporting text below headline
+   */
+  subheading?: string | null;
+  /**
+   * Full-bleed background image
+   */
+  backgroundImage: number | Media;
+  /**
+   * Optional video (takes priority over image if present)
+   */
+  backgroundVideo?: (number | null) | Media;
+  /**
+   * CTA button text, e.g. "Explore Safaris"
+   */
+  ctaLabel?: string | null;
+  /**
+   * CTA button URL, e.g. "/safaris"
+   */
+  ctaLink?: string | null;
+  /**
+   * Controls gradient overlay darkness (0-100)
+   */
+  overlayOpacity?: number | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'homeHero';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedItinerariesBlock".
+ */
+export interface FeaturedItinerariesBlock {
+  /**
+   * Section heading, e.g. "Featured Safaris"
+   */
+  heading?: string | null;
+  /**
+   * Brief intro text
+   */
+  subheading?: string | null;
+  /**
+   * Hand-picked itineraries to feature
+   */
+  itineraries: (number | Itinerary)[];
+  /**
+   * Whether to show investment level on cards
+   */
+  showPricing?: boolean | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'featuredItineraries';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "DestinationHighlightsBlock".
+ */
+export interface DestinationHighlightsBlock {
+  /**
+   * e.g. "Explore Destinations"
+   */
+  heading?: string | null;
+  /**
+   * Brief intro
+   */
+  subheading?: string | null;
+  /**
+   * Destinations to highlight
+   */
+  destinations: (number | Destination)[];
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'destinationHighlights';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ValuePropositionBlock".
+ */
+export interface ValuePropositionBlock {
+  /**
+   * e.g. "Why Kiuli"
+   */
+  heading?: string | null;
+  /**
+   * The editorial content
+   */
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Accompanying image
+   */
+  image?: (number | null) | Media;
+  /**
+   * Image placement relative to text
+   */
+  imagePosition?: ('left' | 'right') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'valueProposition';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TestimonialBlock".
+ */
+export interface TestimonialBlock {
+  /**
+   * The testimonial text
+   */
+  quote: string;
+  /**
+   * Customer name or identifier, e.g. "Sarah M., New York"
+   */
+  attribution: string;
+  /**
+   * e.g. "Kenya & Tanzania, October 2025"
+   */
+  context?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'testimonial';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedPropertiesBlock".
+ */
+export interface FeaturedPropertiesBlock {
+  /**
+   * e.g. "Where You'll Stay"
+   */
+  heading?: string | null;
+  /**
+   * Brief intro
+   */
+  subheading?: string | null;
+  /**
+   * Properties to feature
+   */
+  properties: (number | Property)[];
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'featuredProperties';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "CallToActionBlock".
  */
 export interface CallToActionBlock {
@@ -3273,6 +3449,12 @@ export interface PagesSelect<T extends boolean = true> {
   layout?:
     | T
     | {
+        homeHero?: T | HomeHeroBlockSelect<T>;
+        featuredItineraries?: T | FeaturedItinerariesBlockSelect<T>;
+        destinationHighlights?: T | DestinationHighlightsBlockSelect<T>;
+        valueProposition?: T | ValuePropositionBlockSelect<T>;
+        testimonial?: T | TestimonialBlockSelect<T>;
+        featuredProperties?: T | FeaturedPropertiesBlockSelect<T>;
         cta?: T | CallToActionBlockSelect<T>;
         content?: T | ContentBlockSelect<T>;
         mediaBlock?: T | MediaBlockSelect<T>;
@@ -3292,6 +3474,78 @@ export interface PagesSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HomeHeroBlock_select".
+ */
+export interface HomeHeroBlockSelect<T extends boolean = true> {
+  heading?: T;
+  subheading?: T;
+  backgroundImage?: T;
+  backgroundVideo?: T;
+  ctaLabel?: T;
+  ctaLink?: T;
+  overlayOpacity?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedItinerariesBlock_select".
+ */
+export interface FeaturedItinerariesBlockSelect<T extends boolean = true> {
+  heading?: T;
+  subheading?: T;
+  itineraries?: T;
+  showPricing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "DestinationHighlightsBlock_select".
+ */
+export interface DestinationHighlightsBlockSelect<T extends boolean = true> {
+  heading?: T;
+  subheading?: T;
+  destinations?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ValuePropositionBlock_select".
+ */
+export interface ValuePropositionBlockSelect<T extends boolean = true> {
+  heading?: T;
+  content?: T;
+  image?: T;
+  imagePosition?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TestimonialBlock_select".
+ */
+export interface TestimonialBlockSelect<T extends boolean = true> {
+  quote?: T;
+  attribution?: T;
+  context?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeaturedPropertiesBlock_select".
+ */
+export interface FeaturedPropertiesBlockSelect<T extends boolean = true> {
+  heading?: T;
+  subheading?: T;
+  properties?: T;
+  id?: T;
+  blockName?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

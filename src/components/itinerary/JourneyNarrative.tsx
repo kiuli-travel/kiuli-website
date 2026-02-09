@@ -1,4 +1,4 @@
-import type { Itinerary, Media } from '@/payload-types'
+import type { Itinerary, Media, Property } from '@/payload-types'
 import { StayCard } from './StayCard'
 import { ActivityBlock } from './ActivityBlock'
 import { TransferRow } from './TransferRow'
@@ -93,6 +93,7 @@ type ProcessedStay = {
   dayStart: number
   nights: number
   propertyName: string
+  propertySlug: string | null
   location: string
   country: string
   descriptionRichText: DefaultTypedEditorState | null
@@ -159,11 +160,19 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
           }
         }
 
+        // Extract property slug if property relationship is populated
+        let propertySlug: string | null = null
+        if (segment.property && typeof segment.property === 'object') {
+          const prop = segment.property as Property
+          propertySlug = prop.slug || null
+        }
+
         allSegments.push({
           type: 'stay',
           dayStart: day.dayNumber,
           nights: segment.nights || 1,
           propertyName: segment.accommodationName,
+          propertySlug,
           location: segment.location || '',
           country: segment.country || '',
           descriptionRichText,
@@ -299,6 +308,7 @@ export function JourneyNarrative({ days }: JourneyNarrativeProps) {
                 dayRange={dayRange}
                 nights={stay.nights}
                 propertyName={stay.propertyName}
+                propertySlug={stay.propertySlug || undefined}
                 location={locationText}
                 descriptionContent={
                   stay.descriptionRichText ? (

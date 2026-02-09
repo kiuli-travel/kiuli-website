@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { Calendar, Home, Bed, Check, ChevronDown } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
@@ -9,6 +10,7 @@ interface StayCardProps {
   dateRange?: string
   nights: number
   propertyName: string
+  propertySlug?: string
   location: string
   descriptionContent?: React.ReactNode
   insiderTip?: string
@@ -74,6 +76,7 @@ export function StayCard({
   dateRange,
   nights,
   propertyName,
+  propertySlug,
   location,
   descriptionContent,
   insiderTip,
@@ -118,9 +121,18 @@ export function StayCard({
                 Accommodation
               </span>
             </div>
-            <h3 className="font-semibold text-kiuli-charcoal text-lg">
-              {propertyName}
-            </h3>
+            {propertySlug ? (
+              <Link
+                href={`/properties/${propertySlug}`}
+                className="font-semibold text-kiuli-charcoal text-lg hover:text-kiuli-teal transition-colors"
+              >
+                {propertyName}
+              </Link>
+            ) : (
+              <h3 className="font-semibold text-kiuli-charcoal text-lg">
+                {propertyName}
+              </h3>
+            )}
             <p className="text-kiuli-charcoal/60 text-sm">{location}</p>
           </div>
         </div>
@@ -145,16 +157,34 @@ export function StayCard({
               Accommodation
             </span>
           </div>
-          <h3 className="font-semibold text-kiuli-charcoal">{propertyName}</h3>
+          {propertySlug ? (
+            <Link
+              href={`/properties/${propertySlug}`}
+              className="font-semibold text-kiuli-charcoal hover:text-kiuli-teal transition-colors"
+            >
+              {propertyName}
+            </Link>
+          ) : (
+            <h3 className="font-semibold text-kiuli-charcoal">{propertyName}</h3>
+          )}
           <p className="text-kiuli-charcoal/60 text-sm">{location}</p>
         </div>
       </div>
 
       {/* Content Section */}
       <div className="max-w-3xl mx-auto px-6 md:px-8 py-12 md:py-16">
-        <h2 className="font-serif text-3xl md:text-4xl lg:text-[42px] text-kiuli-charcoal mb-8 leading-tight">
-          {propertyName}
-        </h2>
+        {propertySlug ? (
+          <Link
+            href={`/properties/${propertySlug}`}
+            className="block font-serif text-3xl md:text-4xl lg:text-[42px] text-kiuli-charcoal mb-8 leading-tight hover:text-kiuli-teal transition-colors"
+          >
+            {propertyName}
+          </Link>
+        ) : (
+          <h2 className="font-serif text-3xl md:text-4xl lg:text-[42px] text-kiuli-charcoal mb-8 leading-tight">
+            {propertyName}
+          </h2>
+        )}
 
         {descriptionContent && (
           <div className="prose prose-lg max-w-none text-kiuli-charcoal leading-relaxed">

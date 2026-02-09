@@ -81,7 +81,7 @@ export default buildConfig({
     pool: {
       connectionString: process.env.POSTGRES_URL || '',
     },
-    push: false, // Disable automatic schema push - use migrations only
+    push: false, // Disable schema push - use migrations only
   }),
   collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties],
   cors: [getServerSideURL()].filter(Boolean),

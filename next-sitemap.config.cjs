@@ -12,10 +12,12 @@ module.exports = {
     '/pages-sitemap.xml',
     '/safaris-sitemap.xml',
     '/destinations-sitemap.xml',
+    '/properties-sitemap.xml',
     '/*',
     '/posts/*',
     '/safaris/*',
     '/destinations/*',
+    '/properties/*',
   ],
   robotsTxtOptions: {
     policies: [
@@ -29,6 +31,7 @@ module.exports = {
       `${SITE_URL}/posts-sitemap.xml`,
       `${SITE_URL}/safaris-sitemap.xml`,
       `${SITE_URL}/destinations-sitemap.xml`,
+      `${SITE_URL}/properties-sitemap.xml`,
     ],
   },
 }

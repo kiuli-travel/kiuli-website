@@ -45,3 +45,4 @@ lambda/handler.js
 # Design references (v0 exports)
 design-references/
 v0-zips/
+.env.vercel

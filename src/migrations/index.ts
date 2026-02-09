@@ -39,6 +39,7 @@ import * as migration_20260208_create_authors_collection from './20260208_create
 import * as migration_20260208_update_posts_for_articles from './20260208_update_posts_for_articles';
 import * as migration_20260208_add_properties_and_mappings from './20260208_add_properties_and_mappings';
 import * as migration_20260209_add_homepage_blocks from './20260209_add_homepage_blocks';
+import * as migration_20260209_fix_homepage_block_relationships from './20260209_fix_homepage_block_relationships';
 
 export const migrations = [
   {
@@ -245,5 +246,10 @@ export const migrations = [
     up: migration_20260209_add_homepage_blocks.up,
     down: migration_20260209_add_homepage_blocks.down,
     name: '20260209_add_homepage_blocks'
+  },
+  {
+    up: migration_20260209_fix_homepage_block_relationships.up,
+    down: migration_20260209_fix_homepage_block_relationships.down,
+    name: '20260209_fix_homepage_block_relationships'
   },
 ];

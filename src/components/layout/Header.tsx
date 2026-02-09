@@ -8,8 +8,8 @@ import { useInquiryModal } from '@/components/inquiry-modal/InquiryModalProvider
 const navLinks = [
   { href: '/safaris', label: 'Safaris' },
   { href: '/destinations', label: 'Destinations' },
+  { href: '/properties', label: 'Properties' },
   { href: '/articles', label: 'Articles' },
-  { href: '/contact', label: 'Contact' },
 ]
 
 export function Header() {

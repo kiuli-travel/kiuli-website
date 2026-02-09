@@ -6,10 +6,10 @@ import Image from 'next/image'
 import { useInquiryModal } from '@/components/inquiry-modal/InquiryModalProvider'
 
 const navLinks = [
-  { href: '#', label: 'Safaris' },
-  { href: '#', label: 'Destinations' },
-  { href: '#', label: 'About' },
-  { href: '#', label: 'Contact' },
+  { href: '/safaris', label: 'Safaris' },
+  { href: '/destinations', label: 'Destinations' },
+  { href: '/articles', label: 'Articles' },
+  { href: '/contact', label: 'Contact' },
 ]
 
 export function Header() {

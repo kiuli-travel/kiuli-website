@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import type { Destination, Itinerary, Media } from '@/payload-types'
+import type { Destination, Itinerary, Media, Property } from '@/payload-types'
 
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
@@ -15,6 +15,7 @@ import BestTimeToVisit from '@/components/BestTimeToVisit'
 import ItineraryGrid from '@/components/ItineraryGrid'
 import ItineraryCard from '@/components/ItineraryCard'
 import DestinationCard from '@/components/DestinationCard'
+import PropertyCard from '@/components/PropertyCard'
 import { FAQSection } from '@/components/itinerary/FAQSection'
 import RichText from '@/components/RichText'
 import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
@@ -119,6 +120,20 @@ function extractDescriptionText(description: unknown): string | undefined {
   if (!description) return undefined
   const text = extractTextFromRichText(description)
   return text.length > 0 ? text.substring(0, 150) : undefined
+}
+
+// Helper: Get property hero image
+function getPropertyHeroImage(property: Property): { imgixUrl: string; alt: string } | null {
+  const heroImage = property.heroImage
+  if (!heroImage || typeof heroImage === 'number') return null
+
+  const media = heroImage as Media
+  if (!media.imgixUrl) return null
+
+  return {
+    imgixUrl: media.imgixUrl,
+    alt: media.alt || media.altText || property.name,
+  }
 }
 
 // Generate BreadcrumbList JSON-LD
@@ -357,6 +372,16 @@ export default async function DestinationPage({ params: paramsPromise }: Args) {
   const breadcrumbSchema = generateBreadcrumbSchema(destination, parentCountry, slugPath)
   const faqSchema = generateFAQSchema(faqs)
 
+  // Extract featured properties
+  const featuredProperties: Property[] = []
+  if (destination.featuredProperties && destination.featuredProperties.length > 0) {
+    for (const prop of destination.featuredProperties) {
+      if (typeof prop === 'object') {
+        featuredProperties.push(prop as Property)
+      }
+    }
+  }
+
   // Heading for itineraries section
   const itinerariesHeading =
     destination.type === 'country'
@@ -437,6 +462,27 @@ export default async function DestinationPage({ params: paramsPromise }: Args) {
       {/* Best Time to Visit */}
       {destination.bestTimeToVisit && (
         <BestTimeToVisit content={destination.bestTimeToVisit as DefaultTypedEditorState} />
+      )}
+
+      {/* Featured Properties */}
+      {featuredProperties.length > 0 && (
+        <ItineraryGrid heading={`Where to Stay in ${destination.name}`}>
+          {featuredProperties.map((property) => {
+            const propHeroImage = getPropertyHeroImage(property)
+
+            return (
+              <PropertyCard
+                key={property.id}
+                name={property.name}
+                slug={property.slug}
+                imageUrl={propHeroImage?.imgixUrl}
+                type={property.type || undefined}
+                priceTier={property.priceTier || undefined}
+                destinationName={destination.name}
+              />
+            )
+          })}
+        </ItineraryGrid>
       )}
 
       {/* Itineraries Grid */}

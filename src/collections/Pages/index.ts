@@ -7,12 +7,13 @@ import { CallToAction } from '../../blocks/CallToAction/config'
 import { Content } from '../../blocks/Content/config'
 import { FormBlock } from '../../blocks/Form/config'
 import { MediaBlock } from '../../blocks/MediaBlock/config'
-import { HomeHero } from '../../blocks/HomeHero/config'
-import { FeaturedItineraries } from '../../blocks/FeaturedItineraries/config'
-import { DestinationHighlights } from '../../blocks/DestinationHighlights/config'
-import { ValueProposition } from '../../blocks/ValueProposition/config'
-import { Testimonial } from '../../blocks/Testimonial/config'
-import { FeaturedProperties } from '../../blocks/FeaturedProperties/config'
+// Homepage blocks temporarily disabled - schema needs proper setup
+// import { HomeHero } from '../../blocks/HomeHero/config'
+// import { FeaturedItineraries } from '../../blocks/FeaturedItineraries/config'
+// import { DestinationHighlights } from '../../blocks/DestinationHighlights/config'
+// import { ValueProposition } from '../../blocks/ValueProposition/config'
+// import { Testimonial } from '../../blocks/Testimonial/config'
+// import { FeaturedProperties } from '../../blocks/FeaturedProperties/config'
 import { hero } from '@/heros/config'
 import { slugField } from 'payload'
 import { populatePublishedAt } from '../../hooks/populatePublishedAt'
@@ -79,12 +80,13 @@ export const Pages: CollectionConfig<'pages'> = {
               name: 'layout',
               type: 'blocks',
               blocks: [
-                HomeHero,
-                FeaturedItineraries,
-                DestinationHighlights,
-                ValueProposition,
-                Testimonial,
-                FeaturedProperties,
+                // Homepage blocks temporarily disabled - schema needs proper setup
+                // HomeHero,
+                // FeaturedItineraries,
+                // DestinationHighlights,
+                // ValueProposition,
+                // Testimonial,
+                // FeaturedProperties,
                 CallToAction,
                 Content,
                 MediaBlock,

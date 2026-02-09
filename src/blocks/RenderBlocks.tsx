@@ -7,12 +7,13 @@ import { CallToActionBlock } from '@/blocks/CallToAction/Component'
 import { ContentBlock } from '@/blocks/Content/Component'
 import { FormBlock } from '@/blocks/Form/Component'
 import { MediaBlock } from '@/blocks/MediaBlock/Component'
-import { HomeHeroBlock } from '@/blocks/HomeHero/Component'
-import { FeaturedItinerariesBlock } from '@/blocks/FeaturedItineraries/Component'
-import { DestinationHighlightsBlock } from '@/blocks/DestinationHighlights/Component'
-import { ValuePropositionBlock } from '@/blocks/ValueProposition/Component'
-import { TestimonialBlock } from '@/blocks/Testimonial/Component'
-import { FeaturedPropertiesBlock } from '@/blocks/FeaturedProperties/Component'
+// Homepage blocks temporarily disabled - schema needs proper setup
+// import { HomeHeroBlock } from '@/blocks/HomeHero/Component'
+// import { FeaturedItinerariesBlock } from '@/blocks/FeaturedItineraries/Component'
+// import { DestinationHighlightsBlock } from '@/blocks/DestinationHighlights/Component'
+// import { ValuePropositionBlock } from '@/blocks/ValueProposition/Component'
+// import { TestimonialBlock } from '@/blocks/Testimonial/Component'
+// import { FeaturedPropertiesBlock } from '@/blocks/FeaturedProperties/Component'
 
 // Block components mapped by blockType - each component accepts its specific block props
 const blockComponents = {
@@ -21,18 +22,20 @@ const blockComponents = {
   cta: CallToActionBlock,
   formBlock: FormBlock,
   mediaBlock: MediaBlock,
-  homeHero: HomeHeroBlock,
-  featuredItineraries: FeaturedItinerariesBlock,
-  destinationHighlights: DestinationHighlightsBlock,
-  valueProposition: ValuePropositionBlock,
-  testimonial: TestimonialBlock,
-  featuredProperties: FeaturedPropertiesBlock,
+  // Homepage blocks temporarily disabled - schema needs proper setup
+  // homeHero: HomeHeroBlock,
+  // featuredItineraries: FeaturedItinerariesBlock,
+  // destinationHighlights: DestinationHighlightsBlock,
+  // valueProposition: ValuePropositionBlock,
+  // testimonial: TestimonialBlock,
+  // featuredProperties: FeaturedPropertiesBlock,
 } as const
 
 type BlockType = keyof typeof blockComponents
 
 // Block types that should render full-bleed without margin wrapper
-const fullBleedBlocks = new Set(['homeHero'])
+// homeHero temporarily disabled
+const fullBleedBlocks = new Set<string>([])
 
 export const RenderBlocks: React.FC<{
   blocks: Page['layout'][0][]

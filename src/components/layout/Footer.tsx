@@ -1,18 +1,25 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { CONTACT_PHONE, CONTACT_EMAIL } from '@/components/contact/ContactMethods'
 
-const exploreLinks = [
-  { label: 'Safaris', href: '#' },
-  { label: 'Destinations', href: '#' },
-  { label: 'About Us', href: '#' },
-  { label: 'How It Works', href: '#' },
+// Navigation links (matching Header)
+const navigationLinks = [
+  { label: 'Safaris', href: '/safaris' },
+  { label: 'Destinations', href: '/destinations' },
+  { label: 'Properties', href: '/properties' },
+  { label: 'Articles', href: '/articles' },
 ]
 
-const supportLinks = [
-  { label: 'Contact', href: '#' },
-  { label: 'FAQs', href: '#' },
+// Company links
+const companyLinks = [
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
+]
+
+// Legal links (placeholder hrefs for now)
+const legalLinks = [
   { label: 'Privacy Policy', href: '#' },
-  { label: 'Terms of Service', href: '#' },
+  { label: 'Terms', href: '#' },
 ]
 
 export function Footer() {
@@ -40,16 +47,14 @@ export function Footer() {
                 className="h-[18px] w-auto"
               />
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-gray-300">
-              Luxury African Safaris
-            </p>
+            <p className="mt-4 text-sm leading-relaxed text-gray-300">Luxury African Safaris</p>
           </div>
 
-          {/* Explore Column */}
+          {/* Navigation Column */}
           <div>
             <h3 className="label-caps text-white">Explore</h3>
             <ul className="mt-6 space-y-4">
-              {exploreLinks.map((link) => (
+              {navigationLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
@@ -62,11 +67,11 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Support Column */}
+          {/* Company Column */}
           <div>
-            <h3 className="label-caps text-white">Support</h3>
+            <h3 className="label-caps text-white">Company</h3>
             <ul className="mt-6 space-y-4">
-              {supportLinks.map((link) => (
+              {companyLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
@@ -79,21 +84,21 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Connect Column */}
+          {/* Contact Column */}
           <div>
-            <h3 className="label-caps text-white">Connect</h3>
+            <h3 className="label-caps text-white">Contact</h3>
             <div className="mt-6 space-y-4">
               <a
-                href="mailto:hello@kiuli.com"
+                href={`mailto:${CONTACT_EMAIL}`}
                 className="block text-sm text-gray-400 transition-colors duration-200 hover:text-white"
               >
-                hello@kiuli.com
+                {CONTACT_EMAIL}
               </a>
               <a
-                href="tel:+254700000000"
+                href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`}
                 className="block text-sm text-gray-400 transition-colors duration-200 hover:text-white"
               >
-                +254 700 000 000
+                {CONTACT_PHONE}
               </a>
               <div className="pt-2">
                 <a
@@ -104,7 +109,7 @@ export function Footer() {
                   className="text-gray-400 transition-colors duration-200 hover:text-white"
                 >
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                   </svg>
                 </a>
               </div>
@@ -116,10 +121,21 @@ export function Footer() {
         <div className="mt-16 border-t border-gray-600" />
 
         {/* Bottom Bar */}
-        <div className="mt-8 text-center">
+        <div className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
           <p className="text-xs text-gray-400">
             &copy; {currentYear} Kiuli. All rights reserved.
           </p>
+          <div className="flex gap-6">
+            {legalLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="text-xs text-gray-400 transition-colors duration-200 hover:text-white"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

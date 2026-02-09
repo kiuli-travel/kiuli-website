@@ -82,13 +82,14 @@ export const plugins: Plugin[] = [
       },
     },
   }),
-  searchPlugin({
-    collections: ['posts'],
-    beforeSync: beforeSyncWithSearch,
-    searchOverrides: {
-      fields: ({ defaultFields }) => {
-        return [...defaultFields, ...searchFields]
-      },
-    },
-  }),
+  // TEMPORARILY DISABLED TO DEBUG DASHBOARD ERROR
+  // searchPlugin({
+  //   collections: ['posts'],
+  //   beforeSync: beforeSyncWithSearch,
+  //   searchOverrides: {
+  //     fields: ({ defaultFields }) => {
+  //       return [...defaultFields, ...searchFields]
+  //     },
+  //   },
+  // }),
 ]

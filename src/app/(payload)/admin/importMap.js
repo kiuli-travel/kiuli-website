@@ -44,8 +44,6 @@ import { RootImagesGallery as RootImagesGallery_255ef2e6cf8a21ab49525f913eb50e27
 import { VideosGallery as VideosGallery_ff7b062b2c25a438045e482010c02fea } from '@/components/admin/VideosGallery'
 import { ProcessButton as ProcessButton_6f8f56340afe606e50afe37e4a9f28d1 } from '@/collections/ItineraryJobs/components/ProcessButton'
 import { JobControlPanel as JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2 } from '@/collections/ItineraryJobs/components/JobControlPanel'
-import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
-import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { FolderTypeField as FolderTypeField_3817bf644402e67bfe6577f60ef982de } from '@payloadcms/ui'
 import { RowLabel as RowLabel_ec255a65fa6fa8d1faeb09cf35284224 } from '@/Header/RowLabel'
 import { RowLabel as RowLabel_1f6ff6ff633e3695d348f4f3c58f1466 } from '@/Footer/RowLabel'
@@ -98,8 +96,6 @@ export const importMap = {
   "@/components/admin/VideosGallery#VideosGallery": VideosGallery_ff7b062b2c25a438045e482010c02fea,
   "@/collections/ItineraryJobs/components/ProcessButton#ProcessButton": ProcessButton_6f8f56340afe606e50afe37e4a9f28d1,
   "@/collections/ItineraryJobs/components/JobControlPanel#JobControlPanel": JobControlPanel_3cd4aabc8c394935ca234e320fe6f0a2,
-  "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
-  "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/ui#FolderTypeField": FolderTypeField_3817bf644402e67bfe6577f60ef982de,
   "@/Header/RowLabel#RowLabel": RowLabel_ec255a65fa6fa8d1faeb09cf35284224,
   "@/Footer/RowLabel#RowLabel": RowLabel_1f6ff6ff633e3695d348f4f3c58f1466,

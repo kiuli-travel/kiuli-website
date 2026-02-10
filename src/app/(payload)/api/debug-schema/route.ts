@@ -117,7 +117,6 @@ export async function POST(request: Request): Promise<Response> {
       layout: [
         {
           blockType: 'homeHero',
-          blockName: 'Hero',
           heading: 'Unforgettable African Adventures',
           subheading: 'Expertly crafted luxury safaris',
           backgroundImage: heroImageId,

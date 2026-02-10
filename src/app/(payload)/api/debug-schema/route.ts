@@ -55,7 +55,7 @@ export async function GET(): Promise<Response> {
 /**
  * POST: Try to save a simple homepage and capture any errors
  */
-export async function POST(): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   try {
     const payload = await getPayload({ config: configPromise })
 
@@ -76,6 +76,21 @@ export async function POST(): Promise<Response> {
     }
 
     const heroImageId = mediaResult.docs[0].id
+    const mediaDoc = mediaResult.docs[0]
+
+    // Return debug info first before trying save
+    const urlParam = new URL(request.url).searchParams.get('action')
+    if (urlParam !== 'save') {
+      return NextResponse.json({
+        action: 'debug',
+        message: 'Add ?action=save to actually save',
+        mediaFound: {
+          id: heroImageId,
+          filename: mediaDoc.filename,
+          mimeType: mediaDoc.mimeType,
+        },
+      })
+    }
 
     // Try with homeHero block
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

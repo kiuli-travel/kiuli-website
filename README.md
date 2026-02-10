@@ -14,7 +14,7 @@ Kiuli connects discerning travellers with transformative African safari experien
 | **Storage** | AWS S3 (eu-north-1) |
 | **CDN** | imgix |
 | **Pipeline** | AWS Lambda (5 functions) |
-| **AI Labeling** | GPT-4o via OpenRouter |
+| **AI Labeling** | Nemotron (via OpenRouter) |
 | **AI Enhancement** | Claude 3.5 Sonnet |
 | **Hosting** | Vercel |
 | **Styling** | Tailwind CSS 3.4 |
@@ -156,8 +156,7 @@ S3_BUCKET=kiuli-bucket
 S3_REGION=eu-north-1
 
 # AI Services
-OPENROUTER_API_KEY=        # Image labeling
-GEMINI_API_KEY=            # Content enhancement
+OPENROUTER_API_KEY=        # Image labeling (Nemotron via OpenRouter)
 ```
 
 See [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md) for complete setup instructions.

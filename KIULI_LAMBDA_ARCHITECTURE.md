@@ -44,7 +44,7 @@ The Kiuli Lambda scraper is a **4-phase asynchronous pipeline** that transforms 
 | Web Scraping | Puppeteer + Chromium |
 | Storage | AWS S3 + imgix CDN |
 | Database | Payload CMS (PostgreSQL) |
-| AI Enrichment | OpenRouter GPT-4o |
+| AI Enrichment | Nemotron (via OpenRouter) |
 | Region | eu-north-1 (Stockholm) |
 
 ### Pipeline Duration
@@ -111,7 +111,7 @@ The Kiuli Lambda scraper is a **4-phase asynchronous pipeline** that transforms 
 │   (kiuli-v6-labeler) │  ─────────────────────────────────────────────────
 │                      │  • Processes 10 images per batch
 │                      │  • Fetches image via imgix
-│                      │  • Calls GPT-4o with context
+│                      │  • Calls Nemotron with context
 │                      │  • Parses structured JSON response
 │                      │  • Updates Media with enrichment
 │                      │  • Self-invokes for remaining images
@@ -283,7 +283,7 @@ The Kiuli Lambda scraper is a **4-phase asynchronous pipeline** that transforms 
 **Timeout:** 900 seconds
 **Memory:** 512 MB
 
-**Purpose:** AI-powered image enrichment using GPT-4o.
+**Purpose:** AI-powered image enrichment using Nemotron (via OpenRouter).
 
 **Constants:**
 - `BATCH_SIZE = 10` - Images per batch
@@ -309,7 +309,7 @@ The Kiuli Lambda scraper is a **4-phase asynchronous pipeline** that transforms 
 ```
 
 **Key Functions:**
-- `labelImage(media, context)` - Calls GPT-4o for enrichment
+- `labelImage(media, context)` - Calls Nemotron for enrichment
 - `processMediaLabeling(media, imageStatuses)` - Wrapper with context lookup
 
 **Enrichment Fields Generated:**
@@ -683,7 +683,7 @@ await notifyImagesProcessed(jobId, processed, failed)
 | **AWS S3** | Image storage | `kiuli-bucket` in `eu-north-1` |
 | **imgix** | Image CDN | `kiuli.imgix.net` |
 | **Payload CMS** | Database | `admin.kiuli.com/api/*` |
-| **OpenRouter** | AI enrichment | `openrouter.ai/api/v1` (GPT-4o) |
+| **OpenRouter** | AI enrichment | `openrouter.ai/api/v1` (Nemotron) |
 
 ---
 

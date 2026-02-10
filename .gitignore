@@ -15,12 +15,6 @@ public/sitemap*.xml
 # Local pipeline output (test data)
 output/
 
-# Playwright
-node_modules/
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
 .env*.local
 
 # Lambda build artifacts

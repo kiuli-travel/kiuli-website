@@ -52,12 +52,10 @@ kiuli-website/
 ├── lambda/                  # AWS Lambda functions
 │   ├── orchestrator/        # Pipeline coordination
 │   ├── image-processor/     # Image download and S3 upload
-│   ├── labeler/             # AI image labeling (GPT-4o)
+│   ├── labeler/             # AI image labeling (Nemotron via OpenRouter)
 │   ├── video-processor/     # Video handling
 │   ├── finalizer/           # Pipeline completion
 │   └── shared/              # Shared utilities (config, payload, s3)
-├── scrapers/                # Scraper utilities
-│   └── itrvl_scraper.cjs    # iTrvl scraper script
 ├── public/
 │   ├── fonts/               # Kiuli typography (5 WOFF2 files)
 │   └── logos/               # Kiuli logo assets (13 files)
@@ -83,6 +81,13 @@ kiuli-website/
 | TripTypes | Trip categorization (honeymoon, family, etc.) |
 | VoiceConfiguration | AI voice/tone settings for content |
 | Categories | Content categories |
+| Inquiries | Customer inquiry submissions |
+| Properties | Safari properties/accommodations |
+| PropertyNameMappings | Property name normalization |
+| Authors | Blog post authors |
+| Designers | Travel designers |
+| Sessions | User sessions |
+| ContentSystemSettings | AI content system configuration |
 
 ---
 
@@ -122,7 +127,7 @@ Required environment variables are documented in `.env.example`.
 - `PAYLOAD_API_KEY` — API authentication
 
 **AI Services:**
-- `OPENROUTER_API_KEY` — For GPT-4o image labeling
+- `OPENROUTER_API_KEY` — For Nemotron image labeling (via OpenRouter)
 
 ---
 
@@ -195,7 +200,6 @@ Font files located in `public/fonts/`.
 |------|---------|
 | `CLAUDE.md` | Project instructions and rules |
 | `KIULI_LAMBDA_ARCHITECTURE.md` | Detailed Lambda pipeline documentation |
-| `KIULI_SCRAPER_PRODUCTION_READINESS.md` | Current scraper status assessment |
 | `lambda/DEPLOYMENT.md` | Lambda deployment instructions |
 
 ---

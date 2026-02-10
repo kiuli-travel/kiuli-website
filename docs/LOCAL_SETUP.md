@@ -66,9 +66,6 @@ S3_REGION=eu-north-1
 ```bash
 # OpenRouter (for image labeling in Lambda)
 OPENROUTER_API_KEY=sk-or-v1-...
-
-# Gemini (for content enhancement)
-GEMINI_API_KEY=...
 ```
 
 ### Optional - API Access

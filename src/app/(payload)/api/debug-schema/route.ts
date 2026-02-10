@@ -80,10 +80,23 @@ export async function POST(request: Request): Promise<Response> {
 
     // Return debug info first before trying save
     const urlParam = new URL(request.url).searchParams.get('action')
+
+    if (urlParam === 'check-blocks') {
+      // Check existing data in block tables
+      const db = payload.db.drizzle
+      const homeHeroData = await db.execute(sql`SELECT * FROM pages_blocks_home_hero LIMIT 5`)
+      const page3Data = await db.execute(sql`SELECT id, title, slug FROM pages WHERE id = 3`)
+      return NextResponse.json({
+        action: 'check-blocks',
+        homeHeroRows: homeHeroData.rows,
+        page3: page3Data.rows,
+      })
+    }
+
     if (urlParam !== 'save') {
       return NextResponse.json({
         action: 'debug',
-        message: 'Add ?action=save to actually save',
+        message: 'Add ?action=save to actually save, or ?action=check-blocks to check existing data',
         mediaFound: {
           id: heroImageId,
           filename: mediaDoc.filename,

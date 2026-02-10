@@ -40,6 +40,7 @@ import * as migration_20260208_update_posts_for_articles from './20260208_update
 import * as migration_20260208_add_properties_and_mappings from './20260208_add_properties_and_mappings';
 import * as migration_20260209_add_homepage_blocks from './20260209_add_homepage_blocks';
 import * as migration_20260209_fix_homepage_block_relationships from './20260209_fix_homepage_block_relationships';
+import * as migration_20260210_fix_locked_documents_rels from './20260210_fix_locked_documents_rels';
 
 export const migrations = [
   {
@@ -251,5 +252,10 @@ export const migrations = [
     up: migration_20260209_fix_homepage_block_relationships.up,
     down: migration_20260209_fix_homepage_block_relationships.down,
     name: '20260209_fix_homepage_block_relationships'
+  },
+  {
+    up: migration_20260210_fix_locked_documents_rels.up,
+    down: migration_20260210_fix_locked_documents_rels.down,
+    name: '20260210_fix_locked_documents_rels'
   },
 ];

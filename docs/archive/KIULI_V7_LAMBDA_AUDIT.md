@@ -111,7 +111,7 @@ echo ""
 # Check for V4 fields (itineraryId, price)
 echo "Testing V4 Fields (itineraryId, price):"
 curl -s "https://admin.kiuli.com/api/itineraries?limit=1" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "
 import sys, json
 try:
@@ -133,7 +133,7 @@ echo ""
 # Check for V7 fields (titleItrvl, titleEnhanced, etc)
 echo "Testing V7 Fields (two-field pattern):"
 curl -s "https://admin.kiuli.com/api/itineraries?limit=1" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "
 import sys, json
 try:
@@ -172,7 +172,7 @@ echo ""
 # Check ItineraryJobs for V4 progress fields
 echo "Testing ItineraryJobs V4 Fields:"
 curl -s "https://admin.kiuli.com/api/itinerary-jobs?limit=1&sort=-createdAt" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "
 import sys, json
 try:
@@ -255,19 +255,19 @@ echo ""
 
 # Check VoiceConfiguration collection
 VOICE_COUNT=$(curl -s "https://admin.kiuli.com/api/voice-configuration" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys, json; print(json.load(sys.stdin).get('totalDocs', 0))")
 echo "VoiceConfiguration docs: $VOICE_COUNT"
 
 # Check Destinations collection
 DEST_COUNT=$(curl -s "https://admin.kiuli.com/api/destinations" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys, json; print(json.load(sys.stdin).get('totalDocs', 0))")
 echo "Destinations docs: $DEST_COUNT"
 
 # Check TripTypes collection
 TRIP_COUNT=$(curl -s "https://admin.kiuli.com/api/trip-types" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys, json; print(json.load(sys.stdin).get('totalDocs', 0))")
 echo "TripTypes docs: $TRIP_COUNT"
 
@@ -280,7 +280,7 @@ echo ""
 # Try to create a test media record
 echo "Testing media creation permissions:"
 TEST_RESULT=$(curl -s -X POST "https://admin.kiuli.com/api/media" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "alt": "Test image",
@@ -293,7 +293,7 @@ if echo "$TEST_RESULT" | grep -q "\"id\""; then
   TEST_ID=$(echo "$TEST_RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('doc',{}).get('id',''))")
   if [ -n "$TEST_ID" ]; then
     curl -s -X DELETE "https://admin.kiuli.com/api/media/$TEST_ID" \
-      -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" > /dev/null
+      -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" > /dev/null
     echo "Test record cleaned up"
   fi
 elif echo "$TEST_RESULT" | grep -q "403"; then

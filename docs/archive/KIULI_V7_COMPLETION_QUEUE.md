@@ -28,7 +28,7 @@
 **Commands:**
 ```bash
 curl -s "https://admin.kiuli.com/api/itineraries/14" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
@@ -91,19 +91,19 @@ GATE: All fields must show "EXISTS"
 ```bash
 echo "=== VOICE CONFIGURATION ==="
 curl -s "https://admin.kiuli.com/api/voice-configuration" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print('Status:', 'EXISTS' if 'docs' in d else 'MISSING'); print('Count:', d.get('totalDocs', 0))"
 
 echo ""
 echo "=== DESTINATIONS ==="
 curl -s "https://admin.kiuli.com/api/destinations" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print('Status:', 'EXISTS' if 'docs' in d else 'MISSING'); print('Count:', d.get('totalDocs', 0))"
 
 echo ""
 echo "=== TRIP TYPES ==="
 curl -s "https://admin.kiuli.com/api/trip-types" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print('Status:', 'EXISTS' if 'docs' in d else 'MISSING'); print('Count:', d.get('totalDocs', 0))"
 ```
 
@@ -466,7 +466,7 @@ function toRichText(text: string): any {
 ```bash
 # Test endpoint
 curl -X POST "https://admin.kiuli.com/api/enhance" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "itineraryId": "14",
@@ -868,7 +868,7 @@ GATE: All must be YES
 ```bash
 # Get itinerary via API (simulates front-end request)
 curl -s "https://admin.kiuli.com/api/itineraries/14" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
@@ -904,7 +904,7 @@ GATE: All must match expected (True, True, True)
 ```bash
 # Trigger new scrape
 curl -X POST "https://admin.kiuli.com/api/scrape-itinerary" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "itrvlUrl": "https://itrvl.com/client/portal/Ir0nIrtJMhtj3RUzrj8Qyqw7XTIyA4NGk22g52ZHTmhD6IcgxNcRUNwhXTKXbgKa/680df70720a6c6005b2bfc34"
@@ -917,7 +917,7 @@ curl "https://admin.kiuli.com/api/job-status/$JOB_ID"
 # When complete, verify new itinerary
 ITINERARY_ID="[from job]"
 curl "https://admin.kiuli.com/api/itineraries/$ITINERARY_ID" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "
 import sys, json
 d = json.load(sys.stdin)

@@ -49,7 +49,7 @@ npx payload migrate
 
 # Verify
 curl -s "https://admin.kiuli.com/api/itineraries?limit=1" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys,json; d=json.load(sys.stdin)['docs'][0]; print('itineraryId:', 'itineraryId' in d, '| price:', 'price' in d)"
 ```
 
@@ -69,7 +69,7 @@ cat src/collections/Media.ts | grep -A 20 "access:"
 
 # Check API key permissions
 curl -s "https://admin.kiuli.com/api/users/me" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "import sys,json; print(json.load(sys.stdin))"
 ```
 
@@ -641,7 +641,7 @@ aws lambda get-function \
 # Trigger scrape
 curl -X POST "https://admin.kiuli.com/api/scrape-itinerary" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   -d '{
     "itrvlUrl": "https://itrvl.com/client/portal/Op4IPe4KvCsHC7QuCxjWLQEa0JlM5eVGE0vAGUD9yRnUmAIwpwstlE85upkxlfTJ/680dfc35819f37005c255a29"
   }'
@@ -661,7 +661,7 @@ done
 
 # Verify V7 fields in created itinerary
 curl -s "https://admin.kiuli.com/api/itineraries?sort=-createdAt&limit=1" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   | python3 -c "
 import sys, json
 d = json.load(sys.stdin)['docs'][0]
@@ -945,7 +945,7 @@ aws logs tail /aws/lambda/kiuli-pipeline-worker --follow
 
 # Trigger test scrape
 curl -X POST "https://admin.kiuli.com/api/scrape-itinerary" \
-  -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+  -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
   -d '{"itrvlUrl": "..."}'
 ```
 

@@ -93,7 +93,7 @@ bash KIULI_V7_LAMBDA_AUDIT.md
 1. Fresh scrape succeeds:
    ```bash
    curl -X POST "https://admin.kiuli.com/api/scrape-itinerary" \
-     -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+     -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
      -d '{"itrvlUrl": "https://itrvl.com/client/portal/Op4IPe4KvCsHC7QuCxjWLQEa0JlM5eVGE0vAGUD9yRnUmAIwpwstlE85upkxlfTJ/680dfc35819f37005c255a29"}'
    ```
    Returns: `{"success": true, "jobId": "..."}`
@@ -102,7 +102,7 @@ bash KIULI_V7_LAMBDA_AUDIT.md
    ```bash
    # Get latest itinerary
    curl "https://admin.kiuli.com/api/itineraries?sort=-createdAt&limit=1" \
-     -H "Authorization: Bearer cafGjXq0BOR3sH8zgxoFxcGLzZGyZeOxHoxrM9dyRM0=" \
+     -H "Authorization: Bearer YOUR_PAYLOAD_API_KEY" \
      | python3 -c "
    import sys, json
    d = json.load(sys.stdin)['docs'][0]

@@ -12,7 +12,7 @@ async function seedUser() {
         password: 'PipelineBot2026!',
         name: 'Pipeline Bot',
         enableAPIKey: true,
-        apiKey: '4ea3d6c7-6b4c-42e5-b61d-9cc1546252ff'
+        apiKey: process.env.PAYLOAD_API_KEY || ''
       }
     })
 

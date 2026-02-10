@@ -7,7 +7,7 @@
  */
 
 const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'http://localhost:3000'
-const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY || '4ea3d6c7-6b4c-42e5-b61d-9cc1546252ff'
+const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY || ''
 
 const tripTypes = [
   { name: 'Great Migration', slug: 'great-migration', sortOrder: 1, shortDescription: 'Witness the greatest wildlife spectacle on Earth' },

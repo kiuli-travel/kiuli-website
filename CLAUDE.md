@@ -9,7 +9,7 @@
 Kiuli is a **luxury African safari platform** built with Next.js 15 and Payload CMS. It imports safari itineraries from iTrvl via an AWS Lambda pipeline, enhances content with AI, and presents curated experiences to high-net-worth travelers.
 
 **Key Systems:**
-- **Website** - Next.js 15 App Router with Payload CMS 3.63
+- **Website** - Next.js 15 App Router with Payload CMS 3.76
 - **Admin Panel** - Payload CMS at admin.kiuli.com
 - **Scraper Pipeline** - 5 AWS Lambda functions for itinerary import
 - **AI Enhancement** - Claude 3.5 Sonnet for text, Nemotron for image labeling
@@ -158,7 +158,7 @@ Payload CMS internal tables track relationships for all collections. Missing col
 | Component | Technology |
 |-----------|------------|
 | Framework | Next.js 15.4.7 |
-| CMS | Payload CMS 3.63.0 |
+| CMS | Payload CMS 3.76.0 |
 | Styling | Tailwind CSS 3.4 |
 | Database | Vercel Postgres |
 | Storage | AWS S3 (kiuli-bucket, eu-north-1) |

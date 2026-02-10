@@ -38,6 +38,7 @@ Kiuli connects discerning travellers with high-margin African safaris. The websi
 | Jan 2026 | Production domains pointing to 73-day-old deployment | Git push creates deployments but doesn't update domain aliases | See Rule 6 - use `vercel --prod` then update aliases |
 | Jan 2026 | Admin page went completely blank | Pointed domain to broken deployment without testing | Always test deployment URL directly before updating aliases |
 | Jan 2026 | Homepage showing "Payload Website Template" | `homeStatic` fallback used when no home page in database | Replace template content or create home page in Payload admin |
+| Feb 2026 | Admin dashboard error for 24+ hours, random debugging | Added Authors/Properties collections without migration for `payload_locked_documents_rels` | See Rule 7 - always run `vercel logs production --error` first; See Rule 8 - check schema on collection changes |
 
 ---
 
@@ -126,6 +127,28 @@ curl -sI https://admin.kiuli.com | grep "HTTP/2 200"
 ```
 
 **Always verify deployment is visible on production domains, not just Vercel preview URLs.**
+
+### Rule 7: Diagnose Before Changing
+
+When admin panel shows "Application error":
+1. **FIRST:** Run `vercel logs production --error --since 1h` to get actual error
+2. **SECOND:** Read the full error message and stack trace
+3. **THIRD:** Fix the specific issue identified
+4. **NEVER:** Randomly disable components hoping something works
+5. **NEVER:** Commit "debug: disable X" changes to main branch
+
+The "Digest: XXXXXXX" number in browser is just a hash - it doesn't reveal the actual error. You must get the server logs.
+
+### Rule 8: Collection Changes Need Schema Review
+
+When adding a new Payload collection:
+1. Check if `payload_locked_documents_rels` needs a new column (`<collection>_id`)
+2. Check if `payload_preferences_rels` needs a new column
+3. Create migration BEFORE deploying
+4. Run `npx payload migrate` locally to verify
+5. Test admin dashboard locally: `npm run build && npm start`
+
+Payload CMS internal tables track relationships for all collections. Missing columns cause "column X does not exist" errors on dashboard load.
 
 ---
 
@@ -359,4 +382,4 @@ Itinerary text fields use: `*Itrvl` (original scraped) + `*Enhanced` (AI improve
 
 ---
 
-*Last updated: January 29, 2026*
+*Last updated: February 10, 2026*

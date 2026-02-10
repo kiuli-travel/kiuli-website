@@ -51,3 +51,80 @@ export async function GET(): Promise<Response> {
     }, { status: 500 })
   }
 }
+
+/**
+ * POST: Try to save a simple homepage and capture any errors
+ */
+export async function POST(): Promise<Response> {
+  try {
+    const payload = await getPayload({ config: configPromise })
+
+    // Find a media item for the hero background
+    const mediaResult = await payload.find({
+      collection: 'media',
+      limit: 1,
+      where: {
+        mimeType: { contains: 'image' },
+      },
+    })
+
+    if (mediaResult.docs.length === 0) {
+      return NextResponse.json({
+        success: false,
+        message: 'No media found for hero image',
+      }, { status: 400 })
+    }
+
+    const heroImageId = mediaResult.docs[0].id
+
+    // Try to update page 3 with minimal homepage content
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pageData: any = {
+      title: 'Kiuli - Luxury Safaris',
+      slug: 'home',
+      _status: 'published' as const,
+      hero: {
+        type: 'none' as const,
+      },
+      layout: [
+        {
+          blockType: 'homeHero',
+          blockName: 'Hero',
+          heading: 'Unforgettable African Adventures',
+          subheading: 'Expertly crafted luxury safaris',
+          backgroundImage: heroImageId,
+          ctaLabel: 'Explore Safaris',
+          ctaLink: '/safaris',
+          overlayOpacity: 45,
+        },
+      ],
+      meta: {
+        title: 'Kiuli | Luxury African Safaris',
+        description: 'Expertly crafted luxury African safari experiences.',
+      },
+    }
+
+    const result = await payload.update({
+      collection: 'pages',
+      id: 3,
+      data: pageData,
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Homepage saved successfully',
+      page: {
+        id: result.id,
+        title: result.title,
+        slug: result.slug,
+        status: result._status,
+      },
+    })
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, { status: 500 })
+  }
+}

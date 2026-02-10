@@ -43,6 +43,7 @@ import * as migration_20260209_fix_homepage_block_relationships from './20260209
 import * as migration_20260210_fix_locked_documents_rels from './20260210_fix_locked_documents_rels';
 import * as migration_20260210_fix_homepage_block_ids from './20260210_fix_homepage_block_ids';
 import * as migration_20260210_fix_version_block_id_defaults from './20260210_fix_version_block_id_defaults';
+import * as migration_20260210_fix_all_version_block_ids from './20260210_fix_all_version_block_ids';
 
 export const migrations = [
   {
@@ -269,5 +270,10 @@ export const migrations = [
     up: migration_20260210_fix_version_block_id_defaults.up,
     down: migration_20260210_fix_version_block_id_defaults.down,
     name: '20260210_fix_version_block_id_defaults'
+  },
+  {
+    up: migration_20260210_fix_all_version_block_ids.up,
+    down: migration_20260210_fix_all_version_block_ids.down,
+    name: '20260210_fix_all_version_block_ids'
   },
 ];

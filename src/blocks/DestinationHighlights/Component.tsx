@@ -15,7 +15,7 @@ function getDestinationUrl(destination: Destination): string {
     return `/destinations/${destination.slug}`
   }
 
-  // Regions and parks need parent country
+  // Destinations (non-countries) need parent country
   const country = destination.country as Destination | null
   if (country?.slug) {
     return `/destinations/${country.slug}/${destination.slug}`
@@ -30,10 +30,8 @@ function getTypeBadge(type: string): string {
   switch (type) {
     case 'country':
       return 'Country'
-    case 'region':
-      return 'Region'
-    case 'park':
-      return 'National Park'
+    case 'destination':
+      return 'Destination'
     default:
       return 'Destination'
   }

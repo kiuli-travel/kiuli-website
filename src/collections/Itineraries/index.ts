@@ -367,7 +367,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
       relationTo: 'destinations',
       hasMany: true,
       admin: {
-        description: 'Countries, regions, and parks featured in this itinerary',
+        description: 'Countries and destinations featured in this itinerary',
       },
     },
     {

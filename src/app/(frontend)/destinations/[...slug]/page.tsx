@@ -267,7 +267,7 @@ export default async function DestinationPage({ params: paramsPromise }: Args) {
     })
     destination = result.docs?.[0] || null
   } else if (slugArray.length === 2) {
-    // Region/park page: /destinations/kenya/masai-mara
+    // Destination page: /destinations/kenya/masai-mara
     const countryResult = await payload.find({
       collection: 'destinations',
       draft,

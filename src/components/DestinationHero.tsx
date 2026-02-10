@@ -5,7 +5,7 @@ interface DestinationHeroProps {
   tagline?: string
   imageUrl: string
   imageAlt: string
-  type: 'country' | 'region' | 'park'
+  type: 'country' | 'destination'
   parentName?: string
 }
 
@@ -17,7 +17,7 @@ export default function DestinationHero({
   type,
   parentName,
 }: DestinationHeroProps) {
-  const showParentLabel = (type === 'region' || type === 'park') && parentName
+  const showParentLabel = type === 'destination' && parentName
 
   return (
     <section className="relative w-full h-[400px] md:h-[500px] overflow-hidden">

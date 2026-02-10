@@ -64,7 +64,7 @@ export const Properties: CollectionConfig = {
       relationTo: 'destinations',
       required: true,
       admin: {
-        description: 'The park/region this property is in',
+        description: 'The destination this property is located in',
       },
     },
 

@@ -715,7 +715,7 @@ export interface Itinerary {
    */
   showHeroVideo?: boolean | null;
   /**
-   * Countries, regions, and parks featured in this itinerary
+   * Countries and destinations featured in this itinerary
    */
   destinations?: (number | Destination)[] | null;
   /**
@@ -1576,7 +1576,7 @@ export interface Itinerary {
   _status?: ('draft' | 'published') | null;
 }
 /**
- * Countries, regions, and parks for itinerary cross-linking
+ * Countries and destinations for itinerary cross-linking
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "destinations".
@@ -1594,9 +1594,9 @@ export interface Destination {
   /**
    * Destination type for filtering and hierarchy
    */
-  type: 'country' | 'region' | 'park';
+  type: 'country' | 'destination';
   /**
-   * Parent country (for regions and parks)
+   * Parent country (for destinations)
    */
   country?: (number | null) | Destination;
   /**
@@ -1727,7 +1727,7 @@ export interface Property {
    */
   type?: ('lodge' | 'camp' | 'hotel' | 'villa' | 'mobile_camp' | 'tented_camp') | null;
   /**
-   * The park/region this property is in
+   * The destination this property is located in
    */
   destination: number | Destination;
   /**

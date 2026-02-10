@@ -44,7 +44,7 @@ const getDestinationsSitemap = unstable_cache(
             if (dest.type === 'country') {
               url = `${SITE_URL}/destinations/${dest.slug}`
             } else {
-              // Region or park - need parent country slug
+              // Destination (non-country) - need parent country slug
               const country = dest.country as Destination | null
               if (country && country.slug) {
                 url = `${SITE_URL}/destinations/${country.slug}/${dest.slug}`

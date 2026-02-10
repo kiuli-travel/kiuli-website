@@ -21,7 +21,7 @@ export const Destinations: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     group: 'Content',
-    description: 'Countries, regions, and parks for itinerary cross-linking',
+    description: 'Countries and destinations for itinerary cross-linking',
     defaultColumns: ['name', 'type', 'updatedAt'],
     baseListFilter: () => ({}),
   },
@@ -58,8 +58,7 @@ export const Destinations: CollectionConfig = {
       required: true,
       options: [
         { label: 'Country', value: 'country' },
-        { label: 'Region', value: 'region' },
-        { label: 'Park', value: 'park' },
+        { label: 'Destination', value: 'destination' },
       ],
       admin: {
         description: 'Destination type for filtering and hierarchy',
@@ -70,7 +69,7 @@ export const Destinations: CollectionConfig = {
       type: 'relationship',
       relationTo: 'destinations',
       admin: {
-        description: 'Parent country (for regions and parks)',
+        description: 'Parent country (for destinations)',
         condition: (data) => data.type !== 'country',
       },
     },

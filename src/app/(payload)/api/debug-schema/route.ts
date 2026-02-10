@@ -59,7 +59,7 @@ export async function POST(): Promise<Response> {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Try to update page 3 with MINIMAL data - no blocks at all first
+    // Try to update page 3 with a simple content block (no relationships)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pageData: any = {
       title: 'Kiuli - Luxury Safaris Test',
@@ -68,7 +68,36 @@ export async function POST(): Promise<Response> {
       hero: {
         type: 'none' as const,
       },
-      layout: [],
+      layout: [
+        {
+          blockType: 'content',
+          columns: [
+            {
+              size: 'full',
+              richText: {
+                root: {
+                  type: 'root',
+                  children: [
+                    {
+                      type: 'paragraph',
+                      children: [{ type: 'text', text: 'Hello World' }],
+                      direction: 'ltr',
+                      format: '',
+                      indent: 0,
+                      textFormat: 0,
+                      version: 1,
+                    },
+                  ],
+                  direction: 'ltr',
+                  format: '',
+                  indent: 0,
+                  version: 1,
+                },
+              },
+            },
+          ],
+        },
+      ],
       meta: {
         title: 'Kiuli | Luxury African Safaris',
         description: 'Expertly crafted luxury African safari experiences.',

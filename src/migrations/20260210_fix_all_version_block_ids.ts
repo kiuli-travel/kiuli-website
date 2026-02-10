@@ -6,52 +6,118 @@ import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-vercel-postg
  * These tables have integer IDs with serial sequences but Payload 3.x expects
  * varchar IDs with UUID defaults for version block tables.
  *
- * Tables to fix:
- * - _itineraries_v_blocks_activity
- * - _itineraries_v_blocks_stay
- * - _itineraries_v_blocks_transfer
- * - _pages_v_blocks_archive
- * - _pages_v_blocks_content
- * - _pages_v_blocks_content_columns
- * - _pages_v_blocks_cta
- * - _pages_v_blocks_cta_links
- * - _pages_v_blocks_form_block
- * - _pages_v_blocks_media_block
+ * Must handle FK constraints properly:
+ * - _pages_v_blocks_content has child table _pages_v_blocks_content_columns
+ * - _pages_v_blocks_cta has child table _pages_v_blocks_cta_links
  */
 export async function up({ db }: MigrateUpArgs): Promise<void> {
-  const tablesToFix = [
+  // Tables with children (have FK constraints TO them)
+  const tablesWithChildren = [
+    {
+      parent: '_pages_v_blocks_content',
+      children: ['_pages_v_blocks_content_columns'],
+      fkColumn: '_parent_id',
+    },
+    {
+      parent: '_pages_v_blocks_cta',
+      children: ['_pages_v_blocks_cta_links'],
+      fkColumn: '_parent_id',
+    },
+  ]
+
+  // Simple tables without FK constraints
+  const simpleTables = [
     '_itineraries_v_blocks_activity',
     '_itineraries_v_blocks_stay',
     '_itineraries_v_blocks_transfer',
     '_pages_v_blocks_archive',
-    '_pages_v_blocks_content',
-    '_pages_v_blocks_content_columns',
-    '_pages_v_blocks_cta',
-    '_pages_v_blocks_cta_links',
     '_pages_v_blocks_form_block',
     '_pages_v_blocks_media_block',
   ]
 
-  for (const table of tablesToFix) {
-    // Step 1: Drop the default (which references the sequence)
+  // Handle tables with children first
+  for (const config of tablesWithChildren) {
+    // Step 1: Drop FK constraints from children
+    for (const child of config.children) {
+      await db.execute(sql.raw(`
+        ALTER TABLE "${child}"
+        DROP CONSTRAINT IF EXISTS "${child}_parent_id_fk"
+      `))
+    }
+
+    // Step 2: Fix parent table
+    await db.execute(sql.raw(`
+      ALTER TABLE "${config.parent}"
+      ALTER COLUMN "id" DROP DEFAULT
+    `))
+    await db.execute(sql.raw(`
+      ALTER TABLE "${config.parent}"
+      ALTER COLUMN "id" TYPE varchar USING id::varchar
+    `))
+    await db.execute(sql.raw(`
+      ALTER TABLE "${config.parent}"
+      ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::varchar
+    `))
+    await db.execute(sql.raw(`
+      DROP SEQUENCE IF EXISTS "${config.parent}_id_seq" CASCADE
+    `))
+
+    // Step 3: Fix child tables FK column type
+    for (const child of config.children) {
+      await db.execute(sql.raw(`
+        ALTER TABLE "${child}"
+        ALTER COLUMN "${config.fkColumn}" TYPE varchar USING ${config.fkColumn}::varchar
+      `))
+    }
+
+    // Step 4: Recreate FK constraints
+    for (const child of config.children) {
+      await db.execute(sql.raw(`
+        ALTER TABLE "${child}"
+        ADD CONSTRAINT "${child}_parent_id_fk"
+        FOREIGN KEY ("${config.fkColumn}") REFERENCES "${config.parent}"("id") ON DELETE CASCADE
+      `))
+    }
+  }
+
+  // Handle simple tables
+  for (const table of simpleTables) {
     await db.execute(sql.raw(`
       ALTER TABLE "${table}"
       ALTER COLUMN "id" DROP DEFAULT
     `))
-
-    // Step 2: Convert existing integer IDs to varchar
     await db.execute(sql.raw(`
       ALTER TABLE "${table}"
       ALTER COLUMN "id" TYPE varchar USING id::varchar
     `))
-
-    // Step 3: Add UUID default for new rows
     await db.execute(sql.raw(`
       ALTER TABLE "${table}"
       ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::varchar
     `))
+    await db.execute(sql.raw(`
+      DROP SEQUENCE IF EXISTS "${table}_id_seq" CASCADE
+    `))
+  }
 
-    // Step 4: Drop the orphaned sequence
+  // Handle child tables that also need their IDs fixed
+  const childTables = [
+    '_pages_v_blocks_content_columns',
+    '_pages_v_blocks_cta_links',
+  ]
+
+  for (const table of childTables) {
+    await db.execute(sql.raw(`
+      ALTER TABLE "${table}"
+      ALTER COLUMN "id" DROP DEFAULT
+    `))
+    await db.execute(sql.raw(`
+      ALTER TABLE "${table}"
+      ALTER COLUMN "id" TYPE varchar USING id::varchar
+    `))
+    await db.execute(sql.raw(`
+      ALTER TABLE "${table}"
+      ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::varchar
+    `))
     await db.execute(sql.raw(`
       DROP SEQUENCE IF EXISTS "${table}_id_seq" CASCADE
     `))
@@ -59,41 +125,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
 }
 
 export async function down({ db }: MigrateDownArgs): Promise<void> {
-  const tablesToRevert = [
-    '_itineraries_v_blocks_activity',
-    '_itineraries_v_blocks_stay',
-    '_itineraries_v_blocks_transfer',
-    '_pages_v_blocks_archive',
-    '_pages_v_blocks_content',
-    '_pages_v_blocks_content_columns',
-    '_pages_v_blocks_cta',
-    '_pages_v_blocks_cta_links',
-    '_pages_v_blocks_form_block',
-    '_pages_v_blocks_media_block',
-  ]
-
-  for (const table of tablesToRevert) {
-    // Recreate sequence
-    await db.execute(sql.raw(`
-      CREATE SEQUENCE IF NOT EXISTS "${table}_id_seq"
-    `))
-
-    // Drop UUID default
-    await db.execute(sql.raw(`
-      ALTER TABLE "${table}"
-      ALTER COLUMN "id" DROP DEFAULT
-    `))
-
-    // Convert varchar IDs back to integer (will fail if UUIDs exist)
-    await db.execute(sql.raw(`
-      ALTER TABLE "${table}"
-      ALTER COLUMN "id" TYPE integer USING id::integer
-    `))
-
-    // Restore serial default
-    await db.execute(sql.raw(`
-      ALTER TABLE "${table}"
-      ALTER COLUMN "id" SET DEFAULT nextval('${table}_id_seq'::regclass)
-    `))
-  }
+  // Reverting this migration is complex and may cause data loss
+  // In practice, we don't expect to revert this
+  console.log('Revert not implemented - manual intervention required')
 }

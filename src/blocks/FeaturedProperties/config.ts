@@ -23,9 +23,9 @@ export const FeaturedProperties: Block = {
       type: 'relationship',
       relationTo: 'properties',
       hasMany: true,
-      required: true,
+      required: false, // Made optional to allow saving without selection
       admin: {
-        description: 'Properties to feature',
+        description: 'Properties to feature (select at least one for the block to render)',
       },
     },
   ],

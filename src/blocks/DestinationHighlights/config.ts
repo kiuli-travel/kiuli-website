@@ -23,7 +23,7 @@ export const DestinationHighlights: Block = {
       type: 'relationship',
       relationTo: 'destinations',
       hasMany: true,
-      required: false, // Made optional to allow saving without selection
+      required: true,
       admin: {
         description: 'Destinations to highlight (select at least one for the block to render)',
       },

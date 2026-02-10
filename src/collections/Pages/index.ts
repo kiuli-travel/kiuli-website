@@ -144,7 +144,9 @@ export const Pages: CollectionConfig<'pages'> = {
   },
   versions: {
     drafts: {
-      autosave: false, // Disabled temporarily to debug save issue
+      autosave: {
+        interval: 300, // 5 minutes
+      },
       schedulePublish: true,
     },
     maxPerDoc: 50,

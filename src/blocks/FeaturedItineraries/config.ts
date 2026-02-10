@@ -23,7 +23,7 @@ export const FeaturedItineraries: Block = {
       type: 'relationship',
       relationTo: 'itineraries',
       hasMany: true,
-      required: false, // Made optional to allow saving without selection
+      required: true,
       admin: {
         description: 'Hand-picked itineraries to feature (select at least one for the block to render)',
       },

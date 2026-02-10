@@ -132,6 +132,7 @@ export interface Config {
   db: {
     defaultIDType: number;
   };
+  fallbackLocale: null;
   globals: {
     header: Header;
     footer: Footer;
@@ -143,9 +144,7 @@ export interface Config {
     'property-name-mappings': PropertyNameMappingsSelect<false> | PropertyNameMappingsSelect<true>;
   };
   locale: null;
-  user: User & {
-    collection: 'users';
-  };
+  user: User;
   jobs: {
     tasks: {
       schedulePublish: TaskSchedulePublish;
@@ -2095,9 +2094,9 @@ export interface FeaturedItinerariesBlock {
    */
   subheading?: string | null;
   /**
-   * Hand-picked itineraries to feature
+   * Hand-picked itineraries to feature (select at least one for the block to render)
    */
-  itineraries: (number | Itinerary)[];
+  itineraries?: (number | Itinerary)[] | null;
   /**
    * Whether to show investment level on cards
    */
@@ -2120,9 +2119,9 @@ export interface DestinationHighlightsBlock {
    */
   subheading?: string | null;
   /**
-   * Destinations to highlight
+   * Destinations to highlight (select at least one for the block to render)
    */
-  destinations: (number | Destination)[];
+  destinations?: (number | Destination)[] | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'destinationHighlights';
@@ -2201,9 +2200,9 @@ export interface FeaturedPropertiesBlock {
    */
   subheading?: string | null;
   /**
-   * Properties to feature
+   * Properties to feature (select at least one for the block to render)
    */
-  properties: (number | Property)[];
+  properties?: (number | Property)[] | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'featuredProperties';
@@ -2577,6 +2576,7 @@ export interface User {
       }[]
     | null;
   password?: string | null;
+  collection: 'users';
 }
 /**
  * Manage iTrvl itinerary processing jobs. Use the Import Itinerary page to create new jobs.

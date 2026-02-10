@@ -231,6 +231,6 @@ export async function POST(): Promise<Response> {
   }
 }
 
-export async function GET(request: Request): Promise<Response> {
-  return POST(request)
+export async function GET(): Promise<Response> {
+  return POST()
 }

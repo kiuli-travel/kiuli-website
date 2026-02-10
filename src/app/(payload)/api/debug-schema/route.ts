@@ -136,6 +136,9 @@ export async function POST(request: Request): Promise<Response> {
       collection: 'pages',
       id: 3,
       data: pageData,
+      context: {
+        disableRevalidate: true,
+      },
     })
 
     return NextResponse.json({

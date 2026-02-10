@@ -49,7 +49,8 @@ export async function POST(request: Request): Promise<Response> {
       page = null
     }
 
-    const pageData = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pageData: any = {
       title: 'Kiuli - Luxury Safaris',
       slug: 'home',
       _status: 'published' as const,

@@ -59,10 +59,28 @@ export async function POST(): Promise<Response> {
   try {
     const payload = await getPayload({ config: configPromise })
 
-    // Try to update page 3 with a simple content block (no relationships)
+    // Find a media item for the hero background
+    const mediaResult = await payload.find({
+      collection: 'media',
+      limit: 1,
+      where: {
+        mimeType: { contains: 'image' },
+      },
+    })
+
+    if (mediaResult.docs.length === 0) {
+      return NextResponse.json({
+        success: false,
+        message: 'No media found for hero image',
+      }, { status: 400 })
+    }
+
+    const heroImageId = mediaResult.docs[0].id
+
+    // Try with homeHero block
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pageData: any = {
-      title: 'Kiuli - Luxury Safaris Test',
+      title: 'Kiuli - Luxury Safaris',
       slug: 'home',
       _status: 'draft' as const,
       hero: {
@@ -70,32 +88,14 @@ export async function POST(): Promise<Response> {
       },
       layout: [
         {
-          blockType: 'content',
-          columns: [
-            {
-              size: 'full',
-              richText: {
-                root: {
-                  type: 'root',
-                  children: [
-                    {
-                      type: 'paragraph',
-                      children: [{ type: 'text', text: 'Hello World' }],
-                      direction: 'ltr',
-                      format: '',
-                      indent: 0,
-                      textFormat: 0,
-                      version: 1,
-                    },
-                  ],
-                  direction: 'ltr',
-                  format: '',
-                  indent: 0,
-                  version: 1,
-                },
-              },
-            },
-          ],
+          blockType: 'homeHero',
+          blockName: 'Hero',
+          heading: 'Unforgettable African Adventures',
+          subheading: 'Expertly crafted luxury safaris',
+          backgroundImage: heroImageId,
+          ctaLabel: 'Explore Safaris',
+          ctaLink: '/safaris',
+          overlayOpacity: 45,
         },
       ],
       meta: {

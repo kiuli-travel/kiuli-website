@@ -82,8 +82,9 @@ export default buildConfig({
   collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, PropertyNameMappings],
+  // S3 storage disabled to debug dashboard error
   plugins: [
-    makeS3StoragePlugin(),
+    // makeS3StoragePlugin(),
     ...plugins,
   ],
   secret: process.env.PAYLOAD_SECRET,

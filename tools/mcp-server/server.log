@@ -1,0 +1,200 @@
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/kiuli/sse
+  Messages:      POST http://localhost:3101/kiuli/messages
+  Health:        GET  http://localhost:3101/kiuli/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/sse
+  Messages:      POST http://localhost:3101/messages
+  Health:        GET  http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+SSE connection established
+Session 47f40050-ff84-4de2-a9e2-16b5c920559e ready
+SSE connection established
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/sse
+  Messages:      POST http://localhost:3101/messages
+  Health:        GET  http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+SSE connection established
+Session 2ad3b3f8-0f12-4ce6-8ed3-a4d14a54c3ef ready
+Session 2ad3b3f8-0f12-4ce6-8ed3-a4d14a54c3ef closed
+SSE connection established
+Session c37702e8-215a-4742-9ed6-d44a2989e039 ready
+Session c37702e8-215a-4742-9ed6-d44a2989e039 closed
+SSE connection established
+Session 894214be-147d-4edf-8142-9410bae7028c ready
+SSE connection established
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/sse
+  Messages:      POST http://localhost:3101/messages
+  Health:        GET  http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+SSE connection established
+Session 9940b175-6d88-4640-81fc-55da5c3c0446 ready
+Session 9940b175-6d88-4640-81fc-55da5c3c0446 closed
+SSE connection established
+Session d1e3d7cd-d10a-4ef1-b09f-28d8798693eb ready
+SSE connection established
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/sse
+  Messages:      POST http://localhost:3101/messages
+  Health:        GET  http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+SSE connection established
+Session 69cfdabe-a5ce-415b-a0b7-e6dac0fa2f52 ready
+Session 69cfdabe-a5ce-415b-a0b7-e6dac0fa2f52 closed
+SSE connection established
+Session 037a807e-0e95-4f02-9a67-33a8578541a3 ready
+Session 037a807e-0e95-4f02-9a67-33a8578541a3 closed
+SSE connection established
+Session 711f0db0-8160-4f32-b89f-72896b63cebf ready
+Session 711f0db0-8160-4f32-b89f-72896b63cebf closed
+SSE connection established
+Session 8827a422-caa9-4bf0-9bd8-dce032bdfaef ready
+Session 8827a422-caa9-4bf0-9bd8-dce032bdfaef closed
+SSE connection established
+Session feecba3f-3542-4c56-a0d5-2d684801b9e1 ready
+Session feecba3f-3542-4c56-a0d5-2d684801b9e1 closed
+SSE connection established
+Session 77e46cd7-b41f-48ab-853a-cfd9ff0b50a3 ready
+Session 77e46cd7-b41f-48ab-853a-cfd9ff0b50a3 closed
+SSE connection established
+Session 0fb1970c-0aa2-4619-a113-4a67ecde9fd9 ready
+Session 0fb1970c-0aa2-4619-a113-4a67ecde9fd9 closed
+SSE connection established
+Session 88a093c5-af4c-43c9-ad80-e5a0e3b65849 ready
+Session 88a093c5-af4c-43c9-ad80-e5a0e3b65849 closed
+SSE connection established
+Session 1212899d-445c-4be4-a3d6-be5339731ac8 ready
+Session 1212899d-445c-4be4-a3d6-be5339731ac8 closed
+SSE connection established
+Session 7692510d-e198-498a-a390-8c5e501fde87 ready
+Session 7692510d-e198-498a-a390-8c5e501fde87 closed
+SSE connection established
+Session ab7cd1ae-dc31-4282-856d-7b7d19b884f4 ready
+SSE connection established
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/sse
+  Messages:      POST http://localhost:3101/messages
+  Health:        GET  http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+SSE connection established
+Session 61c644fb-e124-409b-ac21-3bef053013f5 ready
+Session 61c644fb-e124-409b-ac21-3bef053013f5 closed
+SSE connection established
+Session 38f3587f-29f2-4012-aab1-8ff3aae92c5b ready
+Session 38f3587f-29f2-4012-aab1-8ff3aae92c5b closed
+SSE connection established
+Session 975e4bab-cea8-4d84-9333-9056ebf583a2 ready
+Session 975e4bab-cea8-4d84-9333-9056ebf583a2 closed
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/sse
+  Messages:      POST http://localhost:3101/messages
+  Health:        GET  http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+SSE connection request
+Session 78e0f3e5-8fd9-421c-bc1b-ab04bc67f8df ready (1 active)
+Session 78e0f3e5-8fd9-421c-bc1b-ab04bc67f8df closed
+SSE connection request
+Session 5c52ad6c-1c1f-4c2d-acc4-943df9fbe179 ready (1 active)
+Session 5c52ad6c-1c1f-4c2d-acc4-943df9fbe179 closed
+SSE connection request
+Session e5023b2c-58c1-42ae-a493-dd0acc32379f ready (1 active)
+Session e5023b2c-58c1-42ae-a493-dd0acc32379f closed
+SSE connection request
+Session a92462eb-65c9-4e61-8ab1-e8db5fc365bc ready (1 active)
+Session a92462eb-65c9-4e61-8ab1-e8db5fc365bc closed
+SSE connection request
+Session 826cdcad-1606-438c-b39f-46b2c5ba6183 ready (1 active)
+SSE connection request
+Session 65ad5d18-01fc-407d-924e-ac08ad3f402d ready (2 active)
+Session 826cdcad-1606-438c-b39f-46b2c5ba6183 closed
+Session 65ad5d18-01fc-407d-924e-ac08ad3f402d closed
+SSE connection request
+Session 45f3309b-12e7-4d5c-93ed-badd2f816156 ready (1 active)
+Session 45f3309b-12e7-4d5c-93ed-badd2f816156 closed
+SSE connection request
+Session 24bb46e6-1eb6-4317-a4bf-f673a1e94011 ready (1 active)
+Session 24bb46e6-1eb6-4317-a4bf-f673a1e94011 closed
+SSE connection request
+Session 6e138da2-49f0-40e8-a7f3-ad1c12311065 ready (1 active)
+Session 6e138da2-49f0-40e8-a7f3-ad1c12311065 closed
+SSE connection request
+Session c36052a8-e77c-4e55-a293-fc74071f5087 ready (1 active)
+Session c36052a8-e77c-4e55-a293-fc74071f5087 closed
+SSE connection request
+Session 91effee5-b0e7-4886-9f47-b65c333c6093 ready (1 active)
+SSE connection request
+Session c0d8b857-b7af-4079-a338-f8fa29262b50 ready (2 active)
+Session c0d8b857-b7af-4079-a338-f8fa29262b50 closed
+Session 91effee5-b0e7-4886-9f47-b65c333c6093 closed
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  SSE endpoint:  GET  http://localhost:3101/sse
+  Messages:      POST http://localhost:3101/messages
+  Health:        GET  http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+SSE connection request
+Session de97f61b-ea7a-45d8-b9d6-4c20489ccedf ready (1 active)
+Session de97f61b-ea7a-45d8-b9d6-4c20489ccedf closed
+SSE connection request
+Session 63477d4a-78d4-4fff-bb11-e0fa0674f00a ready (1 active)
+Session 63477d4a-78d4-4fff-bb11-e0fa0674f00a closed
+SSE connection request
+Session 099d13bc-f777-4357-a959-61fca20c7265 ready (1 active)
+Session 099d13bc-f777-4357-a959-61fca20c7265 closed
+SSE connection request
+Session cf03aa5b-63e6-4e9e-8aed-dd9af53acfab ready (1 active)
+Session cf03aa5b-63e6-4e9e-8aed-dd9af53acfab closed
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  MCP endpoint:  http://localhost:3101/mcp
+  Health:        http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+Session dba7b22a-e867-4a19-b52f-286504b51d48 initialized (1 active)
+Session 66e61e05-cd7a-4d53-bd2e-6e981e4293ab initialized (2 active)
+Session 9d4aa0d4-b691-4e8c-ad37-cf2d0a0adcec initialized (3 active)
+Session 9d4aa0d4-b691-4e8c-ad37-cf2d0a0adcec closed
+Session e869958e-175f-41d1-9708-e54020490d48 initialized (3 active)
+Session 4b335284-c9ad-43b7-a612-60e8ae89c4f0 initialized (4 active)
+Session 1b140bff-40eb-4d9e-abd8-4d892915a895 initialized (5 active)
+Session 1b140bff-40eb-4d9e-abd8-4d892915a895 closed
+Session 04f9be1e-0066-41f7-ba5f-c5a49a2cfe63 initialized (5 active)
+Session 04f9be1e-0066-41f7-ba5f-c5a49a2cfe63 closed
+Session 3bc10033-1471-474e-9cc4-6369ffc1c750 initialized (5 active)
+Session 3bc10033-1471-474e-9cc4-6369ffc1c750 closed
+Session c7f6b4ca-9804-4283-943d-1de29c5e071a initialized (5 active)
+Session 0db3d03b-85af-4a27-8c7f-fbe1cd132f87 initialized (6 active)
+Session 821199ca-00c4-4b7a-9490-9162046c7bf6 initialized (7 active)
+Session bf012031-e625-4cbf-b66d-bb3fb264f0d1 initialized (8 active)
+Session 9902320c-daa1-4df4-9d1a-5a62c0c92e4f initialized (9 active)
+Session 566b910c-05fa-4f90-9d69-415db5d33da7 initialized (10 active)
+Session 1414ef78-2a84-452f-99d8-6e618bcf12f7 initialized (11 active)
+Session 05194bab-6d53-4b2c-af7b-4ab16e17754f initialized (12 active)
+Session 2f7c5d0b-afcd-4187-9711-55d2d686e42a initialized (13 active)
+Kiuli Filesystem Server listening on http://0.0.0.0:3101
+  MCP endpoint:  http://localhost:3101/mcp
+  Health:        http://localhost:3101/health
+  Project root:  /Users/grahamwallington/Projects/kiuli-website
+Session eeb28d72-a176-4da6-a03a-cb8e7d806541 initialized (1 active)
+Session 44c45f43-ea8d-4aac-ac5a-6566c0ae6019 initialized (2 active)
+Session 0c0ddc0d-65e0-420e-a3d0-b9574f8709f5 initialized (3 active)
+Session 4f21b87a-5ae0-4db6-a6f8-80fa28f677df initialized (4 active)
+Session d45d5630-53f2-48b3-bea6-a46f8825bedd initialized (5 active)
+Session 46c45f7d-ffc1-419e-b4d3-ec67ae8c87eb initialized (6 active)
+Session dc109387-5c0e-405f-b58d-d3e4f6121d0d initialized (7 active)
+Session 4d0c5a76-7dc2-43cc-8f5b-16f46c2b54a9 initialized (8 active)
+Session e6b4f9a3-badf-45ef-bf1f-6f7677829717 initialized (9 active)
+Session 8f51bc17-0dd2-4fa0-a227-b6f38dbdc478 initialized (10 active)
+Session a06ec366-669f-4b91-b03b-c1b981c30cb4 initialized (11 active)
+Session 3c5c578b-f9ce-419a-9817-012309c30780 initialized (12 active)
+Session a058b690-9833-403d-a4bd-9ffc3128eaa0 initialized (13 active)
+Session b0b0c094-de42-4323-97fe-05093aed2cdb initialized (14 active)
+Session cbf559d6-82fa-40f1-b00e-90f3fe852bde initialized (15 active)
+Session 649c3f63-437c-49c0-bcd1-b07b7f407c4a initialized (16 active)
+Session 56913a81-fc38-4402-9a03-9792f5613ce9 initialized (17 active)
+Session de511ce2-a0cb-4c61-acd1-405394dcc889 initialized (18 active)
+Session a8029009-f15e-4516-887d-7236953fa78a initialized (19 active)
+Session 3f4f23c3-4789-43d8-b57f-9cc0911e55a3 initialized (20 active)
+Session 02fd9e2f-2d2b-476d-aa6c-fd5d6f880d1c initialized (21 active)
+Session da101373-3b55-48b1-9e08-dc9998898f04 initialized (22 active)
+Session da101373-3b55-48b1-9e08-dc9998898f04 closed

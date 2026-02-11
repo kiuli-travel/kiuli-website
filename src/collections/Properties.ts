@@ -1,6 +1,19 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, AccessArgs } from 'payload'
 import { authenticated } from '../access/authenticated'
 import { updateLastModified } from './Itineraries/hooks/updateLastModified'
+
+// Allow authenticated users OR API key access for Lambda pipeline
+const authenticatedOrApiKey = ({ req }: AccessArgs) => {
+  if (req.user) return true
+  const headers = req.headers as Headers | Record<string, string>
+  const authHeader = typeof headers?.get === 'function'
+    ? headers.get('authorization')
+    : (headers as Record<string, string>)?.authorization
+  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) {
+    return true
+  }
+  return false
+}
 
 export const Properties: CollectionConfig = {
   slug: 'properties',
@@ -13,8 +26,8 @@ export const Properties: CollectionConfig = {
     drafts: true,
   },
   access: {
-    create: authenticated,
-    update: authenticated,
+    create: authenticatedOrApiKey,
+    update: authenticatedOrApiKey,
     delete: authenticated,
     read: () => true, // Public read — property pages are public
   },

@@ -1,7 +1,7 @@
 # Kiuli Content Engine — Status Tracker
 
 **Last Updated:** February 11, 2026
-**Current Phase:** Phase 2 — COMPLETED
+**Current Phase:** Scraper Audit & Deploy — COMPLETED
 
 ---
 
@@ -27,6 +27,29 @@
 | 13 | NOT STARTED | — | — | — |
 | 14 | NOT STARTED | — | — | — |
 | 15 | NOT STARTED | — | — | — |
+
+---
+
+## Scraper Audit & Deploy — COMPLETED 2026-02-11
+
+### What Was Done
+
+- Scraper pipeline upgraded: property extraction (linkProperties), bidirectional linking, FAQ fix, auth header fix
+- 2 Lambda functions deployed to AWS (orchestrator + image-processor)
+- All 6 test itineraries re-scraped with updated pipeline
+- 29 Property records created across 8 destinations (Botswana, Kenya, Mozambique, Namibia, Rwanda, South Africa, Tanzania, Uganda)
+- Cross-itinerary property dedup confirmed (The Silo linked to 2 itineraries)
+- 0 stay blocks without property_id, 18 property-specific FAQs generated
+- Database migration gap from Phase 1 fixed (added missing columns to payload_locked_documents_rels and payload_preferences_rels)
+- Properties.ts access updated to authenticatedOrApiKey for Lambda pipeline access
+- Report: `content-engine/reports/deploy-and-rescrape.md`
+
+### Issues Encountered
+
+1. Missing transform.js in first Lambda zip — fixed by repackaging
+2. Database migration gap from Phase 1 — fixed with manual SQL
+3. Properties collection 403 on create — fixed with authenticatedOrApiKey access
+4. Labeler chain break on Job 75 — non-critical, all data saved
 
 ---
 

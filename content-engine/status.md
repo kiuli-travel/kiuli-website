@@ -1,7 +1,7 @@
 # Kiuli Content Engine — Status Tracker
 
 **Last Updated:** February 11, 2026
-**Current Phase:** Phase 1 — COMPLETED
+**Current Phase:** Phase 2 — COMPLETED
 
 ---
 
@@ -12,7 +12,7 @@
 | Pre-0 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
 | 0 | SKIPPED | — | — | — |
 | 1 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
-| 2 | NOT STARTED | — | — | — |
+| 2 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
 | 2.5 | NOT STARTED | — | — | — |
 | 3 | NOT STARTED | — | — | — |
 | 4 | NOT STARTED | — | — | — |
@@ -27,6 +27,28 @@
 | 13 | NOT STARTED | — | — | — |
 | 14 | NOT STARTED | — | — | — |
 | 15 | NOT STARTED | — | — | — |
+
+---
+
+## Phase 2: Vector Store — COMPLETED 2026-02-11
+
+### What Was Done
+
+- pgvector 0.8.0 extension enabled on production Neon database
+- `content_embeddings` table created with 17 columns, `vector(3072)` embeddings
+- HNSW index via `halfvec(3072)` expression (m=32, ef_construction=128) — workaround for pgvector 2000-dim HNSW limit
+- 6 scalar btree indexes + 3 GIN array indexes
+- `content-system/db.ts` updated with real unpooled pg Pool implementation
+- `content-system/embeddings/types.ts` corrected to match database CHECK constraint (11 chunk types)
+- SQL migration files created with idempotent `IF NOT EXISTS` guards
+- Verified on Neon dev branch first, then applied to production
+- Dev branch deleted after successful verification
+- Payload admin and API confirmed unaffected
+- Report: `content-engine/reports/phase2-vector-store.md`
+
+### Decisions Made
+
+4. **HNSW halfvec expression index.** pgvector 0.8.0 limits HNSW to 2000 dims for `vector` type. Store full-precision `vector(3072)`, index via `(embedding::halfvec(3072)) halfvec_cosine_ops`. Queries must cast: `ORDER BY embedding::halfvec(3072) <=> $1::halfvec(3072)`. Negligible accuracy loss. (2026-02-11)
 
 ---
 
@@ -61,9 +83,9 @@
 - [x] Orchestration directory created (content-engine/)
 - [x] Git status verified clean
 - [x] npm run build verified passing
-- [ ] Vercel env vars checked
-- [ ] DATABASE_URL_UNPOOLED availability confirmed
-- [ ] neonctl access confirmed
+- [x] Vercel env vars checked (pulled via `vercel env pull`)
+- [x] DATABASE_URL_UNPOOLED availability confirmed
+- [x] neonctl access confirmed (v2.20.2, org-long-rice-46985810)
 
 ### Decisions Made
 

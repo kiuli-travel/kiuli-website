@@ -23,9 +23,15 @@ import { VoiceConfiguration } from './collections/VoiceConfiguration'
 import { Designers } from './collections/Designers'
 import { Authors } from './collections/Authors'
 import { Properties } from './collections/Properties'
+import { ContentProjects } from './collections/ContentProjects'
+import { ContentJobs } from './collections/ContentJobs'
+import { SourceRegistry } from './collections/SourceRegistry'
+import { EditorialDirectives } from './collections/EditorialDirectives'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { PropertyNameMappings } from './globals/PropertyNameMappings'
+import { ContentSystemSettings } from './globals/ContentSystemSettings'
+import { DestinationNameMappings } from './globals/DestinationNameMappings'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
@@ -78,9 +84,9 @@ export default buildConfig({
     },
     push: false, // Disable schema push - use migrations only
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, PropertyNameMappings],
+  globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, DestinationNameMappings],
   plugins: [
     makeS3StoragePlugin(),
     ...plugins,

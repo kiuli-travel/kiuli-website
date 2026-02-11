@@ -84,6 +84,10 @@ export interface Config {
     designers: Designer;
     authors: Author;
     properties: Property;
+    'content-projects': ContentProject;
+    'content-jobs': ContentJob;
+    'source-registry': SourceRegistry;
+    'editorial-directives': EditorialDirective;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -118,6 +122,10 @@ export interface Config {
     designers: DesignersSelect<false> | DesignersSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     properties: PropertiesSelect<false> | PropertiesSelect<true>;
+    'content-projects': ContentProjectsSelect<false> | ContentProjectsSelect<true>;
+    'content-jobs': ContentJobsSelect<false> | ContentJobsSelect<true>;
+    'source-registry': SourceRegistrySelect<false> | SourceRegistrySelect<true>;
+    'editorial-directives': EditorialDirectivesSelect<false> | EditorialDirectivesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -137,11 +145,15 @@ export interface Config {
     header: Header;
     footer: Footer;
     'property-name-mappings': PropertyNameMapping;
+    'content-system-settings': ContentSystemSetting;
+    'destination-name-mappings': DestinationNameMapping;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
     'property-name-mappings': PropertyNameMappingsSelect<false> | PropertyNameMappingsSelect<true>;
+    'content-system-settings': ContentSystemSettingsSelect<false> | ContentSystemSettingsSelect<true>;
+    'destination-name-mappings': DestinationNameMappingsSelect<false> | DestinationNameMappingsSelect<true>;
   };
   locale: null;
   user: User;
@@ -2096,7 +2108,7 @@ export interface FeaturedItinerariesBlock {
   /**
    * Hand-picked itineraries to feature (select at least one for the block to render)
    */
-  itineraries?: (number | Itinerary)[] | null;
+  itineraries: (number | Itinerary)[];
   /**
    * Whether to show investment level on cards
    */
@@ -2121,7 +2133,7 @@ export interface DestinationHighlightsBlock {
   /**
    * Destinations to highlight (select at least one for the block to render)
    */
-  destinations?: (number | Destination)[] | null;
+  destinations: (number | Destination)[];
   id?: string | null;
   blockName?: string | null;
   blockType: 'destinationHighlights';
@@ -2202,7 +2214,7 @@ export interface FeaturedPropertiesBlock {
   /**
    * Properties to feature (select at least one for the block to render)
    */
-  properties?: (number | Property)[] | null;
+  properties: (number | Property)[];
   id?: string | null;
   blockName?: string | null;
   blockType: 'featuredProperties';
@@ -3099,6 +3111,663 @@ export interface Designer {
   createdAt: string;
 }
 /**
+ * Content production projects — from idea through to publication
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-projects".
+ */
+export interface ContentProject {
+  id: number;
+  /**
+   * Working title for this content project
+   */
+  title: string;
+  /**
+   * URL-friendly identifier — auto-generated or manual
+   */
+  slug?: string | null;
+  /**
+   * Current workflow stage
+   */
+  stage: 'idea' | 'brief' | 'research' | 'draft' | 'review' | 'published' | 'proposed' | 'rejected' | 'filtered';
+  /**
+   * Type of content this project produces
+   */
+  contentType:
+    | 'itinerary_cluster'
+    | 'authority'
+    | 'designer_insight'
+    | 'destination_page'
+    | 'property_page'
+    | 'itinerary_enhancement'
+    | 'page_update';
+  /**
+   * How this project was created
+   */
+  originPathway?: ('itinerary' | 'external' | 'designer' | 'cascade') | null;
+  /**
+   * Source itinerary (if origin is itinerary or cascade)
+   */
+  originItinerary?: (number | null) | Itinerary;
+  /**
+   * Source feed entry (if origin is external)
+   */
+  originSource?: (number | null) | SourceRegistry;
+  /**
+   * External URL that triggered this project
+   */
+  originUrl?: string | null;
+  /**
+   * Why this project was filtered during ideation
+   */
+  filterReason?: string | null;
+  /**
+   * Status of current async operation (draft generation, research, etc.)
+   */
+  processingStatus?: ('idle' | 'processing' | 'completed' | 'failed') | null;
+  /**
+   * Human-readable error from last failed operation
+   */
+  processingError?: string | null;
+  /**
+   * When the current async operation started
+   */
+  processingStartedAt?: string | null;
+  /**
+   * Which Payload collection this content publishes to
+   */
+  targetCollection?: ('destinations' | 'itineraries' | 'posts' | 'properties') | null;
+  /**
+   * Payload ID of the target record (for updates and enhancements)
+   */
+  targetRecordId?: string | null;
+  /**
+   * Specific field or block name being updated (for page_update type)
+   */
+  targetField?: string | null;
+  /**
+   * Snapshot of existing content at read time (for page_update type)
+   */
+  targetCurrentContent?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * updatedAt of target record at read time — used for optimistic locking on publish
+   */
+  targetUpdatedAt?: string | null;
+  /**
+   * What this article will cover and why it matters
+   */
+  briefSummary?: string | null;
+  /**
+   * The specific angle or perspective — what makes this different from competitors
+   */
+  targetAngle?: string | null;
+  /**
+   * Who this content is for
+   */
+  targetAudience?: ('customer' | 'professional' | 'guide')[] | null;
+  /**
+   * What competitors have published on this topic and how we differ
+   */
+  competitiveNotes?: string | null;
+  /**
+   * Compiled research findings — editable by designer
+   */
+  synthesis?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Relevant content already on kiuli.com (from embedding store query)
+   */
+  existingSiteContent?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * External sources used in research
+   */
+  sources?:
+    | {
+        /**
+         * Source title or headline
+         */
+        title?: string | null;
+        /**
+         * Source URL
+         */
+        url?: string | null;
+        /**
+         * Source credibility rating
+         */
+        credibility?: ('authoritative' | 'peer_reviewed' | 'preprint' | 'trade' | 'other') | null;
+        /**
+         * Key takeaways from this source
+         */
+        notes?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Unique angles from Kiuli internal sources
+   */
+  proprietaryAngles?:
+    | {
+        /**
+         * The proprietary insight or angle
+         */
+        angle?: string | null;
+        /**
+         * Where this insight came from
+         */
+        source?: ('designer' | 'client' | 'booking' | 'supplier') | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Claims that need verification or have varying confidence
+   */
+  uncertaintyMap?:
+    | {
+        /**
+         * The factual claim
+         */
+        claim?: string | null;
+        /**
+         * Confidence level
+         */
+        confidence?: ('fact' | 'inference' | 'uncertain') | null;
+        /**
+         * Verification notes or sources
+         */
+        notes?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Designer notes on research — context, corrections, additions
+   */
+  editorialNotes?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Full article body (Lexical editor). For compound types, use sections field instead.
+   */
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Structured section content for compound types (destination_page, property_page). JSON object keyed by section name.
+   */
+  sections?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * FAQ items for this content
+   */
+  faqSection?:
+    | {
+        question: string;
+        answer: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * SEO meta title (max 60 chars)
+   */
+  metaTitle?: string | null;
+  /**
+   * SEO meta description (max 160 chars)
+   */
+  metaDescription?: string | null;
+  /**
+   * AI Overview optimised summary (50-70 words)
+   */
+  answerCapsule?: string | null;
+  /**
+   * Selected hero image for this content
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * Auto-populated matches from media library search
+   */
+  libraryMatches?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * AI-generated image candidates
+   */
+  generatedCandidates?:
+    | {
+        /**
+         * URL of generated image
+         */
+        imageUrl?: string | null;
+        /**
+         * Generation prompt used
+         */
+        prompt?: string | null;
+        status?: ('candidate' | 'selected' | 'rejected') | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * LinkedIn post text
+   */
+  linkedinSummary?: string | null;
+  /**
+   * Facebook post text
+   */
+  facebookSummary?: string | null;
+  /**
+   * Facebook pinned comment (often a call to action)
+   */
+  facebookPinnedComment?: string | null;
+  /**
+   * Whether this has been posted to LinkedIn
+   */
+  postedToLinkedin?: boolean | null;
+  /**
+   * Whether this has been posted to Facebook
+   */
+  postedToFacebook?: boolean | null;
+  /**
+   * LinkedIn post ID (for tracking)
+   */
+  linkedinPostId?: string | null;
+  /**
+   * Facebook post ID (for tracking)
+   */
+  facebookPostId?: string | null;
+  /**
+   * Other content projects this links to
+   */
+  internalLinks?: (number | ContentProject)[] | null;
+  /**
+   * Itineraries this content links to
+   */
+  itineraryLinks?: (number | Itinerary)[] | null;
+  /**
+   * Destinations this content links to
+   */
+  destinationLinks?: (number | Destination)[] | null;
+  /**
+   * Properties this content links to
+   */
+  propertyLinks?: (number | Property)[] | null;
+  /**
+   * Result of last consistency check against existing site content
+   */
+  consistencyCheckResult?: ('pass' | 'hard_contradiction' | 'soft_contradiction' | 'not_checked') | null;
+  /**
+   * Specific contradictions or staleness issues found
+   */
+  consistencyIssues?:
+    | {
+        issueType?: ('hard' | 'soft' | 'staleness') | null;
+        /**
+         * The existing content that conflicts
+         */
+        existingContent?: string | null;
+        /**
+         * The new content that conflicts
+         */
+        newContent?: string | null;
+        /**
+         * ID and collection of the conflicting record
+         */
+        sourceRecord?: string | null;
+        resolution?: ('pending' | 'updated_draft' | 'updated_existing' | 'overridden') | null;
+        /**
+         * How this was resolved
+         */
+        resolutionNote?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * String array of destination names this content covers
+   */
+  destinations?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * String array of property names this content covers
+   */
+  properties?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * String array of wildlife species mentioned
+   */
+  species?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * How frequently this content needs freshness review
+   */
+  freshnessCategory?: ('monthly' | 'quarterly' | 'annual' | 'evergreen') | null;
+  /**
+   * When this content was published to its target collection
+   */
+  publishedAt?: string | null;
+  /**
+   * When a designer last reviewed this content
+   */
+  lastReviewedAt?: string | null;
+  /**
+   * Conversation thread between designer and Kiuli AI
+   */
+  messages?:
+    | {
+        role: 'designer' | 'kiuli';
+        /**
+         * Message text
+         */
+        content: string;
+        timestamp: string;
+        /**
+         * Structured record of edits or operations performed in response to this message
+         */
+        actions?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * External data sources monitored for content triggers
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "source-registry".
+ */
+export interface SourceRegistry {
+  id: number;
+  /**
+   * Human-readable source name
+   */
+  name: string;
+  /**
+   * URL of RSS feed or API endpoint
+   */
+  feedUrl: string;
+  /**
+   * Content category of this source
+   */
+  category?: ('science' | 'conservation' | 'industry' | 'policy') | null;
+  /**
+   * How to check this source for new items
+   */
+  checkMethod?: ('rss' | 'api') | null;
+  /**
+   * Whether this source is actively monitored
+   */
+  active?: boolean | null;
+  /**
+   * When this source was last checked for new items
+   */
+  lastCheckedAt?: string | null;
+  /**
+   * ID or URL of the last processed feed item — used as cursor
+   */
+  lastProcessedItemId?: string | null;
+  /**
+   * Timestamp of the last processed feed item
+   */
+  lastProcessedItemTimestamp?: string | null;
+  /**
+   * JSON array of last 50 processed item IDs/URLs — used for deduplication
+   */
+  recentProcessedIds?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Notes about this source — quirks, reliability, contact info
+   */
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Background processing jobs — cascade, decompose, embed, monitor
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-jobs".
+ */
+export interface ContentJob {
+  id: number;
+  /**
+   * Type of background job
+   */
+  jobType: 'cascade' | 'decompose' | 'source_monitor' | 'batch_embed' | 'bootstrap';
+  /**
+   * Current job status
+   */
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  /**
+   * Source itinerary (for cascade and decompose jobs)
+   */
+  itineraryId?: (number | null) | Itinerary;
+  /**
+   * Structured step tracking — see V6 spec Section 11.3 for schema
+   */
+  progress?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Human-readable error summary
+   */
+  error?: string | null;
+  /**
+   * When this job started executing
+   */
+  startedAt?: string | null;
+  /**
+   * When this job completed or failed
+   */
+  completedAt?: string | null;
+  /**
+   * Number of retry attempts made
+   */
+  retriedCount?: number | null;
+  /**
+   * Maximum retry attempts before permanent failure
+   */
+  maxRetries?: number | null;
+  /**
+   * How this job was triggered
+   */
+  createdBy?: ('hook' | 'manual' | 'schedule') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Rules learned from designer decisions — persist across all content production
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "editorial-directives".
+ */
+export interface EditorialDirective {
+  id: number;
+  /**
+   * The editorial rule — e.g. "Do not produce comparison articles between specific lodges"
+   */
+  text: string;
+  /**
+   * JSON string array of topic tags this directive applies to
+   */
+  topicTags?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * JSON string array of destination names this directive applies to
+   */
+  destinationTags?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * JSON string array of content types this directive applies to (e.g. ["authority", "designer_insight"])
+   */
+  contentTypeTags?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Whether this directive is currently enforced
+   */
+  active?: boolean | null;
+  /**
+   * When this directive should be reviewed for continued relevance. Default: 6 months from creation.
+   */
+  reviewAfter?: string | null;
+  /**
+   * When a designer last confirmed this directive is still relevant
+   */
+  lastReviewedAt?: string | null;
+  /**
+   * Number of candidates this directive filtered in the last 30 days — updated by system
+   */
+  filterCount30d?: number | null;
+  /**
+   * The content project whose rejection led to this directive
+   */
+  originProject?: (number | null) | ContentProject;
+  /**
+   * The designer original rejection text that inspired this directive
+   */
+  originRejectionReason?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -3355,6 +4024,22 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'properties';
         value: number | Property;
+      } | null)
+    | ({
+        relationTo: 'content-projects';
+        value: number | ContentProject;
+      } | null)
+    | ({
+        relationTo: 'content-jobs';
+        value: number | ContentJob;
+      } | null)
+    | ({
+        relationTo: 'source-registry';
+        value: number | SourceRegistry;
+      } | null)
+    | ({
+        relationTo: 'editorial-directives';
+        value: number | EditorialDirective;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -4384,6 +5069,177 @@ export interface PropertiesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-projects_select".
+ */
+export interface ContentProjectsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  stage?: T;
+  contentType?: T;
+  originPathway?: T;
+  originItinerary?: T;
+  originSource?: T;
+  originUrl?: T;
+  filterReason?: T;
+  processingStatus?: T;
+  processingError?: T;
+  processingStartedAt?: T;
+  targetCollection?: T;
+  targetRecordId?: T;
+  targetField?: T;
+  targetCurrentContent?: T;
+  targetUpdatedAt?: T;
+  briefSummary?: T;
+  targetAngle?: T;
+  targetAudience?: T;
+  competitiveNotes?: T;
+  synthesis?: T;
+  existingSiteContent?: T;
+  sources?:
+    | T
+    | {
+        title?: T;
+        url?: T;
+        credibility?: T;
+        notes?: T;
+        id?: T;
+      };
+  proprietaryAngles?:
+    | T
+    | {
+        angle?: T;
+        source?: T;
+        id?: T;
+      };
+  uncertaintyMap?:
+    | T
+    | {
+        claim?: T;
+        confidence?: T;
+        notes?: T;
+        id?: T;
+      };
+  editorialNotes?: T;
+  body?: T;
+  sections?: T;
+  faqSection?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
+  metaTitle?: T;
+  metaDescription?: T;
+  answerCapsule?: T;
+  heroImage?: T;
+  libraryMatches?: T;
+  generatedCandidates?:
+    | T
+    | {
+        imageUrl?: T;
+        prompt?: T;
+        status?: T;
+        id?: T;
+      };
+  linkedinSummary?: T;
+  facebookSummary?: T;
+  facebookPinnedComment?: T;
+  postedToLinkedin?: T;
+  postedToFacebook?: T;
+  linkedinPostId?: T;
+  facebookPostId?: T;
+  internalLinks?: T;
+  itineraryLinks?: T;
+  destinationLinks?: T;
+  propertyLinks?: T;
+  consistencyCheckResult?: T;
+  consistencyIssues?:
+    | T
+    | {
+        issueType?: T;
+        existingContent?: T;
+        newContent?: T;
+        sourceRecord?: T;
+        resolution?: T;
+        resolutionNote?: T;
+        id?: T;
+      };
+  destinations?: T;
+  properties?: T;
+  species?: T;
+  freshnessCategory?: T;
+  publishedAt?: T;
+  lastReviewedAt?: T;
+  messages?:
+    | T
+    | {
+        role?: T;
+        content?: T;
+        timestamp?: T;
+        actions?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-jobs_select".
+ */
+export interface ContentJobsSelect<T extends boolean = true> {
+  jobType?: T;
+  status?: T;
+  itineraryId?: T;
+  progress?: T;
+  error?: T;
+  startedAt?: T;
+  completedAt?: T;
+  retriedCount?: T;
+  maxRetries?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "source-registry_select".
+ */
+export interface SourceRegistrySelect<T extends boolean = true> {
+  name?: T;
+  feedUrl?: T;
+  category?: T;
+  checkMethod?: T;
+  active?: T;
+  lastCheckedAt?: T;
+  lastProcessedItemId?: T;
+  lastProcessedItemTimestamp?: T;
+  recentProcessedIds?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "editorial-directives_select".
+ */
+export interface EditorialDirectivesSelect<T extends boolean = true> {
+  text?: T;
+  topicTags?: T;
+  destinationTags?: T;
+  contentTypeTags?: T;
+  active?: T;
+  reviewAfter?: T;
+  lastReviewedAt?: T;
+  filterCount30d?: T;
+  originProject?: T;
+  originRejectionReason?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects_select".
  */
 export interface RedirectsSelect<T extends boolean = true> {
@@ -4751,6 +5607,85 @@ export interface PropertyNameMapping {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-system-settings".
+ */
+export interface ContentSystemSetting {
+  id: number;
+  /**
+   * OpenRouter model identifier for ideation and filtering
+   */
+  ideationModel?: string | null;
+  /**
+   * OpenRouter model identifier for research synthesis
+   */
+  researchModel?: string | null;
+  /**
+   * OpenRouter model identifier for content drafting
+   */
+  draftingModel?: string | null;
+  /**
+   * OpenRouter model identifier for conversation editing
+   */
+  editingModel?: string | null;
+  /**
+   * OpenRouter model identifier for image prompt generation
+   */
+  imageModel?: string | null;
+  /**
+   * Model for generating embeddings (3072 dimensions)
+   */
+  embeddingModel?: string | null;
+  /**
+   * Default prefix prepended to all image generation prompts
+   */
+  defaultImagePromptPrefix?: string | null;
+  /**
+   * Whether consistency checking runs before publication
+   */
+  consistencyCheckEnabled?: boolean | null;
+  /**
+   * Whether cascade auto-populates bidirectional relationships
+   */
+  autoPopulateRelationships?: boolean | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "destination-name-mappings".
+ */
+export interface DestinationNameMapping {
+  id: number;
+  /**
+   * Maps alternative destination names to canonical Destinations records
+   */
+  mappings?:
+    | {
+        /**
+         * Name used in Destinations collection
+         */
+        canonical: string;
+        /**
+         * JSON array of alternative names, e.g. ["Serengeti NP", "Serengeti National Park", "The Serengeti"]
+         */
+        aliases?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        destination: number | Destination;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header_select".
  */
 export interface HeaderSelect<T extends boolean = true> {
@@ -4814,6 +5749,41 @@ export interface PropertyNameMappingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-system-settings_select".
+ */
+export interface ContentSystemSettingsSelect<T extends boolean = true> {
+  ideationModel?: T;
+  researchModel?: T;
+  draftingModel?: T;
+  editingModel?: T;
+  imageModel?: T;
+  embeddingModel?: T;
+  defaultImagePromptPrefix?: T;
+  consistencyCheckEnabled?: T;
+  autoPopulateRelationships?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "destination-name-mappings_select".
+ */
+export interface DestinationNameMappingsSelect<T extends boolean = true> {
+  mappings?:
+    | T
+    | {
+        canonical?: T;
+        aliases?: T;
+        destination?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TaskSchedulePublish".
  */
 export interface TaskSchedulePublish {
@@ -4858,17 +5828,6 @@ export interface BannerBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'banner';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "CodeBlock".
- */
-export interface CodeBlock {
-  language?: ('typescript' | 'javascript' | 'css') | null;
-  code: string;
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'code';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

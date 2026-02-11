@@ -1,7 +1,7 @@
 # Kiuli Content Engine — Status Tracker
 
 **Last Updated:** February 11, 2026
-**Current Phase:** Pre-Phase 0 — Tooling & Scaffolding
+**Current Phase:** Phase 1 — COMPLETED
 
 ---
 
@@ -9,9 +9,9 @@
 
 | Phase | Status | Started | Completed | Gate Passed |
 |-------|--------|---------|-----------|-------------|
-| Pre-0 | IN PROGRESS | 2026-02-11 | — | — |
-| 0 | NOT STARTED | — | — | — |
-| 1 | NOT STARTED | — | — | — |
+| Pre-0 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
+| 0 | SKIPPED | — | — | — |
+| 1 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
 | 2 | NOT STARTED | — | — | — |
 | 2.5 | NOT STARTED | — | — | — |
 | 3 | NOT STARTED | — | — | — |
@@ -30,17 +30,37 @@
 
 ---
 
-## Pre-Phase 0: Tooling & Scaffolding
+## Phase 1: Schema Scaffold — COMPLETED 2026-02-11
+
+### What Was Done
+
+- 4 Payload CMS collections created: ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives
+- 2 Payload globals created: ContentSystemSettings, DestinationNameMappings
+- PropertyNameMappings verified existing and registered
+- All registered in payload.config.ts
+- content-system/ directory created with 10 subdirectories, 42 TypeScript files (types + module stubs)
+- lambda/content-*/ directories created with 4 Lambda handlers + shared modules
+- `npm run build` passes
+- Import map regenerated (no changes needed)
+- Report: `content-engine/reports/phase1-schema-scaffold.md`
+
+### Issues Encountered
+
+1. **Type generation order:** First build failed because `CollectionSlug` type didn't include new slugs. Fixed by running `npx payload generate:types` before build. Future builds will include the correct types.
+
+---
+
+## Pre-Phase 0: Tooling & Scaffolding — COMPLETED 2026-02-11
 
 ### Tasks
 
-- [ ] Enhanced MCP server written (tools/mcp-server/server.mjs)
-- [ ] MCP server npm dependencies installed
-- [ ] Old MCP server replaced with enhanced version
-- [ ] MCP server running with new tools verified
-- [ ] Orchestration directory created (content-engine/)
-- [ ] Git status verified clean
-- [ ] npm run build verified passing
+- [x] Enhanced MCP server written (tools/mcp-server/server.mjs)
+- [x] MCP server npm dependencies installed
+- [x] Old MCP server replaced with enhanced version
+- [x] MCP server running with new tools verified
+- [x] Orchestration directory created (content-engine/)
+- [x] Git status verified clean
+- [x] npm run build verified passing
 - [ ] Vercel env vars checked
 - [ ] DATABASE_URL_UNPOOLED availability confirmed
 - [ ] neonctl access confirmed

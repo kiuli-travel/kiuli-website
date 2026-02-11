@@ -60,6 +60,159 @@ async function linkDestinations(countries) {
 }
 
 /**
+ * Links itinerary stay segments to Property records.
+ * Creates new Property records when not found via PropertyNameMappings or slug lookup.
+ * @param {Array} segments - Raw segments from iTrvl
+ * @param {string[]} destinationIds - Destination IDs returned by linkDestinations()
+ * @returns {Promise<Map<string, number|string>>} Map of accommodation name → Property ID
+ */
+async function linkProperties(segments, destinationIds) {
+  const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'http://localhost:3000';
+  const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
+
+  const propertyMap = new Map(); // accommodationName → propertyId
+  const slugMap = new Map(); // slug → propertyId (dedup within this run)
+
+  if (!PAYLOAD_API_KEY) {
+    console.error('[linkProperties] PAYLOAD_API_KEY not set');
+    return propertyMap;
+  }
+
+  const stays = segments.filter(s => s.type === 'stay' || s.type === 'accommodation');
+  if (stays.length === 0) {
+    console.log('[linkProperties] No stay segments to process');
+    return propertyMap;
+  }
+
+  const headers = { 'Authorization': `users API-Key ${PAYLOAD_API_KEY}` };
+
+  // Fetch PropertyNameMappings ONCE
+  let nameMappings = [];
+  try {
+    const mappingsRes = await fetch(`${PAYLOAD_API_URL}/api/globals/property-name-mappings`, { headers });
+    if (mappingsRes.ok) {
+      const mappingsData = await mappingsRes.json();
+      nameMappings = mappingsData.mappings || [];
+    }
+  } catch (err) {
+    console.error('[linkProperties] Failed to fetch PropertyNameMappings:', err.message);
+  }
+
+  for (const stay of stays) {
+    const accommodationName = stay.name || stay.title || stay.supplierName;
+    if (!accommodationName) continue;
+    if (propertyMap.has(accommodationName)) continue; // Already processed this name
+
+    const slug = generateSlug(accommodationName);
+    if (slugMap.has(slug)) {
+      propertyMap.set(accommodationName, slugMap.get(slug));
+      continue; // Already created/found by slug
+    }
+
+    try {
+      // 1. Check PropertyNameMappings aliases
+      let propertyId = null;
+      for (const mapping of nameMappings) {
+        const aliases = Array.isArray(mapping.aliases) ? mapping.aliases : [];
+        const match = aliases.some(a => a.toLowerCase() === accommodationName.toLowerCase());
+        if (match) {
+          propertyId = typeof mapping.property === 'object' ? mapping.property.id : mapping.property;
+          console.log(`[linkProperties] ALIAS MATCH: ${accommodationName} -> ${propertyId} (via mapping)`);
+          break;
+        }
+      }
+
+      // 2. Query Properties by slug
+      if (!propertyId) {
+        const slugRes = await fetch(
+          `${PAYLOAD_API_URL}/api/properties?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+          { headers }
+        );
+        if (slugRes.ok) {
+          const slugData = await slugRes.json();
+          if (slugData.docs?.[0]?.id) {
+            propertyId = slugData.docs[0].id;
+            console.log(`[linkProperties] LINKED: ${accommodationName} -> ${propertyId} (existing)`);
+          }
+        }
+      }
+
+      // 3. Create new Property if not found
+      if (!propertyId) {
+        // Resolve destination for this stay
+        let destinationId = null;
+        const country = stay.country || stay.countryName;
+        if (country) {
+          const destRes = await fetch(
+            `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(country)}&limit=1`,
+            { headers }
+          );
+          if (destRes.ok) {
+            const destData = await destRes.json();
+            if (destData.docs?.[0]?.id) {
+              destinationId = destData.docs[0].id;
+            }
+          }
+        }
+        // Fallback: use first destination from the itinerary
+        if (!destinationId && destinationIds.length > 0) {
+          destinationId = destinationIds[0];
+        }
+
+        const descriptionText = stay.description || stay.clientIncludeExclude || null;
+
+        const createRes = await fetch(`${PAYLOAD_API_URL}/api/properties`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: accommodationName,
+            slug,
+            destination: destinationId,
+            description_itrvl: descriptionText,
+            _status: 'draft',
+          }),
+        });
+
+        if (createRes.ok) {
+          const created = await createRes.json();
+          propertyId = created.doc?.id || created.id;
+          console.log(`[linkProperties] CREATED: ${accommodationName} -> ${propertyId}`);
+        } else {
+          const errText = await createRes.text();
+          // Handle slug uniqueness conflict — property may already exist
+          if (createRes.status === 400 && errText.includes('unique')) {
+            const retryRes = await fetch(
+              `${PAYLOAD_API_URL}/api/properties?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+              { headers }
+            );
+            if (retryRes.ok) {
+              const retryData = await retryRes.json();
+              if (retryData.docs?.[0]?.id) {
+                propertyId = retryData.docs[0].id;
+                console.log(`[linkProperties] LINKED (after conflict): ${accommodationName} -> ${propertyId}`);
+              }
+            }
+          }
+          if (!propertyId) {
+            console.error(`[linkProperties] Failed to create ${accommodationName}: ${createRes.status} - ${errText}`);
+          }
+        }
+      }
+
+      if (propertyId) {
+        propertyMap.set(accommodationName, propertyId);
+        slugMap.set(slug, propertyId);
+      }
+    } catch (err) {
+      console.error(`[linkProperties] Error for ${accommodationName}:`, err.message);
+    }
+  }
+
+  console.log(`[linkProperties] Total linked: ${propertyMap.size} properties`);
+  return propertyMap;
+}
+
+/**
  * Generate URL-friendly slug from title
  */
 function generateSlug(title) {
@@ -276,7 +429,7 @@ function textToRichText(text) {
  * Map segment to V6 block format
  * Uses *Original fields - enhanced versions added later
  */
-function mapSegmentToBlock(segment, mediaMapping = {}) {
+function mapSegmentToBlock(segment, mediaMapping = {}, propertyMap) {
   const type = segment.type?.toLowerCase();
 
   let blockType = null;
@@ -328,6 +481,7 @@ function mapSegmentToBlock(segment, mediaMapping = {}) {
       inclusionsEnhanced: null,
       inclusionsReviewed: false,
       roomType: segment.roomType || null,
+      property: propertyMap?.get(accommodationName) || null,
     };
   }
 
@@ -440,11 +594,12 @@ function generateFaqItems(segments, title, countries) {
 
   const stays = segments.filter(s => s.type === 'stay' || s.type === 'accommodation');
   for (const stay of stays.slice(0, 3)) {
-    if (stay.name) {
+    const propertyName = stay.name || stay.title || stay.supplierName;
+    if (propertyName) {
       faqItems.push(createFaqItem(
-        `What is included at ${stay.name}?`,
-        stay.inclusions || stay.description ||
-        `${stay.name} offers luxury accommodation with full board and activities as specified in the itinerary.`
+        `What is included at ${propertyName}?`,
+        stay.clientIncludeExclude || stay.inclusions || stay.description ||
+        `${propertyName} offers luxury accommodation with full board and activities as specified in the itinerary.`
       ));
     }
   }
@@ -584,6 +739,17 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
 
   const groupedDays = groupSegmentsByDay(segments, itinerary.startDate);
 
+  const faqItems = generateFaqItems(segments, title, countries);
+  const { metaTitle, metaDescription } = generateMetaFields(title, nights, countries);
+  const investmentIncludes = generateInvestmentIncludes(segments, nights);
+
+  // Link to destination records based on extracted countries
+  const countriesForLinking = countries.map(c => ({ country: c }));
+  const destinationIds = await linkDestinations(countriesForLinking);
+
+  // Link/create property records for stay segments
+  const propertyMap = await linkProperties(segments, destinationIds);
+
   const days = groupedDays.map(day => ({
     dayNumber: day.dayNumber,
     date: day.date,
@@ -593,17 +759,9 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     titleReviewed: false,
     location: day.location,
     segments: day.segments
-      .map(s => mapSegmentToBlock(s, mediaMapping))
+      .map(s => mapSegmentToBlock(s, mediaMapping, propertyMap))
       .filter(Boolean)
   }));
-
-  const faqItems = generateFaqItems(segments, title, countries);
-  const { metaTitle, metaDescription } = generateMetaFields(title, nights, countries);
-  const investmentIncludes = generateInvestmentIncludes(segments, nights);
-
-  // Link to destination records based on extracted countries
-  const countriesForLinking = countries.map(c => ({ country: c }));
-  const destinationIds = await linkDestinations(countriesForLinking);
 
   const transformed = {
     // Basic - V7 two-field pattern
@@ -671,6 +829,9 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     // Build info
     buildTimestamp: new Date().toISOString(),
     _status: 'draft',
+
+    // Property IDs for bidirectional linking (stripped before Payload save)
+    _propertyIds: [...new Set(propertyMap.values())],
   };
 
   console.log(`[Transform] Complete: ${days.length} days, ${faqItems.length} FAQs`);

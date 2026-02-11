@@ -123,7 +123,7 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
   const response = await fetch(`${payload.PAYLOAD_API_URL}/api/media`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${payload.PAYLOAD_API_KEY}`,
+      'Authorization': `users API-Key ${payload.PAYLOAD_API_KEY}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(mediaData)

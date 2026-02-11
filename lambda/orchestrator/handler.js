@@ -242,6 +242,7 @@ exports.handler = async (event) => {
         }
       };
 
+      delete updateData._propertyIds;
       payloadItinerary = await payload.updateItinerary(existingItinerary.id, updateData);
 
     } else {
@@ -262,10 +263,32 @@ exports.handler = async (event) => {
         }
       };
 
+      delete createData._propertyIds;
       payloadItinerary = await payload.createItinerary(createData);
     }
 
     console.log(`[Orchestrator] Itinerary saved: ${payloadItinerary.id}`);
+
+    // Update Property relatedItineraries for bidirectional linking
+    const propertyIds = transformedData._propertyIds || [];
+    if (propertyIds.length > 0) {
+      console.log(`[Orchestrator] Linking ${propertyIds.length} properties to itinerary ${payloadItinerary.id}`);
+      for (const propertyId of propertyIds) {
+        try {
+          const property = await payload.getById('properties', propertyId, { depth: 0 });
+          const existingRelated = (property.relatedItineraries || []).map(r => typeof r === 'object' ? r.id : r);
+          if (!existingRelated.includes(payloadItinerary.id)) {
+            await payload.update('properties', propertyId, {
+              relatedItineraries: [...existingRelated, payloadItinerary.id]
+            });
+            console.log(`[Orchestrator] Linked property ${propertyId} -> itinerary ${payloadItinerary.id}`);
+          }
+        } catch (err) {
+          console.log(`[Orchestrator] Failed to update Property ${propertyId} relatedItineraries: ${err.message}`);
+          // Non-fatal — don't fail the pipeline
+        }
+      }
+    }
 
     // 7. Update job with itinerary reference and counters
     // Track images and videos separately to avoid counter drift

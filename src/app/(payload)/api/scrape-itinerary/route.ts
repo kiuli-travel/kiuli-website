@@ -177,7 +177,18 @@ export async function POST(request: NextRequest) {
     try {
       const executionName = `job-${job.id}-${Date.now()}`
 
-      await getSfnClient().send(
+      // Create fresh client per request to ensure correct credentials
+      const client = new SFNClient({
+        region: (process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim(),
+        credentials: {
+          accessKeyId: (process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').trim(),
+          secretAccessKey: (process.env.KIULI_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '').trim(),
+        },
+      })
+
+      console.log(`[scrape-itinerary] SFN client config: region=${(process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim()}, keyId=${(process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').substring(0, 8)}...`)
+
+      await client.send(
         new StartExecutionCommand({
           stateMachineArn,
           name: executionName,

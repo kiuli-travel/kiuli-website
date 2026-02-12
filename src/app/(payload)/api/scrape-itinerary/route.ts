@@ -186,7 +186,12 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      console.log(`[scrape-itinerary] SFN client config: region=${(process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim()}, keyId=${(process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').substring(0, 8)}...`)
+      const awsEnvVars = Object.entries(process.env)
+        .filter(([k]) => k.startsWith('AWS_') || k.startsWith('KIULI_AWS'))
+        .map(([k, v]) => `${k}=${(v || '').substring(0, 12)}...`)
+        .join(', ')
+      console.log(`[scrape-itinerary] AWS env vars: ${awsEnvVars}`)
+      console.log(`[scrape-itinerary] SFN client credentials: keyId=${(process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').substring(0, 12)}, region=${(process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim()}`)
 
       await client.send(
         new StartExecutionCommand({

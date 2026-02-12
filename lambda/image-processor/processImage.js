@@ -4,6 +4,7 @@
 
 const { uploadToS3, generateS3Key, getImgixUrl } = require('./shared/s3');
 const payload = require('./shared/payload');
+const FormData = require('form-data');
 
 // iTrvl uses imgix CDN for their production media
 // Externalized for resilience if iTrvl changes their CDN
@@ -98,47 +99,43 @@ async function processImage(sourceS3Key, itineraryId, imageContext = {}) {
 }
 
 /**
- * Create Media record in Payload with metadata only
- * Image is already uploaded to S3, so we just need the record
- * Includes source context from imageStatus for enrichment
+ * Create Media record in Payload via multipart file upload.
+ * Payload's upload collection requires the actual file — JSON-only POST returns 500.
+ * Includes source context from imageStatus for enrichment.
  */
 async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType, imageContext = {}) {
-  // Use full sourceS3Key as filename to ensure uniqueness
-  // (sourceS3Key includes UUID prefix, e.g., "abc123_filename.jpg")
   const filename = sourceS3Key || 'image.jpg';
   const displayName = (sourceS3Key.split('/').pop() || 'image.jpg').replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
 
-  // Create media record with JSON metadata (no file upload)
-  // Include source context from imageStatus for enrichment
-  const mediaData = {
-    alt: displayName,
-    sourceS3Key: sourceS3Key,
-    originalS3Key: s3Key,
-    imgixUrl: getImgixUrl(s3Key),
-    url: getImgixUrl(s3Key), // Set url field for Payload
-    filename: filename,
-    mimeType: contentType,
-    filesize: buffer.length,
-    sourceItinerary: itineraryId,
-    processingStatus: 'complete',
-    labelingStatus: 'pending',
-    usedInItineraries: [itineraryId],
-    // Source context from imageStatus (for AI enrichment)
-    sourceProperty: imageContext.propertyName || null,
-    sourceSegmentType: imageContext.segmentType || null,
-    sourceSegmentTitle: imageContext.segmentTitle || null,
-    sourceDayIndex: imageContext.dayIndex || null,
-    country: imageContext.country || null,
-  };
+  const form = new FormData();
 
-  // POST to Payload
+  // File upload (required by Payload upload collection)
+  form.append('file', buffer, { filename, contentType });
+
+  // Metadata fields
+  form.append('alt', displayName);
+  form.append('sourceS3Key', sourceS3Key);
+  form.append('originalS3Key', s3Key);
+  form.append('imgixUrl', getImgixUrl(s3Key));
+  form.append('url', getImgixUrl(s3Key));
+  form.append('sourceItinerary', String(itineraryId));
+  form.append('processingStatus', 'complete');
+  form.append('labelingStatus', 'pending');
+  form.append('usedInItineraries', String(itineraryId));
+  // Source context
+  if (imageContext.propertyName) form.append('sourceProperty', imageContext.propertyName);
+  if (imageContext.segmentType) form.append('sourceSegmentType', imageContext.segmentType);
+  if (imageContext.segmentTitle) form.append('sourceSegmentTitle', imageContext.segmentTitle);
+  if (imageContext.dayIndex) form.append('sourceDayIndex', String(imageContext.dayIndex));
+  if (imageContext.country) form.append('country', imageContext.country);
+
   const response = await fetch(`${payload.PAYLOAD_API_URL}/api/media`, {
     method: 'POST',
     headers: {
       'Authorization': `users API-Key ${payload.PAYLOAD_API_KEY}`,
-      'Content-Type': 'application/json'
+      ...form.getHeaders()
     },
-    body: JSON.stringify(mediaData)
+    body: form
   });
 
   if (!response.ok) {
@@ -147,15 +144,11 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
     // Handle race condition: another Lambda might have created this media
     if (response.status === 400 && errorText.includes('Value must be unique')) {
       console.log(`[ProcessImage] Race condition detected for: ${sourceS3Key}, retrying dedup lookup`);
-
-      // Re-check for existing media (another instance likely just created it)
       const existingMedia = await payload.findMediaBySourceS3Key(sourceS3Key);
       if (existingMedia) {
         console.log(`[ProcessImage] Found existing media after race: ${existingMedia.id}`);
         return existingMedia.id;
       }
-
-      // If still not found, throw the original error
       throw new Error(`Failed to create media: ${response.status} - ${errorText}`);
     }
 

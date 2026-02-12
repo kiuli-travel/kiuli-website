@@ -6,11 +6,12 @@ import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn'
 export const maxDuration = 30 // Only need 30s now - just creates job and triggers Step Functions
 
 // Initialize Step Functions client
+// Use KIULI_AWS_* to avoid Vercel overriding AWS_* env vars
 const sfnClient = new SFNClient({
-  region: process.env.AWS_REGION || 'eu-north-1',
+  region: process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    accessKeyId: process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.KIULI_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '',
   },
 })
 

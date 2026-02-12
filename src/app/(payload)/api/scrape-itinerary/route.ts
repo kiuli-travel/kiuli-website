@@ -6,7 +6,6 @@ import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn'
 export const maxDuration = 30 // Only need 30s now - just creates job and triggers Step Functions
 
 // Lazy-init Step Functions client (env vars may not be available at import time)
-// Use KIULI_AWS_* to avoid Vercel overriding AWS_* env vars
 let _sfnClient: SFNClient | null = null
 function getSfnClient(): SFNClient {
   if (!_sfnClient) {
@@ -168,7 +167,7 @@ export async function POST(request: NextRequest) {
     console.log(`[scrape-itinerary] Created job ${job.id} for itinerary ${parsed.itineraryId} (mode: ${mode})`)
 
     // Trigger Step Functions state machine
-    const stateMachineArn = process.env.STEP_FUNCTION_ARN
+    const stateMachineArn = (process.env.STEP_FUNCTION_ARN || '').trim()
 
     if (!stateMachineArn) {
       throw new Error('STEP_FUNCTION_ARN not configured')
@@ -177,23 +176,7 @@ export async function POST(request: NextRequest) {
     try {
       const executionName = `job-${job.id}-${Date.now()}`
 
-      // Create fresh client per request to ensure correct credentials
-      const client = new SFNClient({
-        region: (process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim(),
-        credentials: {
-          accessKeyId: (process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').trim(),
-          secretAccessKey: (process.env.KIULI_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '').trim(),
-        },
-      })
-
-      const awsEnvVars = Object.entries(process.env)
-        .filter(([k]) => k.startsWith('AWS_') || k.startsWith('KIULI_AWS'))
-        .map(([k, v]) => `${k}=${(v || '').substring(0, 12)}...`)
-        .join(', ')
-      console.log(`[scrape-itinerary] AWS env vars: ${awsEnvVars}`)
-      console.log(`[scrape-itinerary] SFN client credentials: keyId=${(process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').substring(0, 12)}, region=${(process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim()}`)
-
-      await client.send(
+      await getSfnClient().send(
         new StartExecutionCommand({
           stateMachineArn,
           name: executionName,
@@ -218,7 +201,7 @@ export async function POST(request: NextRequest) {
         id: job.id,
         data: {
           status: 'failed',
-          errorMessage: `Failed to trigger pipeline: ${(err as Error).message} [keyPrefix=${(process.env.KIULI_AWS_ACCESS_KEY_ID || '').substring(0, 8) || 'NONE'},region=${(process.env.KIULI_AWS_REGION || 'NONE')}]`,
+          errorMessage: `Failed to trigger pipeline: ${(err as Error).message}`,
           errorPhase: 'initialization',
         },
       })

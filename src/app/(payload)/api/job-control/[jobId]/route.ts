@@ -5,7 +5,6 @@ import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn'
 import type { ItineraryJob } from '@/payload-types'
 
 // Lazy-init Step Functions client (env vars may not be available at import time)
-// Use KIULI_AWS_* to avoid Vercel overriding AWS_* env vars
 let _sfnClient: SFNClient | null = null
 function getSfnClient(): SFNClient {
   if (!_sfnClient) {
@@ -196,7 +195,7 @@ async function handleRetry(payload: Payload, job: ItineraryJob) {
   })
 
   // Trigger Step Functions state machine
-  const stateMachineArn = process.env.STEP_FUNCTION_ARN
+  const stateMachineArn = (process.env.STEP_FUNCTION_ARN || '').trim()
 
   if (!stateMachineArn) {
     return NextResponse.json(
@@ -289,7 +288,7 @@ async function handleRetryFailed(payload: Payload, job: ItineraryJobWithImageSta
   })
 
   // Trigger Step Functions for retry (starts at image processing step)
-  const stateMachineArn = process.env.STEP_FUNCTION_ARN
+  const stateMachineArn = (process.env.STEP_FUNCTION_ARN || '').trim()
 
   if (!stateMachineArn) {
     return NextResponse.json(

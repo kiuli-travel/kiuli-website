@@ -4,15 +4,21 @@ import config from '@payload-config'
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn'
 import type { ItineraryJob } from '@/payload-types'
 
-// Initialize Step Functions client
+// Lazy-init Step Functions client (env vars may not be available at import time)
 // Use KIULI_AWS_* to avoid Vercel overriding AWS_* env vars
-const sfnClient = new SFNClient({
-  region: (process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim(),
-  credentials: {
-    accessKeyId: (process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').trim(),
-    secretAccessKey: (process.env.KIULI_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '').trim(),
-  },
-})
+let _sfnClient: SFNClient | null = null
+function getSfnClient(): SFNClient {
+  if (!_sfnClient) {
+    _sfnClient = new SFNClient({
+      region: (process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim(),
+      credentials: {
+        accessKeyId: (process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').trim(),
+        secretAccessKey: (process.env.KIULI_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '').trim(),
+      },
+    })
+  }
+  return _sfnClient
+}
 
 /**
  * Validate authentication via Payload session OR API key
@@ -202,7 +208,7 @@ async function handleRetry(payload: Payload, job: ItineraryJob) {
   try {
     const executionName = `job-${job.id}-retry-${Date.now()}`
 
-    await sfnClient.send(
+    await getSfnClient().send(
       new StartExecutionCommand({
         stateMachineArn,
         name: executionName,
@@ -295,7 +301,7 @@ async function handleRetryFailed(payload: Payload, job: ItineraryJobWithImageSta
   try {
     const executionName = `job-${job.id}-retry-failed-${Date.now()}`
 
-    await sfnClient.send(
+    await getSfnClient().send(
       new StartExecutionCommand({
         stateMachineArn,
         name: executionName,

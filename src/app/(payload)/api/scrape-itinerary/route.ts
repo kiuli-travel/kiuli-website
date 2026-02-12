@@ -5,15 +5,21 @@ import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn'
 
 export const maxDuration = 30 // Only need 30s now - just creates job and triggers Step Functions
 
-// Initialize Step Functions client
+// Lazy-init Step Functions client (env vars may not be available at import time)
 // Use KIULI_AWS_* to avoid Vercel overriding AWS_* env vars
-const sfnClient = new SFNClient({
-  region: (process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim(),
-  credentials: {
-    accessKeyId: (process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').trim(),
-    secretAccessKey: (process.env.KIULI_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '').trim(),
-  },
-})
+let _sfnClient: SFNClient | null = null
+function getSfnClient(): SFNClient {
+  if (!_sfnClient) {
+    _sfnClient = new SFNClient({
+      region: (process.env.KIULI_AWS_REGION || process.env.AWS_REGION || 'eu-north-1').trim(),
+      credentials: {
+        accessKeyId: (process.env.KIULI_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '').trim(),
+        secretAccessKey: (process.env.KIULI_AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '').trim(),
+      },
+    })
+  }
+  return _sfnClient
+}
 
 function parseItrvlUrl(url: string): { accessKey: string; itineraryId: string } | null {
   try {
@@ -171,7 +177,7 @@ export async function POST(request: NextRequest) {
     try {
       const executionName = `job-${job.id}-${Date.now()}`
 
-      await sfnClient.send(
+      await getSfnClient().send(
         new StartExecutionCommand({
           stateMachineArn,
           name: executionName,

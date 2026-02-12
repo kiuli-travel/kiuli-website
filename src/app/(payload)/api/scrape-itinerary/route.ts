@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
         id: job.id,
         data: {
           status: 'failed',
-          errorMessage: `Failed to trigger pipeline: ${(err as Error).message}`,
+          errorMessage: `Failed to trigger pipeline: ${(err as Error).message} [keyPrefix=${(process.env.KIULI_AWS_ACCESS_KEY_ID || '').substring(0, 8) || 'NONE'},region=${(process.env.KIULI_AWS_REGION || 'NONE')}]`,
           errorPhase: 'initialization',
         },
       })

@@ -4,7 +4,6 @@
 
 const { uploadToS3, generateS3Key, getImgixUrl } = require('./shared/s3');
 const payload = require('./shared/payload');
-const FormData = require('form-data');
 
 // iTrvl uses imgix CDN for their production media
 // Externalized for resilience if iTrvl changes their CDN
@@ -107,10 +106,12 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
   const filename = sourceS3Key || 'image.jpg';
   const displayName = (sourceS3Key.split('/').pop() || 'image.jpg').replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
 
+  // Use Node.js 20 built-in FormData + Blob (npm form-data is incompatible with built-in fetch)
   const form = new FormData();
 
   // File upload (required by Payload upload collection)
-  form.append('file', buffer, { filename, contentType });
+  const blob = new Blob([buffer], { type: contentType });
+  form.append('file', blob, filename);
 
   // Metadata fields
   form.append('alt', displayName);
@@ -129,11 +130,11 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
   if (imageContext.dayIndex) form.append('sourceDayIndex', String(imageContext.dayIndex));
   if (imageContext.country) form.append('country', imageContext.country);
 
+  // Built-in fetch auto-sets Content-Type with multipart boundary — do NOT set it manually
   const response = await fetch(`${payload.PAYLOAD_API_URL}/api/media`, {
     method: 'POST',
     headers: {
-      'Authorization': `users API-Key ${payload.PAYLOAD_API_KEY}`,
-      ...form.getHeaders()
+      'Authorization': `users API-Key ${payload.PAYLOAD_API_KEY}`
     },
     body: form
   });

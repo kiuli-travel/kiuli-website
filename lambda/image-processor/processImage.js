@@ -36,19 +36,31 @@ async function processImage(sourceS3Key, itineraryId, imageContext = {}) {
   if (existingMedia) {
     console.log(`[ProcessImage] Dedup hit: ${sourceS3Key} -> ${existingMedia.id}`);
 
-    // KNOWN LIMITATION: usedInItineraries is NOT updated for dedup hits.
-    //
-    // Why: Updating usedInItineraries causes 413 Payload Too Large errors
-    // because Payload returns fully populated documents in the response.
-    //
-    // Alternative: Media usage is tracked via itinerary.images array instead.
-    // The finalizer links media to itineraries using ImageStatuses collection.
-    //
-    // Impact: Media.usedInItineraries may not reflect all itineraries using
-    // a given media file. For accurate usage tracking, query itineraries
-    // with images array containing the media ID.
-    //
-    // See: FORENSIC_REPORT.md - Issue H2
+    // Update usedInItineraries — use depth=0 to avoid 413 errors
+    try {
+      const existingItineraries = (existingMedia.usedInItineraries || [])
+        .map(i => typeof i === 'object' ? i.id : i);
+
+      const itineraryIdNum = typeof itineraryId === 'number' ? itineraryId : parseInt(itineraryId, 10);
+
+      if (!existingItineraries.includes(itineraryIdNum)) {
+        await fetch(`${payload.PAYLOAD_API_URL}/api/media/${existingMedia.id}?depth=0`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `users API-Key ${payload.PAYLOAD_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            usedInItineraries: [...existingItineraries, itineraryIdNum]
+          })
+        });
+        console.log(`[ProcessImage] Updated usedInItineraries for media ${existingMedia.id}`);
+      }
+    } catch (linkError) {
+      // Non-fatal — log but don't fail the pipeline
+      console.warn(`[ProcessImage] Failed to update usedInItineraries: ${linkError.message}`);
+    }
+
     return {
       mediaId: existingMedia.id,
       skipped: true

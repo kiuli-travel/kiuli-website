@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
+import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn'
 
-export const maxDuration = 30 // Only need 30s now - just creates job and triggers Lambda
+export const maxDuration = 30 // Only need 30s now - just creates job and triggers Step Functions
 
-// Initialize Lambda client
-const lambdaClient = new LambdaClient({
+// Initialize Step Functions client
+const sfnClient = new SFNClient({
   region: process.env.AWS_REGION || 'eu-north-1',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
@@ -160,16 +160,21 @@ export async function POST(request: NextRequest) {
 
     console.log(`[scrape-itinerary] Created job ${job.id} for itinerary ${parsed.itineraryId} (mode: ${mode})`)
 
-    // Trigger V6 Orchestrator Lambda asynchronously
-    const orchestratorArn = process.env.LAMBDA_ORCHESTRATOR_ARN || 'kiuli-v6-orchestrator'
+    // Trigger Step Functions state machine
+    const stateMachineArn = process.env.STEP_FUNCTION_ARN
+
+    if (!stateMachineArn) {
+      throw new Error('STEP_FUNCTION_ARN not configured')
+    }
 
     try {
-      // Invoke Lambda asynchronously (Event invocation type)
-      await lambdaClient.send(
-        new InvokeCommand({
-          FunctionName: orchestratorArn,
-          InvocationType: 'Event', // Async - returns immediately
-          Payload: JSON.stringify({
+      const executionName = `job-${job.id}-${Date.now()}`
+
+      await sfnClient.send(
+        new StartExecutionCommand({
+          stateMachineArn,
+          name: executionName,
+          input: JSON.stringify({
             jobId: job.id,
             itrvlUrl,
             itineraryId: parsed.itineraryId,
@@ -180,9 +185,9 @@ export async function POST(request: NextRequest) {
         })
       )
 
-      console.log(`[scrape-itinerary] Triggered orchestrator for job ${job.id}`)
+      console.log(`[scrape-itinerary] Started Step Functions execution: ${executionName}`)
     } catch (err) {
-      console.error('[scrape-itinerary] Failed to trigger Lambda:', err)
+      console.error('[scrape-itinerary] Failed to trigger Step Functions:', err)
 
       // Update job to failed
       await payload.update({
@@ -190,7 +195,7 @@ export async function POST(request: NextRequest) {
         id: job.id,
         data: {
           status: 'failed',
-          errorMessage: `Failed to trigger orchestrator: ${(err as Error).message}`,
+          errorMessage: `Failed to trigger pipeline: ${(err as Error).message}`,
           errorPhase: 'initialization',
         },
       })

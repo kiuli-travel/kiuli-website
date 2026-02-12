@@ -8,15 +8,12 @@
  * 4. Handle versioning if update mode
  * 5. Create draft itinerary
  * 6. Update job with image list
- * 7. Invoke image-processor Lambda
+ * 7. Return result for Step Functions (no longer invokes image-processor)
  */
 
-const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { transform } = require('./transform');
 const payload = require('./shared/payload');
 const { notifyJobStarted } = require('./shared/notifications');
-
-const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'eu-north-1' });
 
 /**
  * Map iTrvl segment type to Kiuli segment type enum
@@ -35,18 +32,18 @@ exports.handler = async (event) => {
   console.log('[Orchestrator] Invoked');
   const startTime = Date.now();
 
-  // Parse event
+  // Parse event — Step Functions passes plain object
   let body;
   try {
     body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body || event;
   } catch (e) {
-    return errorResponse(400, 'Invalid request body');
+    throw new Error('Invalid request body');
   }
 
   const { jobId, itrvlUrl, mode = 'create' } = body;
 
   if (!jobId || !itrvlUrl) {
-    return errorResponse(400, 'Missing jobId or itrvlUrl');
+    throw new Error('Missing jobId or itrvlUrl');
   }
 
   console.log(`[Orchestrator] Job: ${jobId}, URL: ${itrvlUrl}, Mode: ${mode}`);
@@ -346,56 +343,22 @@ exports.handler = async (event) => {
     // Send notification
     await notifyJobStarted(jobId, transformedData.title);
 
-    // 8. Invoke image-processor Lambda
-    const imageProcessorArn = process.env.LAMBDA_IMAGE_PROCESSOR_ARN;
-
-    if (imageProcessorArn) {
-      console.log('[Orchestrator] Invoking image-processor Lambda...');
-
-      await lambdaClient.send(new InvokeCommand({
-        FunctionName: imageProcessorArn,
-        InvocationType: 'Event', // Async invocation
-        Payload: JSON.stringify({
-          jobId,
-          itineraryId: payloadItinerary.id,
-          chunkIndex: 0
-        })
-      }));
-
-      console.log('[Orchestrator] Image-processor invoked');
-    } else {
-      console.log('[Orchestrator] LAMBDA_IMAGE_PROCESSOR_ARN not set, skipping image processing');
-    }
-
-    // 9. Return success
+    // 8. Return result for Step Functions (plain object, not HTTP response)
     const duration = (Date.now() - startTime) / 1000;
     console.log(`[Orchestrator] Phase 1 complete in ${duration}s`);
 
     return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        jobId,
-        itineraryId: payloadItinerary.id,
-        imagesFound: imageList.length,
-        videosFound: videoList.length,
-        mode: existingItinerary ? 'update' : 'create',
-        duration
-      })
+      jobId: String(jobId),
+      itineraryId: String(payloadItinerary.id),
+      imagesFound: imageList.length,
+      videosFound: videoList.length,
+      mode: existingItinerary ? 'update' : 'create',
+      chunkIndex: 0
     };
 
   } catch (error) {
     console.error('[Orchestrator] Failed:', error);
-
     await payload.failJob(jobId, error.message, 'orchestrator');
-
-    return errorResponse(500, error.message);
+    throw error; // Step Functions catches this
   }
 };
-
-function errorResponse(status, message) {
-  return {
-    statusCode: status,
-    body: JSON.stringify({ success: false, error: message })
-  };
-}

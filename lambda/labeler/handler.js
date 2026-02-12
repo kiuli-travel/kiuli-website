@@ -1,26 +1,24 @@
 /**
  * Labeler Lambda - V6 Phase 3
  *
- * Conservative AI labeling with batched processing
- * Self-invokes for next batch, triggers Finalizer when complete
+ * Conservative AI labeling with batched processing.
+ * Step Functions handles iteration — this Lambda processes one batch and returns remaining count.
+ * Image discovery uses ImageStatuses collection (not usedInItineraries which breaks on dedup).
  */
 
-const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { labelImage } = require('./labelImage');
 const payload = require('./shared/payload');
 
 const BATCH_SIZE = 10;  // Images per invocation
 const CONCURRENT = 3;   // Concurrent AI calls
-const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'eu-north-1' });
 
 exports.handler = async (event) => {
-  console.log('[Labeler] Invoked');
+  console.log('[Labeler] Invoked', JSON.stringify(event));
 
   const { jobId, itineraryId, batchIndex = 0 } = event;
 
   if (!jobId || !itineraryId) {
-    console.error('[Labeler] Missing jobId or itineraryId');
-    return { success: false, error: 'Missing jobId or itineraryId' };
+    throw new Error('Missing jobId or itineraryId');
   }
 
   console.log(`[Labeler] Job: ${jobId}, Batch: ${batchIndex}`);
@@ -41,21 +39,39 @@ exports.handler = async (event) => {
       });
     }
 
-    // 2. Get unlabeled media for this itinerary (exclude videos)
-    // Use bracket notation - Payload doesn't parse JSON where clauses correctly
-    const mediaResult = await payload.find('media', {
-      'where[and][0][labelingStatus][equals]': 'pending',
-      'where[and][1][usedInItineraries][contains]': itineraryId,
+    // 2. Get media IDs from ImageStatuses (authoritative source — not usedInItineraries)
+    const imageStatusesResult = await payload.find('image-statuses', {
+      'where[and][0][job][equals]': jobId,
+      'where[and][1][mediaType][not_equals]': 'video',
+      'where[and][2][mediaId][exists]': 'true',
+      limit: '1000'
+    });
+    const imageStatuses = imageStatusesResult.docs || [];
+    const mediaIds = [...new Set(imageStatuses.map(s => s.mediaId).filter(Boolean))];
+
+    if (mediaIds.length === 0) {
+      console.log('[Labeler] No media IDs found in ImageStatuses');
+      await payload.updateJob(jobId, {
+        phase3CompletedAt: new Date().toISOString(),
+        labelingCompletedAt: new Date().toISOString(),
+        currentPhase: 'Phase 4: Finalizing'
+      });
+      return { jobId: String(jobId), itineraryId: String(itineraryId), remaining: 0 };
+    }
+
+    // 3. Query unlabeled media from these IDs
+    const unlabeledResult = await payload.find('media', {
+      'where[and][0][id][in]': mediaIds.join(','),
+      'where[and][1][labelingStatus][equals]': 'pending',
       'where[and][2][mediaType][not_equals]': 'video',
       limit: BATCH_SIZE.toString()
     });
-
-    const unlabeledMedia = mediaResult.docs || [];
+    const unlabeledMedia = unlabeledResult.docs || [];
     console.log(`[Labeler] Found ${unlabeledMedia.length} unlabeled images`);
 
     if (unlabeledMedia.length === 0) {
-      // All labeled, move to finalizer
-      console.log('[Labeler] All images labeled, triggering finalizer');
+      // All labeled, update job phase
+      console.log('[Labeler] All images labeled');
 
       await payload.updateJob(jobId, {
         phase3CompletedAt: new Date().toISOString(),
@@ -63,16 +79,14 @@ exports.handler = async (event) => {
         currentPhase: 'Phase 4: Finalizing'
       });
 
-      await triggerFinalizer(jobId, itineraryId);
-      return { success: true, message: 'All images labeled' };
+      return { jobId: String(jobId), itineraryId: String(itineraryId), remaining: 0 };
     }
 
-    // 3. Update total to label count on first batch
+    // 4. Update total to label count on first batch
     if (batchIndex === 0) {
-      // Use bracket notation - Payload doesn't parse JSON where clauses correctly
       const totalUnlabeled = await payload.find('media', {
-        'where[and][0][labelingStatus][equals]': 'pending',
-        'where[and][1][usedInItineraries][contains]': itineraryId,
+        'where[and][0][id][in]': mediaIds.join(','),
+        'where[and][1][labelingStatus][equals]': 'pending',
         'where[and][2][mediaType][not_equals]': 'video',
         limit: '1'
       });
@@ -81,13 +95,6 @@ exports.handler = async (event) => {
         imagesToLabel: totalUnlabeled.totalDocs || unlabeledMedia.length
       });
     }
-
-    // 4. Get image statuses from separate collection for context lookup
-    const imageStatusesResult = await payload.find('image-statuses', {
-      'where[job][equals]': jobId,
-      limit: '1000'
-    });
-    const imageStatuses = imageStatusesResult.docs || [];
 
     // 5. Process batch with concurrency limit
     let labeled = 0;
@@ -119,55 +126,36 @@ exports.handler = async (event) => {
 
     console.log(`[Labeler] Batch complete: ${labeled} labeled, ${failed} failed`);
 
-    // 6. Check if more to label (exclude videos)
-    // Use bracket notation - Payload doesn't parse JSON where clauses correctly
+    // 7. Check remaining count
     const remainingResult = await payload.find('media', {
-      'where[and][0][labelingStatus][equals]': 'pending',
-      'where[and][1][usedInItineraries][contains]': itineraryId,
+      'where[and][0][id][in]': mediaIds.join(','),
+      'where[and][1][labelingStatus][equals]': 'pending',
       'where[and][2][mediaType][not_equals]': 'video',
       limit: '1'
     });
-
     const remainingCount = remainingResult.totalDocs || 0;
 
-    if (remainingCount > 0) {
-      // Self-invoke for next batch
-      console.log(`[Labeler] ${remainingCount} images remaining, self-invoking...`);
-
-      await lambdaClient.send(new InvokeCommand({
-        FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME,
-        InvocationType: 'Event',
-        Payload: JSON.stringify({
-          jobId,
-          itineraryId,
-          batchIndex: batchIndex + 1
-        })
-      }));
-
-    } else {
-      // All done, trigger finalizer
-      console.log('[Labeler] All images labeled, triggering finalizer');
-
+    if (remainingCount === 0) {
       await payload.updateJob(jobId, {
         phase3CompletedAt: new Date().toISOString(),
         labelingCompletedAt: new Date().toISOString(),
         currentPhase: 'Phase 4: Finalizing'
       });
-
-      await triggerFinalizer(jobId, itineraryId);
     }
 
+    // Return for Step Functions flow control
     return {
-      success: true,
+      jobId: String(jobId),
+      itineraryId: String(itineraryId),
+      remaining: remainingCount,
       labeled,
-      failed,
-      remaining: remainingCount
+      failed
     };
 
   } catch (error) {
     console.error('[Labeler] Failed:', error);
     await payload.failJob(jobId, error.message, 'labeler');
-    return { success: false, error: error.message };
+    throw error; // Step Functions catches this
   }
 };
 
@@ -221,27 +209,4 @@ async function processMediaLabeling(media, imageStatuses = []) {
 
     return { success: false, mediaId, error: error.message };
   }
-}
-
-/**
- * Trigger finalizer Lambda
- */
-async function triggerFinalizer(jobId, itineraryId) {
-  const finalizerArn = process.env.LAMBDA_FINALIZER_ARN;
-
-  if (!finalizerArn) {
-    console.log('[Labeler] LAMBDA_FINALIZER_ARN not set, skipping finalizer');
-    return;
-  }
-
-  await lambdaClient.send(new InvokeCommand({
-    FunctionName: finalizerArn,
-    InvocationType: 'Event',
-    Payload: JSON.stringify({
-      jobId,
-      itineraryId
-    })
-  }));
-
-  console.log('[Labeler] Finalizer Lambda invoked');
 }

@@ -1,0 +1,30 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "lambda:InvokeFunction",
+      "Resource": [
+        "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-orchestrator",
+        "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-image-processor",
+        "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-labeler",
+        "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-video-processor",
+        "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-finalizer"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogDelivery",
+        "logs:GetLogDelivery",
+        "logs:UpdateLogDelivery",
+        "logs:DeleteLogDelivery",
+        "logs:ListLogDeliveries",
+        "logs:PutResourcePolicy",
+        "logs:DescribeResourcePolicies",
+        "logs:DescribeLogGroups"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

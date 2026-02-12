@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload, Payload } from 'payload'
 import config from '@payload-config'
-import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
+import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn'
 import type { ItineraryJob } from '@/payload-types'
 
-// Initialize Lambda client
-const lambdaClient = new LambdaClient({
+// Initialize Step Functions client
+const sfnClient = new SFNClient({
   region: process.env.AWS_REGION || 'eu-north-1',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
@@ -188,15 +188,24 @@ async function handleRetry(payload: Payload, job: ItineraryJob) {
     },
   })
 
-  // Trigger orchestrator
-  const orchestratorArn = process.env.LAMBDA_ORCHESTRATOR_ARN || 'kiuli-v6-orchestrator'
+  // Trigger Step Functions state machine
+  const stateMachineArn = process.env.STEP_FUNCTION_ARN
+
+  if (!stateMachineArn) {
+    return NextResponse.json(
+      { success: false, error: 'STEP_FUNCTION_ARN not configured' },
+      { status: 500 }
+    )
+  }
 
   try {
-    await lambdaClient.send(
-      new InvokeCommand({
-        FunctionName: orchestratorArn,
-        InvocationType: 'Event',
-        Payload: JSON.stringify({
+    const executionName = `job-${job.id}-retry-${Date.now()}`
+
+    await sfnClient.send(
+      new StartExecutionCommand({
+        stateMachineArn,
+        name: executionName,
+        input: JSON.stringify({
           jobId: job.id,
           itrvlUrl: job.itrvlUrl,
           itineraryId: job.itineraryId,
@@ -272,15 +281,24 @@ async function handleRetryFailed(payload: Payload, job: ItineraryJobWithImageSta
     } as Record<string, unknown>,
   })
 
-  // Trigger image processor for the failed images
-  const imageProcessorArn = process.env.LAMBDA_IMAGE_PROCESSOR_ARN || 'kiuli-v6-image-processor'
+  // Trigger Step Functions for retry (starts at image processing step)
+  const stateMachineArn = process.env.STEP_FUNCTION_ARN
+
+  if (!stateMachineArn) {
+    return NextResponse.json(
+      { success: false, error: 'STEP_FUNCTION_ARN not configured' },
+      { status: 500 }
+    )
+  }
 
   try {
-    await lambdaClient.send(
-      new InvokeCommand({
-        FunctionName: imageProcessorArn,
-        InvocationType: 'Event',
-        Payload: JSON.stringify({
+    const executionName = `job-${job.id}-retry-failed-${Date.now()}`
+
+    await sfnClient.send(
+      new StartExecutionCommand({
+        stateMachineArn,
+        name: executionName,
+        input: JSON.stringify({
           jobId: job.id,
           itineraryId: job.processedItinerary || job.payloadId,
           retryFailed: true,

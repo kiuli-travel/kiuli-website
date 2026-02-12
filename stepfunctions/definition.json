@@ -1,0 +1,159 @@
+{
+  "Comment": "Kiuli Scraper Pipeline - Orchestrates itinerary import from iTrvl",
+  "StartAt": "Orchestrate",
+  "States": {
+    "Orchestrate": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-orchestrator",
+      "ResultPath": "$",
+      "TimeoutSeconds": 180,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "MaxAttempts": 1,
+          "BackoffRate": 2,
+          "IntervalSeconds": 10
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "PipelineFailed",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "ProcessImageChunk"
+    },
+    "ProcessImageChunk": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-image-processor",
+      "ResultPath": "$.imageResult",
+      "TimeoutSeconds": 360,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "MaxAttempts": 2,
+          "BackoffRate": 2,
+          "IntervalSeconds": 5
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "PipelineFailed",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "CheckImagesRemaining"
+    },
+    "CheckImagesRemaining": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.imageResult.remaining",
+          "NumericGreaterThan": 0,
+          "Next": "ImageProcessingWait"
+        }
+      ],
+      "Default": "ProcessVideos"
+    },
+    "ImageProcessingWait": {
+      "Type": "Wait",
+      "Seconds": 1,
+      "Next": "ProcessImageChunk"
+    },
+    "ProcessVideos": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-image-processor",
+      "Parameters": {
+        "jobId.$": "$.jobId",
+        "itineraryId.$": "$.itineraryId",
+        "processVideosOnly": true
+      },
+      "ResultPath": "$.videoResult",
+      "TimeoutSeconds": 360,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "MaxAttempts": 2,
+          "BackoffRate": 2,
+          "IntervalSeconds": 10
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "LabelBatch",
+          "ResultPath": "$.videoError",
+          "Comment": "Video failures are non-fatal"
+        }
+      ],
+      "Next": "LabelBatch"
+    },
+    "LabelBatch": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-labeler",
+      "ResultPath": "$.labelResult",
+      "TimeoutSeconds": 180,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "MaxAttempts": 2,
+          "BackoffRate": 2,
+          "IntervalSeconds": 5
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "PipelineFailed",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "CheckLabelsRemaining"
+    },
+    "CheckLabelsRemaining": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.labelResult.remaining",
+          "NumericGreaterThan": 0,
+          "Next": "LabelingWait"
+        }
+      ],
+      "Default": "Finalize"
+    },
+    "LabelingWait": {
+      "Type": "Wait",
+      "Seconds": 2,
+      "Next": "LabelBatch"
+    },
+    "Finalize": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-finalizer",
+      "ResultPath": "$.finalResult",
+      "TimeoutSeconds": 120,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "MaxAttempts": 1,
+          "BackoffRate": 2,
+          "IntervalSeconds": 10
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "PipelineFailed",
+          "ResultPath": "$.error"
+        }
+      ],
+      "End": true
+    },
+    "PipelineFailed": {
+      "Type": "Fail",
+      "Error": "PipelineError",
+      "Cause": "Pipeline step failed — check CloudWatch logs"
+    }
+  }
+}

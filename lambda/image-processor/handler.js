@@ -1,8 +1,9 @@
 /**
  * Image Processor Lambda - V6 Phase 2
  *
- * Chunked image processing with global deduplication
- * Self-invokes for next chunk, triggers Labeler when complete
+ * Chunked image processing with global deduplication.
+ * Step Functions handles iteration — this Lambda processes one chunk and returns remaining count.
+ * Separate ProcessVideos step handles video processing.
  */
 
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
@@ -14,13 +15,36 @@ const CHUNK_SIZE = 20;
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'eu-north-1' });
 
 exports.handler = async (event) => {
-  console.log('[ImageProcessor] Invoked');
+  console.log('[ImageProcessor] Invoked', JSON.stringify(event));
 
-  const { jobId, itineraryId, chunkIndex = 0 } = event;
+  const { jobId, itineraryId, chunkIndex = 0, processVideosOnly = false } = event;
 
   if (!jobId || !itineraryId) {
-    console.error('[ImageProcessor] Missing jobId or itineraryId');
-    return { success: false, error: 'Missing jobId or itineraryId' };
+    throw new Error('Missing jobId or itineraryId');
+  }
+
+  // Video-only mode: process videos and return
+  if (processVideosOnly) {
+    console.log('[ImageProcessor] Video processing mode');
+    try {
+      await processVideos(jobId, itineraryId);
+    } catch (videoError) {
+      console.error(`[ImageProcessor] Video processing failed (non-fatal): ${videoError.message}`);
+      try {
+        await payload.updateJob(jobId, { videoProcessingError: videoError.message });
+      } catch (updateErr) {
+        console.error(`[ImageProcessor] Failed to record video error: ${updateErr.message}`);
+      }
+    }
+
+    await payload.updateJob(jobId, {
+      phase2CompletedAt: new Date().toISOString(),
+      currentPhase: 'Phase 3: Labeling Images'
+    });
+
+    await notifyImagesProcessed(jobId, 0, 0);
+
+    return { jobId: String(jobId), itineraryId: String(itineraryId), remaining: 0 };
   }
 
   console.log(`[ImageProcessor] Job: ${jobId}, Chunk: ${chunkIndex}`);
@@ -52,21 +76,18 @@ exports.handler = async (event) => {
     console.log(`[ImageProcessor] Total: ${allStatuses.length}, Pending: ${pendingImages.length}`);
 
     if (pendingImages.length === 0) {
-      // All images processed, move to labeling
-      console.log('[ImageProcessor] No pending images, triggering labeler');
-      await triggerLabeler(jobId, itineraryId);
-      return { success: true, message: 'No pending images' };
+      console.log('[ImageProcessor] No pending images');
+      return { jobId: String(jobId), itineraryId: String(itineraryId), remaining: 0, chunkIndex };
     }
 
-    // 2. Get chunk to process
+    // 3. Get chunk to process
     const chunk = pendingImages.slice(0, CHUNK_SIZE);
     console.log(`[ImageProcessor] Processing chunk of ${chunk.length} images`);
 
-    // 3. Process each image in chunk
+    // 4. Process each image in chunk
     let processed = 0;
     let skipped = 0;
     let failed = 0;
-    const mediaMapping = {};
 
     for (const imageStatus of chunk) {
       const sourceS3Key = imageStatus.sourceS3Key;
@@ -86,8 +107,6 @@ exports.handler = async (event) => {
           await updateImageStatus(jobId, sourceS3Key, 'complete', result.mediaId, null, new Date().toISOString());
         }
 
-        mediaMapping[sourceS3Key] = result.mediaId;
-
       } catch (error) {
         console.error(`[ImageProcessor] Failed: ${sourceS3Key}`, error.message);
         failed++;
@@ -95,13 +114,12 @@ exports.handler = async (event) => {
       }
     }
 
-    // 4. Update job progress
+    // 5. Update job progress
     const totalProcessed = (job.processedImages || 0) + processed;
     const totalSkipped = (job.skippedImages || 0) + skipped;
     const totalFailed = (job.failedImages || 0) + failed;
 
     // Cap progress at 99% during processing - finalizer sets 100% after reconciliation
-    // This prevents overflow when videos are processed asynchronously
     const progressValue = allStatuses.length > 0
       ? Math.min(99, Math.round(((totalProcessed + totalSkipped + totalFailed) / allStatuses.length) * 100))
       : 0;
@@ -113,74 +131,24 @@ exports.handler = async (event) => {
       progress: progressValue
     });
 
-    // 5. Skip itinerary media update here - defer to finalizer
-    // This avoids 413 errors when the images array grows large
-    // The finalizer will update itinerary.images from image-statuses collection
-    console.log(`[ImageProcessor] Skipping itinerary media update (${Object.keys(mediaMapping).length} IDs), deferring to finalizer`);
-
-    console.log(`[ImageProcessor] Chunk complete: ${processed} processed, ${skipped} skipped, ${failed} failed`);
-
-    // 6. Check if more images to process
     const remainingPending = pendingImages.length - chunk.length;
+    console.log(`[ImageProcessor] Chunk complete: ${processed} processed, ${skipped} skipped, ${failed} failed, ${remainingPending} remaining`);
 
-    if (remainingPending > 0) {
-      // Self-invoke for next chunk
-      console.log(`[ImageProcessor] ${remainingPending} images remaining, self-invoking...`);
-
-      await lambdaClient.send(new InvokeCommand({
-        FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME,
-        InvocationType: 'Event',
-        Payload: JSON.stringify({
-          jobId,
-          itineraryId,
-          chunkIndex: chunkIndex + 1
-        })
-      }));
-
-    } else {
-      // All images done, process videos before triggering labeler
-      console.log('[ImageProcessor] All images processed, checking for videos...');
-
-      // Process pending videos (non-blocking - don't let video failures block labeler)
-      try {
-        await processVideos(jobId, itineraryId);
-      } catch (videoError) {
-        console.error(`[ImageProcessor] Video processing failed (non-fatal): ${videoError.message}`);
-        // Record video error in job for visibility in admin UI
-        try {
-          await payload.updateJob(jobId, {
-            videoProcessingError: videoError.message
-          });
-        } catch (updateErr) {
-          console.error(`[ImageProcessor] Failed to record video error: ${updateErr.message}`);
-        }
-        // Continue to labeler regardless of video failures
-      }
-
-      // All done, trigger labeler
-      console.log('[ImageProcessor] Triggering labeler');
-
-      await payload.updateJob(jobId, {
-        phase2CompletedAt: new Date().toISOString(),
-        currentPhase: 'Phase 3: Labeling Images'
-      });
-
-      await notifyImagesProcessed(jobId, totalProcessed + totalSkipped, totalFailed);
-      await triggerLabeler(jobId, itineraryId);
-    }
-
+    // Return for Step Functions flow control
     return {
-      success: true,
+      jobId: String(jobId),
+      itineraryId: String(itineraryId),
+      remaining: remainingPending,
+      chunkIndex: chunkIndex + 1,
       processed,
       skipped,
-      failed,
-      remaining: remainingPending
+      failed
     };
 
   } catch (error) {
     console.error('[ImageProcessor] Failed:', error);
     await payload.failJob(jobId, error.message, 'image-processor');
-    return { success: false, error: error.message };
+    throw error; // Step Functions catches this
   }
 };
 
@@ -212,34 +180,9 @@ async function updateImageStatus(jobId, sourceS3Key, status, mediaId = null, sta
 }
 
 /**
- * Update itinerary with media mappings
- */
-async function updateItineraryMedia(itineraryId, mediaMapping) {
-  try {
-    const itinerary = await payload.getItinerary(itineraryId);
-
-    // Collect all media IDs
-    const existingImages = itinerary.images || [];
-    const newMediaIds = Object.values(mediaMapping);
-    const allImages = [...new Set([...existingImages, ...newMediaIds])];
-
-    // Update itinerary images array
-    await payload.updateItinerary(itineraryId, {
-      images: allImages
-    });
-
-    // Note: Segment-level image updates are handled by the finalizer Lambda
-    // which has access to the full ImageStatuses collection with context
-
-    console.log(`[ImageProcessor] Updated itinerary with ${newMediaIds.length} new media IDs`);
-
-  } catch (error) {
-    console.error('[ImageProcessor] Failed to update itinerary media:', error.message);
-  }
-}
-
-/**
  * Process pending videos by invoking video-processor Lambda
+ * Note: video-processor is a separate Lambda (not recursive) — kept as Lambda invoke
+ * because it requires the FFmpeg layer which only exists on that Lambda.
  */
 async function processVideos(jobId, itineraryId) {
   // Query pending videos
@@ -283,28 +226,4 @@ async function processVideos(jobId, itineraryId) {
   }
 
   console.log(`[ImageProcessor] Video processor invoked for ${pendingVideos.length} video(s)`);
-}
-
-/**
- * Trigger labeler Lambda
- */
-async function triggerLabeler(jobId, itineraryId) {
-  const labelerArn = process.env.LAMBDA_LABELER_ARN;
-
-  if (!labelerArn) {
-    console.log('[ImageProcessor] LAMBDA_LABELER_ARN not set, skipping labeler');
-    return;
-  }
-
-  await lambdaClient.send(new InvokeCommand({
-    FunctionName: labelerArn,
-    InvocationType: 'Event',
-    Payload: JSON.stringify({
-      jobId,
-      itineraryId,
-      batchIndex: 0
-    })
-  }));
-
-  console.log('[ImageProcessor] Labeler Lambda invoked');
 }

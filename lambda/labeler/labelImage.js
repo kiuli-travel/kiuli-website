@@ -1,9 +1,20 @@
 /**
  * AI Image Labeling using GPT-4o with Context-Aware Enrichment
  * V6 - Uses structured outputs for guaranteed JSON parsing
+ * S3 fallback for image fetching when imgix is unavailable
  */
 
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { analyzeImageWithContext } = require('./shared/openrouter');
+
+const s3Client = new S3Client({
+  region: process.env.S3_REGION || 'eu-north-1',
+  credentials: process.env.S3_ACCESS_KEY_ID ? {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY
+  } : undefined
+});
+const S3_BUCKET = process.env.S3_BUCKET;
 
 /**
  * Label a single image using GPT-4o with context-aware enrichment
@@ -18,24 +29,47 @@ const { analyzeImageWithContext } = require('./shared/openrouter');
  * @returns {object} Fields to update on Media document
  */
 async function labelImage(media, context = {}) {
-  // Get image URL (prefer imgix for optimization)
-  const imageUrl = media.imgixUrl || media.url;
-  if (!imageUrl) {
-    console.error(`[Labeler] No URL for media ${media.id}`);
-    return { labelingStatus: 'failed', processingError: 'No image URL' };
-  }
-
   console.log(`[Labeler] Processing media ${media.id}: ${media.filename || 'unnamed'}`);
   console.log(`[Labeler] Context: ${context.propertyName || 'unknown'}, ${context.country || 'unknown'}`);
 
   try {
-    // Fetch image and convert to base64
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+    // Get image data - try S3 first (reliable), fallback to imgix
+    let base64;
+    const s3Key = media.originalS3Key;
+
+    if (s3Key && S3_BUCKET) {
+      try {
+        console.log(`[Labeler] Fetching from S3: ${s3Key}`);
+        const s3Response = await s3Client.send(new GetObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: s3Key
+        }));
+        const chunks = [];
+        for await (const chunk of s3Response.Body) {
+          chunks.push(chunk);
+        }
+        base64 = Buffer.concat(chunks).toString('base64');
+      } catch (s3Error) {
+        console.warn(`[Labeler] S3 fetch failed: ${s3Error.message}, trying imgix...`);
+        base64 = null;
+      }
     }
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const base64 = Buffer.from(imageBuffer).toString('base64');
+
+    if (!base64) {
+      // Fallback to imgix/URL
+      const imageUrl = media.imgixUrl || media.url;
+      if (!imageUrl) {
+        console.error(`[Labeler] No URL for media ${media.id}`);
+        return { labelingStatus: 'failed', processingError: 'No image URL or S3 key' };
+      }
+
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+      }
+      const imageBuffer = await imageResponse.arrayBuffer();
+      base64 = Buffer.from(imageBuffer).toString('base64');
+    }
 
     // Call GPT-4o with context (structured outputs guarantees valid JSON)
     const enrichment = await analyzeImageWithContext(base64, context);

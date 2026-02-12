@@ -1,9 +1,9 @@
 {
   "name": "kiuli-labeler",
-  "version": "6.0.0",
-  "description": "V6 Labeler Lambda - Phase 3 (conservative AI labeling)",
+  "version": "6.1.0",
+  "description": "V6 Labeler Lambda - Phase 3 (AI image enrichment with S3 fallback)",
   "main": "handler.js",
   "dependencies": {
-    "@aws-sdk/client-lambda": "^3.0.0"
+    "@aws-sdk/client-s3": "^3.0.0"
   }
 }

@@ -435,6 +435,6 @@ exports.handler = async (event) => {
   } catch (error) {
     console.error('[Finalizer] Failed:', error);
     await payload.failJob(jobId, error.message, 'finalizer');
-    return { success: false, error: error.message };
+    throw error; // Step Functions catches this
   }
 };

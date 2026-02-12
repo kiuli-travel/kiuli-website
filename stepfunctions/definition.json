@@ -6,7 +6,7 @@
       "Type": "Task",
       "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-orchestrator",
       "ResultPath": "$",
-      "TimeoutSeconds": 180,
+      "TimeoutSeconds": 900,
       "Retry": [
         {
           "ErrorEquals": ["States.TaskFailed"],
@@ -28,7 +28,7 @@
       "Type": "Task",
       "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-image-processor",
       "ResultPath": "$.imageResult",
-      "TimeoutSeconds": 360,
+      "TimeoutSeconds": 900,
       "Retry": [
         {
           "ErrorEquals": ["States.TaskFailed"],
@@ -71,7 +71,7 @@
         "processVideosOnly": true
       },
       "ResultPath": "$.videoResult",
-      "TimeoutSeconds": 360,
+      "TimeoutSeconds": 900,
       "Retry": [
         {
           "ErrorEquals": ["States.TaskFailed"],
@@ -94,7 +94,7 @@
       "Type": "Task",
       "Resource": "arn:aws:lambda:eu-north-1:405531875262:function:kiuli-v6-labeler",
       "ResultPath": "$.labelResult",
-      "TimeoutSeconds": 180,
+      "TimeoutSeconds": 600,
       "Retry": [
         {
           "ErrorEquals": ["States.TaskFailed"],

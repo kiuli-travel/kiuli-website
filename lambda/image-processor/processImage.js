@@ -141,10 +141,10 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
     sourceS3Key: sourceS3Key,
     originalS3Key: s3Key,
     imgixUrl: getImgixUrl(s3Key),
-    sourceItinerary: String(itineraryId),
+    sourceItinerary: Number(itineraryId),
     processingStatus: 'complete',
     labelingStatus: 'pending',
-    usedInItineraries: [itineraryId],
+    usedInItineraries: [Number(itineraryId)],
   };
   if (imageContext.propertyName) payloadData.sourceProperty = imageContext.propertyName;
   if (imageContext.segmentType) payloadData.sourceSegmentType = imageContext.segmentType;

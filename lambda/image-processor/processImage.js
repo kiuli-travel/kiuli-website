@@ -127,29 +127,32 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
   const filename = sourceS3Key || 'image.jpg';
   const displayName = (sourceS3Key.split('/').pop() || 'image.jpg').replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
 
-  // Use Node.js 20 built-in FormData + Blob (npm form-data is incompatible with built-in fetch)
+  // Use Node.js 20 built-in FormData + Blob
+  // Payload expects: 'file' for the upload, '_payload' JSON string for all other fields
   const form = new FormData();
 
   // File upload (required by Payload upload collection)
   const blob = new Blob([buffer], { type: contentType });
   form.append('file', blob, filename);
 
-  // Metadata fields
-  form.append('alt', displayName);
-  form.append('sourceS3Key', sourceS3Key);
-  form.append('originalS3Key', s3Key);
-  form.append('imgixUrl', getImgixUrl(s3Key));
-  form.append('url', getImgixUrl(s3Key));
-  form.append('sourceItinerary', String(itineraryId));
-  form.append('processingStatus', 'complete');
-  form.append('labelingStatus', 'pending');
-  form.append('usedInItineraries', String(itineraryId));
-  // Source context
-  if (imageContext.propertyName) form.append('sourceProperty', imageContext.propertyName);
-  if (imageContext.segmentType) form.append('sourceSegmentType', imageContext.segmentType);
-  if (imageContext.segmentTitle) form.append('sourceSegmentTitle', imageContext.segmentTitle);
-  if (imageContext.dayIndex) form.append('sourceDayIndex', String(imageContext.dayIndex));
-  if (imageContext.country) form.append('country', imageContext.country);
+  // Metadata as _payload JSON (Payload's multipart convention)
+  const payloadData = {
+    alt: displayName,
+    sourceS3Key: sourceS3Key,
+    originalS3Key: s3Key,
+    imgixUrl: getImgixUrl(s3Key),
+    sourceItinerary: String(itineraryId),
+    processingStatus: 'complete',
+    labelingStatus: 'pending',
+    usedInItineraries: [itineraryId],
+  };
+  if (imageContext.propertyName) payloadData.sourceProperty = imageContext.propertyName;
+  if (imageContext.segmentType) payloadData.sourceSegmentType = imageContext.segmentType;
+  if (imageContext.segmentTitle) payloadData.sourceSegmentTitle = imageContext.segmentTitle;
+  if (imageContext.dayIndex) payloadData.sourceDayIndex = Number(imageContext.dayIndex);
+  if (imageContext.country) payloadData.country = imageContext.country;
+
+  form.append('_payload', JSON.stringify(payloadData));
 
   // Built-in fetch auto-sets Content-Type with multipart boundary — do NOT set it manually
   const response = await fetch(`${payload.PAYLOAD_API_URL}/api/media`, {

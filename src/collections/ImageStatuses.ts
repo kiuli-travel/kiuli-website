@@ -1,17 +1,5 @@
-import type { CollectionConfig, AccessArgs } from 'payload';
+import type { CollectionConfig } from 'payload';
 import { authenticated } from '../access/authenticated';
-
-// Allow authenticated users OR API key access for Lambda pipeline
-const authenticatedOrApiKey = ({ req }: AccessArgs) => {
-  if (req.user) return true
-  const headers = req.headers as Headers | Record<string, string>
-  const authHeader =
-    typeof headers?.get === 'function'
-      ? headers.get('authorization')
-      : (headers as Record<string, string>)?.authorization
-  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) return true
-  return false
-}
 
 export const ImageStatuses: CollectionConfig = {
   slug: 'image-statuses',
@@ -26,9 +14,9 @@ export const ImageStatuses: CollectionConfig = {
     description: 'Per-image processing status for pipeline jobs',
   },
   access: {
-    read: authenticatedOrApiKey,
-    create: authenticatedOrApiKey,
-    update: authenticatedOrApiKey,
+    read: authenticated,
+    create: authenticated,
+    update: authenticated,
     delete: authenticated,
   },
   fields: [

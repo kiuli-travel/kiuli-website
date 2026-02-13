@@ -1,17 +1,6 @@
-import type { AccessArgs, CollectionConfig } from 'payload'
+import type { CollectionConfig } from 'payload'
+import { authenticated } from '../access/authenticated'
 import { updateLastModified } from './Itineraries/hooks/updateLastModified'
-
-// Allow authenticated users OR API key access
-const authenticatedOrApiKey = ({ req }: AccessArgs) => {
-  if (req.user) return true
-  const headers = req.headers as Headers | Record<string, string>
-  const authHeader =
-    typeof headers?.get === 'function'
-      ? headers.get('authorization')
-      : (headers as Record<string, string>)?.authorization
-  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) return true
-  return false
-}
 
 export const Destinations: CollectionConfig = {
   slug: 'destinations',
@@ -27,8 +16,8 @@ export const Destinations: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: authenticatedOrApiKey,
-    update: authenticatedOrApiKey,
+    create: authenticated,
+    update: authenticated,
     delete: ({ req }) => !!req.user,
   },
   hooks: {

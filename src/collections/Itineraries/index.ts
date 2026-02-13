@@ -1,34 +1,6 @@
-import type { CollectionConfig, AccessArgs } from 'payload'
+import type { CollectionConfig } from 'payload'
 import { authenticated } from '../../access/authenticated'
 import { calculateChecklist, resolveFields, updateLastModified, validatePublish } from './hooks'
-
-// Allow authenticated users OR API key access for Lambda pipeline
-const authenticatedOrApiKey = ({ req }: AccessArgs) => {
-  if (req.user) return true
-  const headers = req.headers as Headers | Record<string, string>
-  const authHeader =
-    typeof headers?.get === 'function'
-      ? headers.get('authorization')
-      : (headers as Record<string, string>)?.authorization
-  // Accept both Bearer (legacy) and users API-Key (Payload native) formats
-  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) return true
-  return false
-}
-
-// Only allow creation via API (not admin UI)
-// Users should use the Import Itinerary page instead
-const apiKeyOnlyCreate = ({ req }: AccessArgs) => {
-  // Block logged-in users from creating via admin UI
-  // Allow API key access for Lambda pipeline
-  const headers = req.headers as Headers | Record<string, string>
-  const authHeader =
-    typeof headers?.get === 'function'
-      ? headers.get('authorization')
-      : (headers as Record<string, string>)?.authorization
-  // Accept both Bearer (legacy) and users API-Key (Payload native) formats
-  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) return true
-  return false
-}
 
 export const Itineraries: CollectionConfig<'itineraries'> = {
   slug: 'itineraries',
@@ -40,9 +12,9 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
     hideAPIURL: true,
   },
   access: {
-    read: authenticatedOrApiKey,
-    create: apiKeyOnlyCreate, // Only allow API-based creation (via Lambda pipeline)
-    update: authenticatedOrApiKey,
+    read: authenticated,
+    create: authenticated,
+    update: authenticated,
     delete: authenticated,
   },
   hooks: {

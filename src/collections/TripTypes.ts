@@ -1,16 +1,5 @@
-import type { AccessArgs, CollectionConfig } from 'payload'
-
-// Allow authenticated users OR API key access
-const authenticatedOrApiKey = ({ req }: AccessArgs) => {
-  if (req.user) return true
-  const headers = req.headers as Headers | Record<string, string>
-  const authHeader =
-    typeof headers?.get === 'function'
-      ? headers.get('authorization')
-      : (headers as Record<string, string>)?.authorization
-  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) return true
-  return false
-}
+import type { CollectionConfig } from 'payload'
+import { authenticated } from '../access/authenticated'
 
 export const TripTypes: CollectionConfig = {
   slug: 'trip-types',
@@ -22,8 +11,8 @@ export const TripTypes: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: authenticatedOrApiKey,
-    update: authenticatedOrApiKey,
+    create: authenticated,
+    update: authenticated,
     delete: ({ req }) => !!req.user,
   },
   fields: [

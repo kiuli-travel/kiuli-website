@@ -1,33 +1,14 @@
-import type { CollectionConfig, AccessArgs } from 'payload'
+import type { CollectionConfig } from 'payload'
 import { authenticated } from '../../access/authenticated'
 import { beforeDelete } from './hooks/beforeDelete'
-
-// Allow authenticated users OR API key access for updates
-const authenticatedOrApiKey = ({ req }: AccessArgs) => {
-  // Check if user is authenticated (via session or API key)
-  if (req.user) return true
-
-  // Check for Authorization header with API key format
-  const headers = req.headers as Headers | Record<string, string>
-  const authHeader = typeof headers?.get === 'function'
-    ? headers.get('authorization')
-    : (headers as Record<string, string>)?.authorization
-  // Accept both Bearer (legacy) and users API-Key (Payload native) formats
-  if (authHeader?.startsWith('Bearer ') || authHeader?.startsWith('users API-Key ')) {
-    // API key auth - always allow for Lambda pipeline worker
-    return true
-  }
-
-  return false
-}
 
 export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
   slug: 'itinerary-jobs',
   access: {
-    create: authenticatedOrApiKey,
+    create: authenticated,
     delete: authenticated,
-    read: authenticatedOrApiKey,
-    update: authenticatedOrApiKey,
+    read: authenticated,
+    update: authenticated,
   },
   admin: {
     defaultColumns: ['itineraryId', 'status', 'currentPhase', 'createdAt'],

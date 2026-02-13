@@ -1,7 +1,7 @@
 # Kiuli Content Engine — Status Tracker
 
 **Last Updated:** February 13, 2026
-**Current Phase:** Phase 2.5 (Bootstrap embeddings) — PENDING
+**Current Phase:** Phase 3 (OpenRouter client + test endpoint) — PENDING
 
 ---
 
@@ -14,7 +14,7 @@
 | 1 | COMPLETED | 2026-02-11 | 2026-02-13 | Yes | Code + DB schema match. 26 tables, 41 enums, version tables, array sub-tables, globals |
 | 1.5 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | Baseline snapshot + proper Payload migration. See report: phase1-db-reconciliation.md |
 | 2 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes | content_embeddings table correct, pgvector 0.8.0, all indexes |
-| 2.5 | PENDING | — | — | — | Bootstrap embeddings (7 itineraries, 33 properties, 10 destinations) |
+| 2.5 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | 143 embeddings: 65 segments, 44 FAQs, 33 properties, 1 destination. See report: phase2.5-bootstrap-embeddings.md |
 | 3 | PENDING | — | — | — | OpenRouter client + test endpoint |
 | 4 | PENDING | — | — | — | Embeddings engine (chunker, embedder, query) |
 | 5 | PENDING | — | — | — | Cascade (Lambda) |
@@ -60,7 +60,7 @@ See: `content-engine/reports/phase1-db-reconciliation.md`
 | Destinations | 10 | 9 unpublished, 1 published (Rwanda). Only Rwanda has content |
 | Properties | 33 | All draft. All have description_itrvl |
 | Media | 632+ | All non-video labeled |
-| content_embeddings | 0 | Empty — bootstrap not done |
+| content_embeddings | 143 | 65 itinerary_segment, 44 faq_answer, 33 property_section, 1 destination_section |
 | content_projects | 0 | Empty — schema correct (48 cols, version tables, array sub-tables) |
 | content_jobs | 0 | Empty — schema correct (progress=jsonb) |
 
@@ -72,7 +72,7 @@ See: `content-engine/reports/phase1-db-reconciliation.md`
 Phase 1.5 → Phase 2.5 → Phase 3 → Phase 4 → Phase 5 → ... → Phase 15
 ```
 
-Phase 1.5 is complete. Phase 2.5 (bootstrap embeddings) is next.
+Phase 2.5 is complete. Phase 3 (OpenRouter client) is next.
 
 ---
 
@@ -81,8 +81,8 @@ Phase 1.5 is complete. Phase 2.5 (bootstrap embeddings) is next.
 | Prompt | Status |
 |--------|--------|
 | `phase1-fix-db-schema.md` | COMPLETED |
-| `phase2.5-bootstrap-embeddings.md` | Ready (+ addendum for properties) |
-| `phase2.5-addendum-properties.md` | Addendum to add property content |
+| `phase2.5-bootstrap-embeddings.md` | COMPLETED |
+| `fix-auth-bypass.md` | COMPLETED |
 | `phase3-openrouter-client.md` | Ready for CLI |
 | `phase4-embeddings-engine.md` | Ready for CLI |
 | Phases 5-15 | Not yet written — will be written as earlier phases complete |

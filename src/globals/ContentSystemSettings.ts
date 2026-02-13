@@ -14,7 +14,7 @@ export const ContentSystemSettings: GlobalConfig = {
     {
       name: 'ideationModel',
       type: 'text',
-      defaultValue: 'anthropic/claude-sonnet-4-20250514',
+      defaultValue: 'anthropic/claude-sonnet-4',
       admin: {
         description: 'OpenRouter model identifier for ideation and filtering',
       },
@@ -22,7 +22,7 @@ export const ContentSystemSettings: GlobalConfig = {
     {
       name: 'researchModel',
       type: 'text',
-      defaultValue: 'anthropic/claude-sonnet-4-20250514',
+      defaultValue: 'anthropic/claude-sonnet-4',
       admin: {
         description: 'OpenRouter model identifier for research synthesis',
       },
@@ -30,7 +30,7 @@ export const ContentSystemSettings: GlobalConfig = {
     {
       name: 'draftingModel',
       type: 'text',
-      defaultValue: 'anthropic/claude-sonnet-4-20250514',
+      defaultValue: 'anthropic/claude-sonnet-4',
       admin: {
         description: 'OpenRouter model identifier for content drafting',
       },
@@ -38,7 +38,7 @@ export const ContentSystemSettings: GlobalConfig = {
     {
       name: 'editingModel',
       type: 'text',
-      defaultValue: 'anthropic/claude-sonnet-4-20250514',
+      defaultValue: 'anthropic/claude-sonnet-4',
       admin: {
         description: 'OpenRouter model identifier for conversation editing',
       },
@@ -46,7 +46,7 @@ export const ContentSystemSettings: GlobalConfig = {
     {
       name: 'imageModel',
       type: 'text',
-      defaultValue: 'anthropic/claude-sonnet-4-20250514',
+      defaultValue: 'anthropic/claude-sonnet-4',
       admin: {
         description: 'OpenRouter model identifier for image prompt generation',
       },

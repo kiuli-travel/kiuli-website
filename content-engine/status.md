@@ -1,7 +1,7 @@
 # Kiuli Content Engine — Status Tracker
 
 **Last Updated:** February 13, 2026
-**Current Phase:** Phase 3 (OpenRouter client + test endpoint) — PENDING
+**Current Phase:** Phase 4 (Embeddings engine) — PENDING
 
 ---
 
@@ -15,7 +15,7 @@
 | 1.5 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | Baseline snapshot + proper Payload migration. See report: phase1-db-reconciliation.md |
 | 2 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes | content_embeddings table correct, pgvector 0.8.0, all indexes |
 | 2.5 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | 143 embeddings: 65 segments, 44 FAQs, 33 properties, 1 destination. See report: phase2.5-bootstrap-embeddings.md |
-| 3 | PENDING | — | — | — | OpenRouter client + test endpoint |
+| 3 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | OpenRouter client + test endpoint. Model ID corrected to `anthropic/claude-sonnet-4`. See report: phase3-openrouter-client.md |
 | 4 | PENDING | — | — | — | Embeddings engine (chunker, embedder, query) |
 | 5 | PENDING | — | — | — | Cascade (Lambda) |
 | 6 | PENDING | — | — | — | Ideation (Lambda) |
@@ -72,7 +72,7 @@ See: `content-engine/reports/phase1-db-reconciliation.md`
 Phase 1.5 → Phase 2.5 → Phase 3 → Phase 4 → Phase 5 → ... → Phase 15
 ```
 
-Phase 2.5 is complete. Phase 3 (OpenRouter client) is next.
+Phase 3 is complete. Phase 4 (Embeddings engine) is next.
 
 ---
 
@@ -83,7 +83,7 @@ Phase 2.5 is complete. Phase 3 (OpenRouter client) is next.
 | `phase1-fix-db-schema.md` | COMPLETED |
 | `phase2.5-bootstrap-embeddings.md` | COMPLETED |
 | `fix-auth-bypass.md` | COMPLETED |
-| `phase3-openrouter-client.md` | Ready for CLI |
+| `phase3-openrouter-client.md` | COMPLETED |
 | `phase4-embeddings-engine.md` | Ready for CLI |
 | Phases 5-15 | Not yet written — will be written as earlier phases complete |
 

@@ -4,47 +4,49 @@ import * as migration_20260113_102418_itinerary_schema_v3 from './20260113_10241
 import * as migration_20260113_124555_v6_schema_updates from './20260113_124555_v6_schema_updates';
 import * as migration_20260114_181510_schema_valid_field from './20260114_181510_schema_valid_field';
 import * as migration_20260116_create_image_statuses from './20260116_create_image_statuses';
-import * as migration_20260120_add_reviewed_to_segments from './20260120_add_reviewed_to_segments';
+import * as migration_20260120_add_faq_twofield_pattern from './20260120_add_faq_twofield_pattern';
+import * as migration_20260120_add_overview_investment_twofield from './20260120_add_overview_investment_twofield';
+import * as migration_20260120_add_relationship_fields from './20260120_add_relationship_fields';
 import * as migration_20260120_add_reviewed_to_faqs from './20260120_add_reviewed_to_faqs';
+import * as migration_20260120_add_reviewed_to_segments from './20260120_add_reviewed_to_segments';
+import * as migration_20260120_add_root_twofield_pattern from './20260120_add_root_twofield_pattern';
+import * as migration_20260120_add_segments_twofield_pattern from './20260120_add_segments_twofield_pattern';
 import * as migration_20260120_add_version_to_jobs from './20260120_add_version_to_jobs';
-import * as migration_20260120_create_voice_configuration from './20260120_create_voice_configuration';
 import * as migration_20260120_create_destinations from './20260120_create_destinations';
 import * as migration_20260120_create_trip_types from './20260120_create_trip_types';
-import * as migration_20260120_add_root_twofield_pattern from './20260120_add_root_twofield_pattern';
-import * as migration_20260120_add_overview_investment_twofield from './20260120_add_overview_investment_twofield';
-import * as migration_20260120_add_segments_twofield_pattern from './20260120_add_segments_twofield_pattern';
-import * as migration_20260120_add_faq_twofield_pattern from './20260120_add_faq_twofield_pattern';
-import * as migration_20260120_add_relationship_fields from './20260120_add_relationship_fields';
-import * as migration_20260120_seed_segment_description_voice from './20260120_seed_segment_description_voice';
-import * as migration_20260120_seed_faq_answer_voice from './20260120_seed_faq_answer_voice';
-import * as migration_20260120_seed_meta_description_voice from './20260120_seed_meta_description_voice';
+import * as migration_20260120_create_voice_configuration from './20260120_create_voice_configuration';
 import * as migration_20260120_seed_day_title_voice from './20260120_seed_day_title_voice';
+import * as migration_20260120_seed_faq_answer_voice from './20260120_seed_faq_answer_voice';
 import * as migration_20260120_seed_investment_includes_voice from './20260120_seed_investment_includes_voice';
+import * as migration_20260120_seed_meta_description_voice from './20260120_seed_meta_description_voice';
+import * as migration_20260120_seed_segment_description_voice from './20260120_seed_segment_description_voice';
 import * as migration_20260121_seed_overview_summary_voice from './20260121_seed_overview_summary_voice';
 import * as migration_20260121_seed_why_kiuli_voice from './20260121_seed_why_kiuli_voice';
 import * as migration_20260128_add_video_scraping_tracking from './20260128_add_video_scraping_tracking';
+import * as migration_20260129_drop_video_scraping_columns from './20260129_drop_video_scraping_columns';
 import * as migration_20260202_add_contact_consent from './20260202_add_contact_consent';
+import * as migration_20260202_create_interests_select from './20260202_create_interests_select';
 import * as migration_20260202_make_phone_country_code_nullable from './20260202_make_phone_country_code_nullable';
 import * as migration_20260202_make_primary_interest_nullable from './20260202_make_primary_interest_nullable';
-import * as migration_20260202_create_interests_select from './20260202_create_interests_select';
 import * as migration_20260204_create_sessions_and_inquiry_fields from './20260204_create_sessions_and_inquiry_fields';
-import * as migration_20260205_drop_primary_interest from './20260205_drop_primary_interest';
 import * as migration_20260205_create_designers_and_seed from './20260205_create_designers_and_seed';
+import * as migration_20260205_drop_primary_interest from './20260205_drop_primary_interest';
 import * as migration_20260207_add_base_fields_for_hook from './20260207_add_base_fields_for_hook';
-import * as migration_20260207_add_seo_fields from './20260207_add_seo_fields';
 import * as migration_20260207_add_destination_fields from './20260207_add_destination_fields';
+import * as migration_20260207_add_seo_fields from './20260207_add_seo_fields';
 import * as migration_20260208_add_destinations_highlights_table from './20260208_add_destinations_highlights_table';
-import * as migration_20260208_fix_destinations_versioning_schema from './20260208_fix_destinations_versioning_schema';
-import * as migration_20260208_create_authors_collection from './20260208_create_authors_collection';
-import * as migration_20260208_update_posts_for_articles from './20260208_update_posts_for_articles';
 import * as migration_20260208_add_properties_and_mappings from './20260208_add_properties_and_mappings';
+import * as migration_20260208_create_authors_collection from './20260208_create_authors_collection';
+import * as migration_20260208_fix_destinations_versioning_schema from './20260208_fix_destinations_versioning_schema';
+import * as migration_20260208_update_posts_for_articles from './20260208_update_posts_for_articles';
 import * as migration_20260209_add_homepage_blocks from './20260209_add_homepage_blocks';
 import * as migration_20260209_fix_homepage_block_relationships from './20260209_fix_homepage_block_relationships';
-import * as migration_20260210_fix_locked_documents_rels from './20260210_fix_locked_documents_rels';
-import * as migration_20260210_fix_homepage_block_ids from './20260210_fix_homepage_block_ids';
-import * as migration_20260210_fix_version_block_id_defaults from './20260210_fix_version_block_id_defaults';
 import * as migration_20260210_fix_all_version_block_ids from './20260210_fix_all_version_block_ids';
-import * as migration_20260212_reconcile_content_engine_tables from './20260212_reconcile_content_engine_tables';
+import * as migration_20260210_fix_homepage_block_ids from './20260210_fix_homepage_block_ids';
+import * as migration_20260210_fix_locked_documents_rels from './20260210_fix_locked_documents_rels';
+import * as migration_20260210_fix_version_block_id_defaults from './20260210_fix_version_block_id_defaults';
+import * as migration_20260213_133332 from './20260213_133332';
+import * as migration_20260213_133845 from './20260213_133845';
 
 export const migrations = [
   {
@@ -75,211 +77,221 @@ export const migrations = [
   {
     up: migration_20260116_create_image_statuses.up,
     down: migration_20260116_create_image_statuses.down,
-    name: '20260116_create_image_statuses'
-  },
-  {
-    up: migration_20260120_add_reviewed_to_segments.up,
-    down: migration_20260120_add_reviewed_to_segments.down,
-    name: '20260120_add_reviewed_to_segments'
-  },
-  {
-    up: migration_20260120_add_reviewed_to_faqs.up,
-    down: migration_20260120_add_reviewed_to_faqs.down,
-    name: '20260120_add_reviewed_to_faqs'
-  },
-  {
-    up: migration_20260120_add_version_to_jobs.up,
-    down: migration_20260120_add_version_to_jobs.down,
-    name: '20260120_add_version_to_jobs'
-  },
-  {
-    up: migration_20260120_create_voice_configuration.up,
-    down: migration_20260120_create_voice_configuration.down,
-    name: '20260120_create_voice_configuration'
-  },
-  {
-    up: migration_20260120_create_destinations.up,
-    down: migration_20260120_create_destinations.down,
-    name: '20260120_create_destinations'
-  },
-  {
-    up: migration_20260120_create_trip_types.up,
-    down: migration_20260120_create_trip_types.down,
-    name: '20260120_create_trip_types'
-  },
-  {
-    up: migration_20260120_add_root_twofield_pattern.up,
-    down: migration_20260120_add_root_twofield_pattern.down,
-    name: '20260120_add_root_twofield_pattern'
-  },
-  {
-    up: migration_20260120_add_overview_investment_twofield.up,
-    down: migration_20260120_add_overview_investment_twofield.down,
-    name: '20260120_add_overview_investment_twofield'
-  },
-  {
-    up: migration_20260120_add_segments_twofield_pattern.up,
-    down: migration_20260120_add_segments_twofield_pattern.down,
-    name: '20260120_add_segments_twofield_pattern'
+    name: '20260116_create_image_statuses',
   },
   {
     up: migration_20260120_add_faq_twofield_pattern.up,
     down: migration_20260120_add_faq_twofield_pattern.down,
-    name: '20260120_add_faq_twofield_pattern'
+    name: '20260120_add_faq_twofield_pattern',
+  },
+  {
+    up: migration_20260120_add_overview_investment_twofield.up,
+    down: migration_20260120_add_overview_investment_twofield.down,
+    name: '20260120_add_overview_investment_twofield',
   },
   {
     up: migration_20260120_add_relationship_fields.up,
     down: migration_20260120_add_relationship_fields.down,
-    name: '20260120_add_relationship_fields'
+    name: '20260120_add_relationship_fields',
   },
   {
-    up: migration_20260120_seed_segment_description_voice.up,
-    down: migration_20260120_seed_segment_description_voice.down,
-    name: '20260120_seed_segment_description_voice'
+    up: migration_20260120_add_reviewed_to_faqs.up,
+    down: migration_20260120_add_reviewed_to_faqs.down,
+    name: '20260120_add_reviewed_to_faqs',
   },
   {
-    up: migration_20260120_seed_faq_answer_voice.up,
-    down: migration_20260120_seed_faq_answer_voice.down,
-    name: '20260120_seed_faq_answer_voice'
+    up: migration_20260120_add_reviewed_to_segments.up,
+    down: migration_20260120_add_reviewed_to_segments.down,
+    name: '20260120_add_reviewed_to_segments',
   },
   {
-    up: migration_20260120_seed_meta_description_voice.up,
-    down: migration_20260120_seed_meta_description_voice.down,
-    name: '20260120_seed_meta_description_voice'
+    up: migration_20260120_add_root_twofield_pattern.up,
+    down: migration_20260120_add_root_twofield_pattern.down,
+    name: '20260120_add_root_twofield_pattern',
+  },
+  {
+    up: migration_20260120_add_segments_twofield_pattern.up,
+    down: migration_20260120_add_segments_twofield_pattern.down,
+    name: '20260120_add_segments_twofield_pattern',
+  },
+  {
+    up: migration_20260120_add_version_to_jobs.up,
+    down: migration_20260120_add_version_to_jobs.down,
+    name: '20260120_add_version_to_jobs',
+  },
+  {
+    up: migration_20260120_create_destinations.up,
+    down: migration_20260120_create_destinations.down,
+    name: '20260120_create_destinations',
+  },
+  {
+    up: migration_20260120_create_trip_types.up,
+    down: migration_20260120_create_trip_types.down,
+    name: '20260120_create_trip_types',
+  },
+  {
+    up: migration_20260120_create_voice_configuration.up,
+    down: migration_20260120_create_voice_configuration.down,
+    name: '20260120_create_voice_configuration',
   },
   {
     up: migration_20260120_seed_day_title_voice.up,
     down: migration_20260120_seed_day_title_voice.down,
-    name: '20260120_seed_day_title_voice'
+    name: '20260120_seed_day_title_voice',
+  },
+  {
+    up: migration_20260120_seed_faq_answer_voice.up,
+    down: migration_20260120_seed_faq_answer_voice.down,
+    name: '20260120_seed_faq_answer_voice',
   },
   {
     up: migration_20260120_seed_investment_includes_voice.up,
     down: migration_20260120_seed_investment_includes_voice.down,
-    name: '20260120_seed_investment_includes_voice'
+    name: '20260120_seed_investment_includes_voice',
+  },
+  {
+    up: migration_20260120_seed_meta_description_voice.up,
+    down: migration_20260120_seed_meta_description_voice.down,
+    name: '20260120_seed_meta_description_voice',
+  },
+  {
+    up: migration_20260120_seed_segment_description_voice.up,
+    down: migration_20260120_seed_segment_description_voice.down,
+    name: '20260120_seed_segment_description_voice',
   },
   {
     up: migration_20260121_seed_overview_summary_voice.up,
     down: migration_20260121_seed_overview_summary_voice.down,
-    name: '20260121_seed_overview_summary_voice'
+    name: '20260121_seed_overview_summary_voice',
   },
   {
     up: migration_20260121_seed_why_kiuli_voice.up,
     down: migration_20260121_seed_why_kiuli_voice.down,
-    name: '20260121_seed_why_kiuli_voice'
+    name: '20260121_seed_why_kiuli_voice',
   },
   {
     up: migration_20260128_add_video_scraping_tracking.up,
     down: migration_20260128_add_video_scraping_tracking.down,
-    name: '20260128_add_video_scraping_tracking'
+    name: '20260128_add_video_scraping_tracking',
+  },
+  {
+    up: migration_20260129_drop_video_scraping_columns.up,
+    down: migration_20260129_drop_video_scraping_columns.down,
+    name: '20260129_drop_video_scraping_columns',
   },
   {
     up: migration_20260202_add_contact_consent.up,
     down: migration_20260202_add_contact_consent.down,
-    name: '20260202_add_contact_consent'
-  },
-  {
-    up: migration_20260202_make_phone_country_code_nullable.up,
-    down: migration_20260202_make_phone_country_code_nullable.down,
-    name: '20260202_make_phone_country_code_nullable'
-  },
-  {
-    up: migration_20260202_make_primary_interest_nullable.up,
-    down: migration_20260202_make_primary_interest_nullable.down,
-    name: '20260202_make_primary_interest_nullable'
+    name: '20260202_add_contact_consent',
   },
   {
     up: migration_20260202_create_interests_select.up,
     down: migration_20260202_create_interests_select.down,
-    name: '20260202_create_interests_select'
+    name: '20260202_create_interests_select',
+  },
+  {
+    up: migration_20260202_make_phone_country_code_nullable.up,
+    down: migration_20260202_make_phone_country_code_nullable.down,
+    name: '20260202_make_phone_country_code_nullable',
+  },
+  {
+    up: migration_20260202_make_primary_interest_nullable.up,
+    down: migration_20260202_make_primary_interest_nullable.down,
+    name: '20260202_make_primary_interest_nullable',
   },
   {
     up: migration_20260204_create_sessions_and_inquiry_fields.up,
     down: migration_20260204_create_sessions_and_inquiry_fields.down,
-    name: '20260204_create_sessions_and_inquiry_fields'
-  },
-  {
-    up: migration_20260205_drop_primary_interest.up,
-    down: migration_20260205_drop_primary_interest.down,
-    name: '20260205_drop_primary_interest'
+    name: '20260204_create_sessions_and_inquiry_fields',
   },
   {
     up: migration_20260205_create_designers_and_seed.up,
     down: migration_20260205_create_designers_and_seed.down,
-    name: '20260205_create_designers_and_seed'
+    name: '20260205_create_designers_and_seed',
+  },
+  {
+    up: migration_20260205_drop_primary_interest.up,
+    down: migration_20260205_drop_primary_interest.down,
+    name: '20260205_drop_primary_interest',
   },
   {
     up: migration_20260207_add_base_fields_for_hook.up,
     down: migration_20260207_add_base_fields_for_hook.down,
-    name: '20260207_add_base_fields_for_hook'
-  },
-  {
-    up: migration_20260207_add_seo_fields.up,
-    down: migration_20260207_add_seo_fields.down,
-    name: '20260207_add_seo_fields'
+    name: '20260207_add_base_fields_for_hook',
   },
   {
     up: migration_20260207_add_destination_fields.up,
     down: migration_20260207_add_destination_fields.down,
-    name: '20260207_add_destination_fields'
+    name: '20260207_add_destination_fields',
+  },
+  {
+    up: migration_20260207_add_seo_fields.up,
+    down: migration_20260207_add_seo_fields.down,
+    name: '20260207_add_seo_fields',
   },
   {
     up: migration_20260208_add_destinations_highlights_table.up,
     down: migration_20260208_add_destinations_highlights_table.down,
-    name: '20260208_add_destinations_highlights_table'
-  },
-  {
-    up: migration_20260208_fix_destinations_versioning_schema.up,
-    down: migration_20260208_fix_destinations_versioning_schema.down,
-    name: '20260208_fix_destinations_versioning_schema'
-  },
-  {
-    up: migration_20260208_create_authors_collection.up,
-    down: migration_20260208_create_authors_collection.down,
-    name: '20260208_create_authors_collection'
-  },
-  {
-    up: migration_20260208_update_posts_for_articles.up,
-    down: migration_20260208_update_posts_for_articles.down,
-    name: '20260208_update_posts_for_articles'
+    name: '20260208_add_destinations_highlights_table',
   },
   {
     up: migration_20260208_add_properties_and_mappings.up,
     down: migration_20260208_add_properties_and_mappings.down,
-    name: '20260208_add_properties_and_mappings'
+    name: '20260208_add_properties_and_mappings',
+  },
+  {
+    up: migration_20260208_create_authors_collection.up,
+    down: migration_20260208_create_authors_collection.down,
+    name: '20260208_create_authors_collection',
+  },
+  {
+    up: migration_20260208_fix_destinations_versioning_schema.up,
+    down: migration_20260208_fix_destinations_versioning_schema.down,
+    name: '20260208_fix_destinations_versioning_schema',
+  },
+  {
+    up: migration_20260208_update_posts_for_articles.up,
+    down: migration_20260208_update_posts_for_articles.down,
+    name: '20260208_update_posts_for_articles',
   },
   {
     up: migration_20260209_add_homepage_blocks.up,
     down: migration_20260209_add_homepage_blocks.down,
-    name: '20260209_add_homepage_blocks'
+    name: '20260209_add_homepage_blocks',
   },
   {
     up: migration_20260209_fix_homepage_block_relationships.up,
     down: migration_20260209_fix_homepage_block_relationships.down,
-    name: '20260209_fix_homepage_block_relationships'
-  },
-  {
-    up: migration_20260210_fix_locked_documents_rels.up,
-    down: migration_20260210_fix_locked_documents_rels.down,
-    name: '20260210_fix_locked_documents_rels'
-  },
-  {
-    up: migration_20260210_fix_homepage_block_ids.up,
-    down: migration_20260210_fix_homepage_block_ids.down,
-    name: '20260210_fix_homepage_block_ids'
-  },
-  {
-    up: migration_20260210_fix_version_block_id_defaults.up,
-    down: migration_20260210_fix_version_block_id_defaults.down,
-    name: '20260210_fix_version_block_id_defaults'
+    name: '20260209_fix_homepage_block_relationships',
   },
   {
     up: migration_20260210_fix_all_version_block_ids.up,
     down: migration_20260210_fix_all_version_block_ids.down,
-    name: '20260210_fix_all_version_block_ids'
+    name: '20260210_fix_all_version_block_ids',
   },
   {
-    up: migration_20260212_reconcile_content_engine_tables.up,
-    down: migration_20260212_reconcile_content_engine_tables.down,
-    name: '20260212_reconcile_content_engine_tables'
+    up: migration_20260210_fix_homepage_block_ids.up,
+    down: migration_20260210_fix_homepage_block_ids.down,
+    name: '20260210_fix_homepage_block_ids',
+  },
+  {
+    up: migration_20260210_fix_locked_documents_rels.up,
+    down: migration_20260210_fix_locked_documents_rels.down,
+    name: '20260210_fix_locked_documents_rels',
+  },
+  {
+    up: migration_20260210_fix_version_block_id_defaults.up,
+    down: migration_20260210_fix_version_block_id_defaults.down,
+    name: '20260210_fix_version_block_id_defaults',
+  },
+  {
+    up: migration_20260213_133332.up,
+    down: migration_20260213_133332.down,
+    name: '20260213_133332',
+  },
+  {
+    up: migration_20260213_133845.up,
+    down: migration_20260213_133845.down,
+    name: '20260213_133845'
   },
 ];

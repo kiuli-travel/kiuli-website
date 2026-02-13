@@ -1,126 +1,97 @@
 # Kiuli Content Engine — Status Tracker
 
-**Last Updated:** February 11, 2026
-**Current Phase:** Scraper Audit & Deploy — COMPLETED
+**Last Updated:** February 13, 2026
+**Current Phase:** Phase 2.5 (Bootstrap embeddings) — PENDING
 
 ---
 
 ## Phase Status
 
-| Phase | Status | Started | Completed | Gate Passed |
-|-------|--------|---------|-----------|-------------|
-| Pre-0 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
-| 0 | SKIPPED | — | — | — |
-| 1 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
-| 2 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes |
-| 2.5 | NOT STARTED | — | — | — |
-| 3 | NOT STARTED | — | — | — |
-| 4 | NOT STARTED | — | — | — |
-| 5 | NOT STARTED | — | — | — |
-| 6 | NOT STARTED | — | — | — |
-| 7 | NOT STARTED | — | — | — |
-| 8 | NOT STARTED | — | — | — |
-| 9 | NOT STARTED | — | — | — |
-| 10 | NOT STARTED | — | — | — |
-| 11 | NOT STARTED | — | — | — |
-| 12 | NOT STARTED | — | — | — |
-| 13 | NOT STARTED | — | — | — |
-| 14 | NOT STARTED | — | — | — |
-| 15 | NOT STARTED | — | — | — |
+| Phase | Status | Started | Completed | Gate Passed | Notes |
+|-------|--------|---------|-----------|-------------|-------|
+| Pre-0 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes | MCP server, env vars, neonctl |
+| 0 | SKIPPED | — | — | — | Env vars already configured |
+| 1 | COMPLETED | 2026-02-11 | 2026-02-13 | Yes | Code + DB schema match. 26 tables, 41 enums, version tables, array sub-tables, globals |
+| 1.5 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | Baseline snapshot + proper Payload migration. See report: phase1-db-reconciliation.md |
+| 2 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes | content_embeddings table correct, pgvector 0.8.0, all indexes |
+| 2.5 | PENDING | — | — | — | Bootstrap embeddings (7 itineraries, 33 properties, 10 destinations) |
+| 3 | PENDING | — | — | — | OpenRouter client + test endpoint |
+| 4 | PENDING | — | — | — | Embeddings engine (chunker, embedder, query) |
+| 5 | PENDING | — | — | — | Cascade (Lambda) |
+| 6 | PENDING | — | — | — | Ideation (Lambda) |
+| 7 | PENDING | — | — | — | Dashboard + Health UI |
+| 8 | PENDING | — | — | — | Research + Source Monitor Lambda |
+| 9 | PENDING | — | — | — | Conversation handler |
+| 10 | PENDING | — | — | — | Workspace UI |
+| 11 | PENDING | — | — | — | Drafting pipeline |
+| 12 | PENDING | — | — | — | Consistency checking |
+| 13 | PENDING | — | — | — | Publishing pipeline |
+| 14 | PENDING | — | — | — | Image pipeline |
+| 15 | PENDING | — | — | — | Quality gates |
 
 ---
 
-## Scraper Audit & Deploy — COMPLETED 2026-02-11
+## Phase 1 Database Gap — RESOLVED
 
-### What Was Done
+**Discovered:** February 13, 2026 | **Fixed:** February 13, 2026
 
-- Scraper pipeline upgraded: property extraction (linkProperties), bidirectional linking, FAQ fix, auth header fix
-- 2 Lambda functions deployed to AWS (orchestrator + image-processor)
-- All 6 test itineraries re-scraped with updated pipeline
-- 29 Property records created across 8 destinations (Botswana, Kenya, Mozambique, Namibia, Rwanda, South Africa, Tanzania, Uganda)
-- Cross-itinerary property dedup confirmed (The Silo linked to 2 itineraries)
-- 0 stay blocks without property_id, 18 property-specific FAQs generated
-- Database migration gap from Phase 1 fixed (added missing columns to payload_locked_documents_rels and payload_preferences_rels)
-- Properties.ts access updated to authenticatedOrApiKey for Lambda pipeline access
-- Report: `content-engine/reports/deploy-and-rescrape.md`
+Phase 1 stub tables replaced with proper Payload migration. All 26 tables created with correct schemas.
 
-### Issues Encountered
+| Table | Before | After | Status |
+|-------|--------|-------|--------|
+| content_projects | 8 cols | 48 cols | FIXED |
+| content_jobs | 9 cols | 13 cols (progress=jsonb) | FIXED |
+| source_registry | 9 cols | 13 cols | FIXED |
+| editorial_directives | 7 cols | 13 cols | FIXED |
+| content_system_settings | missing | created (9 fields) | FIXED |
+| destination_name_mappings | missing | created + array sub-table | FIXED |
+| Version tables | missing | 10 tables (_content_projects_v + 9 sub-tables) | FIXED |
+| Array sub-tables | missing | 9 tables | FIXED |
 
-1. Missing transform.js in first Lambda zip — fixed by repackaging
-2. Database migration gap from Phase 1 — fixed with manual SQL
-3. Properties collection 403 on create — fixed with authenticatedOrApiKey access
-4. Labeler chain break on Job 75 — non-critical, all data saved
+See: `content-engine/reports/phase1-db-reconciliation.md`
 
 ---
 
-## Phase 2: Vector Store — COMPLETED 2026-02-11
+## Data State (February 13, 2026)
 
-### What Was Done
-
-- pgvector 0.8.0 extension enabled on production Neon database
-- `content_embeddings` table created with 17 columns, `vector(3072)` embeddings
-- HNSW index via `halfvec(3072)` expression (m=32, ef_construction=128) — workaround for pgvector 2000-dim HNSW limit
-- 6 scalar btree indexes + 3 GIN array indexes
-- `content-system/db.ts` updated with real unpooled pg Pool implementation
-- `content-system/embeddings/types.ts` corrected to match database CHECK constraint (11 chunk types)
-- SQL migration files created with idempotent `IF NOT EXISTS` guards
-- Verified on Neon dev branch first, then applied to production
-- Dev branch deleted after successful verification
-- Payload admin and API confirmed unaffected
-- Report: `content-engine/reports/phase2-vector-store.md`
-
-### Decisions Made
-
-4. **HNSW halfvec expression index.** pgvector 0.8.0 limits HNSW to 2000 dims for `vector` type. Store full-precision `vector(3072)`, index via `(embedding::halfvec(3072)) halfvec_cosine_ops`. Queries must cast: `ORDER BY embedding::halfvec(3072) <=> $1::halfvec(3072)`. Negligible accuracy loss. (2026-02-11)
+| Collection | Count | Notes |
+|------------|-------|-------|
+| Itineraries | 7 | All draft. 34 stays, 41 activities, 49 FAQs |
+| Destinations | 10 | 9 unpublished, 1 published (Rwanda). Only Rwanda has content |
+| Properties | 33 | All draft. All have description_itrvl |
+| Media | 632+ | All non-video labeled |
+| content_embeddings | 0 | Empty — bootstrap not done |
+| content_projects | 0 | Empty — schema correct (48 cols, version tables, array sub-tables) |
+| content_jobs | 0 | Empty — schema correct (progress=jsonb) |
 
 ---
 
-## Phase 1: Schema Scaffold — COMPLETED 2026-02-11
+## Execution Order
 
-### What Was Done
+```
+Phase 1.5 → Phase 2.5 → Phase 3 → Phase 4 → Phase 5 → ... → Phase 15
+```
 
-- 4 Payload CMS collections created: ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives
-- 2 Payload globals created: ContentSystemSettings, DestinationNameMappings
-- PropertyNameMappings verified existing and registered
-- All registered in payload.config.ts
-- content-system/ directory created with 10 subdirectories, 42 TypeScript files (types + module stubs)
-- lambda/content-*/ directories created with 4 Lambda handlers + shared modules
-- `npm run build` passes
-- Import map regenerated (no changes needed)
-- Report: `content-engine/reports/phase1-schema-scaffold.md`
-
-### Issues Encountered
-
-1. **Type generation order:** First build failed because `CollectionSlug` type didn't include new slugs. Fixed by running `npx payload generate:types` before build. Future builds will include the correct types.
+Phase 1.5 is complete. Phase 2.5 (bootstrap embeddings) is next.
 
 ---
 
-## Pre-Phase 0: Tooling & Scaffolding — COMPLETED 2026-02-11
+## Prompts Available
 
-### Tasks
+| Prompt | Status |
+|--------|--------|
+| `phase1-fix-db-schema.md` | COMPLETED |
+| `phase2.5-bootstrap-embeddings.md` | Ready (+ addendum for properties) |
+| `phase2.5-addendum-properties.md` | Addendum to add property content |
+| `phase3-openrouter-client.md` | Ready for CLI |
+| `phase4-embeddings-engine.md` | Ready for CLI |
+| Phases 5-15 | Not yet written — will be written as earlier phases complete |
 
-- [x] Enhanced MCP server written (tools/mcp-server/server.mjs)
-- [x] MCP server npm dependencies installed
-- [x] Old MCP server replaced with enhanced version
-- [x] MCP server running with new tools verified
-- [x] Orchestration directory created (content-engine/)
-- [x] Git status verified clean
-- [x] npm run build verified passing
-- [x] Vercel env vars checked (pulled via `vercel env pull`)
-- [x] DATABASE_URL_UNPOOLED availability confirmed
-- [x] neonctl access confirmed (v2.20.2, org-long-rice-46985810)
+---
 
-### Decisions Made
+## Environment Variables — All Present
 
-1. **EditorialDirectives is a Collection, not a Global.** Requires individual records with relationships, querying, and lifecycle management. (Agreed 2026-02-11)
-2. **Single lambda/ directory.** Content system Lambdas go in lambda/content-cascade/, lambda/content-decompose/, etc. alongside existing scraper Lambdas. No separate lambdas/ directory. (Agreed 2026-02-11)
-3. **Lambda handlers in JS, shared modules in TS.** Matches existing scraper pattern, simplifies deployment. content-system/ modules are TypeScript. (Agreed 2026-02-11)
-
-### Spec Corrections Required Before Phase 1
-
-1. V6 spec Section 11.5: EditorialDirectives — change from Global to Collection
-2. V6 spec Section 14: Repository structure — lambda/ not lambdas/
-3. Dev Plan V4 Phase 1: Task 4 — EditorialDirectives is a Collection, not a Global
+CONTENT_SYSTEM_SECRET, OPENAI_API_KEY, PERPLEXITY_API_KEY, OPENROUTER_API_KEY, CONTENT_LAMBDA_API_KEY, DATABASE_URL_UNPOOLED, POSTGRES_URL — all confirmed on Vercel.
 
 ---
 
@@ -129,9 +100,10 @@
 If this conversation runs out of context, the next Claude.ai session should:
 
 1. Read this file first: `content-engine/status.md`
-2. Read the latest report in: `content-engine/reports/`
-3. Read the current CLI prompt in: `content-engine/prompts/`
-4. Reference specs: KIULI_CONTENT_SYSTEM_V6.md and KIULI_CONTENT_SYSTEM_DEVELOPMENT_PLAN_V4.md (in Claude.ai project files)
-5. Reference current state: KIULI_PROJECT_STATE_FEB10.md (in Claude.ai project files)
+2. Read the assessment: `content-engine/EXECUTION_ASSESSMENT_FEB13.md`
+3. Read the latest report in: `content-engine/reports/`
+4. Read the current CLI prompt in: `content-engine/prompts/`
+5. Reference specs: KIULI_CONTENT_SYSTEM_V6.md and KIULI_CONTENT_SYSTEM_DEVELOPMENT_PLAN_V4.md (in Claude.ai project files)
+6. Reference current state: KIULI_PROJECT_STATE_FEB13.md (in Claude.ai project files)
 
 The strategist (Claude.ai) writes prompts into content-engine/prompts/ and reads reports from content-engine/reports/. The tactician (Claude CLI) executes prompts and writes reports.

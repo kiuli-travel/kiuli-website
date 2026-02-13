@@ -93,7 +93,78 @@ export async function embedAndInsertBatches(
   }
 }
 
-// Keep original export for type compatibility
+// --- ContentProject embedding (Phase 4) ---
+
 export async function embedChunks(options: EmbedOptions): Promise<EmbeddingRecord[]> {
-  return []
+  const { chunks } = options
+  if (chunks.length === 0) return []
+
+  const batchSize = options.batchSize ?? BATCH_SIZE
+  const records: EmbeddingRecord[] = []
+
+  const totalBatches = Math.ceil(chunks.length / batchSize)
+  for (let i = 0; i < chunks.length; i += batchSize) {
+    const batch = chunks.slice(i, i + batchSize)
+    const batchNum = Math.floor(i / batchSize) + 1
+    console.log(`Embedding batch ${batchNum}/${totalBatches} (${batch.length} chunks)`)
+
+    const texts = batch.map(c => c.text)
+    const embeddings = await embedTextsWithRetry(texts)
+
+    for (let j = 0; j < batch.length; j++) {
+      const chunk = batch[j]
+      const embedding = embeddings[j]
+
+      const result = await query(
+        `INSERT INTO content_embeddings (
+          chunk_type, chunk_text, embedding,
+          content_project_id, content_type,
+          destinations, properties, species, freshness_category,
+          created_at, updated_at
+        ) VALUES (
+          $1, $2, $3::vector(3072),
+          $4, $5,
+          $6, $7, $8, $9,
+          NOW(), NOW()
+        ) RETURNING id, created_at, updated_at`,
+        [
+          chunk.chunkType,
+          chunk.text,
+          `[${embedding.join(',')}]`,
+          chunk.sourceId ? parseInt(chunk.sourceId, 10) : null,
+          chunk.metadata.contentType ?? null,
+          chunk.metadata.destinations ?? null,
+          chunk.metadata.properties ?? null,
+          chunk.metadata.species ?? null,
+          chunk.metadata.freshnessCategory ?? null,
+        ]
+      )
+
+      const row = result.rows[0]
+      records.push({
+        id: row.id,
+        chunkType: chunk.chunkType,
+        chunkText: chunk.text,
+        embedding,
+        contentProjectId: chunk.sourceId ? parseInt(chunk.sourceId, 10) : undefined,
+        contentType: chunk.metadata.contentType,
+        destinations: chunk.metadata.destinations,
+        properties: chunk.metadata.properties,
+        species: chunk.metadata.species,
+        freshnessCategory: chunk.metadata.freshnessCategory,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })
+    }
+  }
+
+  return records
+}
+
+export async function deleteProjectEmbeddings(contentProjectId: number): Promise<number> {
+  const result = await query(
+    'DELETE FROM content_embeddings WHERE content_project_id = $1',
+    [contentProjectId]
+  )
+  return result.rowCount ?? 0
 }

@@ -1,7 +1,7 @@
 # Kiuli Content Engine — Status Tracker
 
 **Last Updated:** February 13, 2026
-**Current Phase:** Phase 4 (Embeddings engine) — PENDING
+**Current Phase:** Phase 5 (Cascade Lambda) — PENDING
 
 ---
 
@@ -16,7 +16,7 @@
 | 2 | COMPLETED | 2026-02-11 | 2026-02-11 | Yes | content_embeddings table correct, pgvector 0.8.0, all indexes |
 | 2.5 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | 143 embeddings: 65 segments, 44 FAQs, 33 properties, 1 destination. See report: phase2.5-bootstrap-embeddings.md |
 | 3 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | OpenRouter client + test endpoint. Model ID corrected to `anthropic/claude-sonnet-4`. See report: phase3-openrouter-client.md |
-| 4 | PENDING | — | — | — | Embeddings engine (chunker, embedder, query) |
+| 4 | COMPLETED | 2026-02-13 | 2026-02-13 | Yes | chunkContent() for all content types, embedChunks() with content_project_id, /api/content/embed endpoint. See report: phase4-embeddings-engine.md |
 | 5 | PENDING | — | — | — | Cascade (Lambda) |
 | 6 | PENDING | — | — | — | Ideation (Lambda) |
 | 7 | PENDING | — | — | — | Dashboard + Health UI |
@@ -72,7 +72,7 @@ See: `content-engine/reports/phase1-db-reconciliation.md`
 Phase 1.5 → Phase 2.5 → Phase 3 → Phase 4 → Phase 5 → ... → Phase 15
 ```
 
-Phase 3 is complete. Phase 4 (Embeddings engine) is next.
+Phase 4 is complete. Phase 5 (Cascade Lambda) is next.
 
 ---
 
@@ -84,7 +84,7 @@ Phase 3 is complete. Phase 4 (Embeddings engine) is next.
 | `phase2.5-bootstrap-embeddings.md` | COMPLETED |
 | `fix-auth-bypass.md` | COMPLETED |
 | `phase3-openrouter-client.md` | COMPLETED |
-| `phase4-embeddings-engine.md` | Ready for CLI |
+| `phase4-embeddings-engine.md` | COMPLETED |
 | Phases 5-15 | Not yet written — will be written as earlier phases complete |
 
 ---

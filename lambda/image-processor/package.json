@@ -4,7 +4,10 @@
   "description": "V6 Image Processor Lambda - Phase 2 (chunked image migration with dedup)",
   "main": "handler.js",
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/client-lambda": "^3.0.0"
+    "@img/sharp-libvips-linux-x64": "^1.2.4",
+    "@img/sharp-linux-x64": "^0.34.5",
+    "sharp": "^0.34.5"
   }
 }

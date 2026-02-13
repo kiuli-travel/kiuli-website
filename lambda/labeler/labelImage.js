@@ -6,6 +6,7 @@
 
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { analyzeImageWithContext } = require('./shared/openrouter');
+const sharp = require('sharp');
 
 const s3Client = new S3Client({
   region: process.env.S3_REGION || 'eu-north-1',
@@ -67,8 +68,27 @@ async function labelImage(media, context = {}) {
       if (!imageResponse.ok) {
         throw new Error(`Failed to fetch image: ${imageResponse.status}`);
       }
-      const imageBuffer = await imageResponse.arrayBuffer();
-      base64 = Buffer.from(imageBuffer).toString('base64');
+      const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+      base64 = imageBuffer.toString('base64');
+    }
+
+    // Resize for AI labeling — vision models don't need high resolution
+    try {
+      const rawBuffer = Buffer.from(base64, 'base64');
+      const metadata = await sharp(rawBuffer).metadata();
+      const needsResize = metadata.width > 1200 || metadata.height > 800 || rawBuffer.length > 10 * 1024 * 1024;
+
+      if (needsResize) {
+        console.log(`[Labeler] Resizing for AI: ${metadata.width}x${metadata.height} (${rawBuffer.length} bytes)`);
+        const resized = await sharp(rawBuffer)
+          .resize(1200, 800, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 75 })
+          .toBuffer();
+        base64 = resized.toString('base64');
+        console.log(`[Labeler] Resized: ${resized.length} bytes`);
+      }
+    } catch (resizeError) {
+      console.warn(`[Labeler] Resize failed, using original: ${resizeError.message}`);
     }
 
     // Call GPT-4o with context (structured outputs guarantees valid JSON)

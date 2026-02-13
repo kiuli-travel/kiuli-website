@@ -4,6 +4,7 @@
 
 const { uploadToS3, generateS3Key, getImgixUrl } = require('./shared/s3');
 const payload = require('./shared/payload');
+const sharp = require('sharp');
 
 // iTrvl uses imgix CDN for their production media
 // Externalized for resilience if iTrvl changes their CDN
@@ -86,8 +87,28 @@ async function processImage(sourceS3Key, itineraryId, imageContext = {}) {
   const s3Key = generateS3Key(sourceS3Key, itineraryId);
   await uploadToS3(buffer, s3Key, contentType);
 
-  // 4. Create Media record via Payload multipart upload (with context)
-  const mediaId = await createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, contentType, imageContext);
+  // 4. Resize for Payload upload (web quality — imgix handles further transforms)
+  let uploadBuffer = buffer;
+  let uploadContentType = contentType;
+  try {
+    const metadata = await sharp(buffer).metadata();
+    const needsResize = metadata.width > 2400 || metadata.height > 1600 || buffer.length > 4 * 1024 * 1024;
+
+    if (needsResize) {
+      console.log(`[ProcessImage] Resizing for Payload: ${metadata.width}x${metadata.height} (${buffer.length} bytes)`);
+      uploadBuffer = await sharp(buffer)
+        .resize(2400, 1600, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      uploadContentType = 'image/jpeg';
+      console.log(`[ProcessImage] Resized: ${uploadBuffer.length} bytes`);
+    }
+  } catch (resizeError) {
+    console.warn(`[ProcessImage] Resize failed, using original: ${resizeError.message}`);
+  }
+
+  // 5. Create Media record via Payload multipart upload (with context)
+  const mediaId = await createMediaRecord(uploadBuffer, sourceS3Key, s3Key, itineraryId, uploadContentType, imageContext);
 
   console.log(`[ProcessImage] Created media: ${mediaId}`);
 

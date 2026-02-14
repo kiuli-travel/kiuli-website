@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { authenticated } from '../../access/authenticated'
-import { calculateChecklist, resolveFields, updateLastModified, validatePublish } from './hooks'
+import { calculateChecklist, resolveFields, triggerCascade, updateLastModified, validatePublish } from './hooks'
 
 export const Itineraries: CollectionConfig<'itineraries'> = {
   slug: 'itineraries',
@@ -19,6 +19,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   },
   hooks: {
     beforeChange: [calculateChecklist, updateLastModified, validatePublish],
+    afterChange: [triggerCascade],
     afterRead: [resolveFields],
   },
   versions: {

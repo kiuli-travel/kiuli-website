@@ -1,69 +1,94 @@
-export interface EntityMap {
-  destinations: DestinationEntity[]
-  properties: PropertyEntity[]
-  species: string[]
-  activities: string[]
+/**
+ * Type definitions for the Itinerary Cascade pipeline.
+ * All IDs are number (Payload auto-increment).
+ */
+
+// --- Entity extraction types ---
+
+export interface CountryEntity {
+  name: string
+  normalized: string
 }
 
-export interface DestinationEntity {
+export interface LocationEntity {
   name: string
+  normalized: string
   country: string
-  aliases: string[]
-  confidence: number
 }
 
 export interface PropertyEntity {
   name: string
-  destination: string
-  aliases: string[]
-  confidence: number
+  normalized: string
+  location: string
+  country: string
+  existingPropertyId: number | null
 }
+
+export interface EntityMap {
+  countries: CountryEntity[]
+  locations: LocationEntity[]
+  properties: PropertyEntity[]
+  activities: string[]
+}
+
+// --- Resolution types ---
+
+export interface ResolutionResult {
+  entityName: string
+  entityType: 'country' | 'destination' | 'property'
+  action: 'found' | 'created' | 'skipped'
+  payloadId: number | null
+  collection: string
+  note?: string
+}
+
+// --- Relationship types ---
+
+export interface RelationshipAction {
+  sourceCollection: string
+  sourceId: number
+  field: string
+  targetCollection: string
+  addedIds: number[]
+  action: 'updated' | 'already_current' | 'skipped'
+}
+
+// --- ContentProject types ---
+
+export interface ContentProjectAction {
+  targetCollection: string
+  targetRecordId: number
+  action: 'created' | 'already_exists'
+  contentProjectId?: number
+}
+
+// --- Step result ---
+
+export interface CascadeStepResult {
+  step: number
+  name: string
+  status: 'completed' | 'failed'
+  duration: number
+  detail: unknown
+}
+
+// --- Overall cascade result ---
 
 export interface CascadeResult {
-  itineraryId: string
-  entitiesExtracted: EntityMap
-  destinationsResolved: DestinationResolution[]
-  propertiesResolved: PropertyResolution[]
-  relationshipsVerified: RelationshipVerification[]
-  projectsCreated: string[]
-  errors: CascadeError[]
+  itineraryId: number
+  dryRun: boolean
+  steps: CascadeStepResult[]
+  entities: EntityMap | null
+  resolutions: ResolutionResult[]
+  relationships: RelationshipAction[]
+  contentProjects: ContentProjectAction[]
+  error?: string
 }
 
-export interface DestinationResolution {
-  extractedName: string
-  canonicalName: string | null
-  payloadId: string | null
-  created: boolean
-  confidence: number
-}
-
-export interface PropertyResolution {
-  extractedName: string
-  canonicalName: string | null
-  payloadId: string | null
-  destinationId: string | null
-  created: boolean
-  confidence: number
-}
-
-export interface RelationshipVerification {
-  sourceCollection: string
-  sourceId: string
-  targetCollection: string
-  targetId: string
-  relationshipField: string
-  existed: boolean
-  created: boolean
-}
-
-export interface CascadeError {
-  step: string
-  entity: string
-  message: string
-}
+// --- Options ---
 
 export interface CascadeOptions {
-  itineraryId: string
+  itineraryId: number
   dryRun?: boolean
-  skipRelationships?: boolean
+  jobId?: number
 }

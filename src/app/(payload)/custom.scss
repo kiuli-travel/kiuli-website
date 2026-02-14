@@ -1,0 +1,12 @@
+/* Tailwind utilities for custom admin views (Content Engine dashboard, etc.)
+   DO NOT add @tailwind base — preflight resets break Payload's admin styling.
+   See: https://github.com/payloadcms/payload/issues/8878 */
+@tailwind components;
+@tailwind utilities;
+
+/* Fix: Tailwind's .table utility sets display:block, which breaks Payload's
+   collection list tables. Restore the correct value.
+   See: https://github.com/payloadcms/payload/issues/11679 */
+.table {
+  display: table;
+}

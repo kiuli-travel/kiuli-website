@@ -49,8 +49,17 @@ export async function filterCandidates(
 
     // Check 2: Embedding Duplicate Check
     try {
+      // Query text must match the stored chunk structure (title + briefSummary +
+      // targetAngle + destinations + properties) to get accurate similarity scores.
+      const queryParts = [
+        candidate.title,
+        candidate.briefSummary,
+        candidate.targetAngle,
+        candidate.destinations.length > 0 ? candidate.destinations.join(', ') : '',
+        candidate.properties.length > 0 ? candidate.properties.join(', ') : '',
+      ].filter(Boolean)
       const searchResults = await semanticSearch(
-        candidate.title + ' ' + candidate.briefSummary,
+        queryParts.join(' '),
         { topK: 3, minScore: 0.7 },
       )
 

@@ -151,6 +151,7 @@ async function mergeRelationship(
     collection: collection as 'destinations',
     id: recordId,
     data: { [field]: merged } as Record<string, unknown>,
+    draft: true, // Skip required-field validation (destinations may lack heroImage)
   })
 
   return {

@@ -177,6 +177,7 @@ async function queryDestination(
     },
     limit: 1,
     depth: 0,
+    draft: true, // Include draft destinations (created without heroImage)
   })
   return (result.docs[0] as unknown as DestinationDoc) ?? null
 }

@@ -115,6 +115,7 @@ async function mergeRelationship(
     collection: collection as 'destinations',
     id: recordId,
     depth: 0,
+    draft: true, // Destinations may be draft-only (created without heroImage)
   })
 
   const currentRaw = (doc as unknown as Record<string, unknown>)[field]

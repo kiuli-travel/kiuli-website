@@ -140,12 +140,16 @@ function checkDirectives(
       }
     }
 
-    // Topic dimension (keyword check in title + briefSummary)
+    // Topic dimension: require MAJORITY of topic tags to match (ceil(n/2))
+    // This prevents overly aggressive filtering where a single keyword match
+    // (e.g. "gorilla") causes a directive about "gorilla permit costs" to filter
+    // any article mentioning gorillas.
     if (topicTags.length > 0) {
       dimensionsTested++
       const text = (candidate.title + ' ' + candidate.briefSummary).toLowerCase()
-      const hasTopicMatch = topicTags.some((tag) => text.includes(tag.toLowerCase()))
-      if (hasTopicMatch) dimensionsMatched++
+      const matchCount = topicTags.filter((tag) => text.includes(tag.toLowerCase())).length
+      const threshold = Math.ceil(topicTags.length / 2)
+      if (matchCount >= threshold) dimensionsMatched++
     }
 
     // ALL applicable dimensions must match

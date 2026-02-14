@@ -1,5 +1,7 @@
 import type { Payload } from 'payload'
 import type { FilteredCandidate } from './types'
+import type { ContentChunk } from '../embeddings/types'
+import { embedChunks } from '../embeddings/embedder'
 import { slugify } from '../cascade/utils'
 
 interface ShapeBriefsOptions {
@@ -50,7 +52,13 @@ export async function shapeBriefs(options: ShapeBriefsOptions): Promise<ShapeBri
 
     if (candidate.passed) {
       const id = await createPassedProject(payload, candidate, itineraryId, slug)
-      if (id) passedIds.push(id)
+      if (id) {
+        passedIds.push(id)
+        // Embed the brief immediately so subsequent runs detect semantic duplicates
+        await embedBrief(id, candidate).catch((err) => {
+          console.warn('[brief-shaper] Failed to embed brief for project', id, ':', err)
+        })
+      }
     } else {
       const id = await createFilteredProject(payload, candidate, itineraryId, slug)
       if (id) filteredIds.push(id)
@@ -58,6 +66,40 @@ export async function shapeBriefs(options: ShapeBriefsOptions): Promise<ShapeBri
   }
 
   return { passedIds, filteredIds }
+}
+
+async function embedBrief(projectId: number, candidate: FilteredCandidate): Promise<void> {
+  const chunkText = [
+    candidate.title,
+    candidate.briefSummary,
+    candidate.targetAngle,
+    candidate.destinations.length > 0 ? `Destinations: ${candidate.destinations.join(', ')}` : '',
+    candidate.properties.length > 0 ? `Properties: ${candidate.properties.join(', ')}` : '',
+    candidate.species.length > 0 ? `Species: ${candidate.species.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+
+  const chunk: ContentChunk = {
+    id: `brief-${projectId}`,
+    sourceCollection: 'content-projects',
+    sourceId: String(projectId),
+    sourceField: 'brief',
+    chunkType: 'article_section',
+    text: chunkText,
+    metadata: {
+      title: candidate.title,
+      contentType: candidate.contentType,
+      destinations: candidate.destinations,
+      properties: candidate.properties,
+      species: candidate.species,
+      freshnessCategory: candidate.freshnessCategory,
+      wordCount: chunkText.split(/\s+/).length,
+    },
+  }
+
+  await embedChunks({ chunks: [chunk] })
+  console.log(`[brief-shaper] Embedded brief for project ${projectId}: "${candidate.title}"`)
 }
 
 async function createPassedProject(

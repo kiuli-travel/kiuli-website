@@ -50,6 +50,7 @@ import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } f
 import { RowLabel as RowLabel_ec255a65fa6fa8d1faeb09cf35284224 } from '@/Header/RowLabel'
 import { RowLabel as RowLabel_1f6ff6ff633e3695d348f4f3c58f1466 } from '@/Footer/RowLabel'
 import { ImportItineraryLink as ImportItineraryLink_4ec22f07d32f94aa350ea732b4015f51 } from '@/components/admin/ImportItineraryLink'
+import { ContentEngineLink as ContentEngineLink_50cc4e68aad59e92d1ddd08cfbfd68f3 } from '@/components/admin/ContentEngineLink'
 import { NotificationBell as NotificationBell_a85350652356ec53eeb8176045ede954 } from '@/components/admin/NotificationBell'
 import { default as default_1a7510af427896d367a49dbf838d2de6 } from '@/components/BeforeDashboard'
 import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/components/BeforeLogin'
@@ -109,6 +110,7 @@ export const importMap = {
   "@/Header/RowLabel#RowLabel": RowLabel_ec255a65fa6fa8d1faeb09cf35284224,
   "@/Footer/RowLabel#RowLabel": RowLabel_1f6ff6ff633e3695d348f4f3c58f1466,
   "@/components/admin/ImportItineraryLink#ImportItineraryLink": ImportItineraryLink_4ec22f07d32f94aa350ea732b4015f51,
+  "@/components/admin/ContentEngineLink#ContentEngineLink": ContentEngineLink_50cc4e68aad59e92d1ddd08cfbfd68f3,
   "@/components/admin/NotificationBell#NotificationBell": NotificationBell_a85350652356ec53eeb8176045ede954,
   "@/components/BeforeDashboard#default": default_1a7510af427896d367a49dbf838d2de6,
   "@/components/BeforeLogin#default": default_8a7ab0eb7ab5c511aba12e68480bfe5e,

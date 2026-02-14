@@ -46,6 +46,7 @@ export default buildConfig({
       beforeDashboard: ['@/components/BeforeDashboard'],
       afterNavLinks: [
         '@/components/admin/ImportItineraryLink#ImportItineraryLink',
+        '@/components/admin/ContentEngineLink#ContentEngineLink',
         '@/components/admin/NotificationBell#NotificationBell',
       ],
     },

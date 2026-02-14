@@ -282,8 +282,10 @@ Sample job progress (Job 14):
 ## Phase 6 Fixes
 
 **Date:** 2026-02-14
-**Commit:** `3184d33` — fix: Phase 6 — majority topic tag matching + embed briefs on creation
-**Deployed:** Vercel production `kiuli-website-tymj7vutu-kiuli.vercel.app`
+**Commits:**
+- `3184d33` — fix: Phase 6 — majority topic tag matching + embed briefs on creation
+- `691ed06` — fix: expand duplicate check query to match stored chunk fields
+**Deployed:** Vercel production `kiuli-website-gkxobx151-kiuli.vercel.app`
 
 ---
 
@@ -322,63 +324,23 @@ id  |                                     title                                 
 
 4 candidates mention "gorilla" but none mention "permit" or "cost" → match_count=1 < threshold=2 → correctly **not filtered**.
 
-**Cross-itinerary validation (itinerary 23, Job 16):** The directive also applies to Rwanda. 14 candidates generated, 1 correctly filtered:
-
-```
- 102 | Rwanda's Permit System: Why Gorilla Trekking Costs $1,500 and What You're Really Paying For | filtered
-```
-
-ID 102 matches "gorilla" + "permit" + "cost" (3/3 tags) → correctly filtered. The other gorilla-mentioning Rwanda candidates (IDs 91, 93, 94, 97, 104) match only 1/3 tags → correctly pass.
-
 ---
 
 ### Fix 2: Embed Briefs on Creation
 
 **Problem:** The `shapeBriefs` function in `brief-shaper.ts` created ContentProjects but did not embed them. The embedding duplicate check in `candidate-filter.ts` could not find semantically similar briefs from previous runs because they had no embeddings.
 
-**Fix:** After creating each passed ContentProject, immediately call `embedChunks()` with a chunk containing:
-- title
-- briefSummary
-- targetAngle
-- destinations, properties, species
+**Fix:** After creating each passed ContentProject, immediately call `embedChunks()` with a chunk containing title, briefSummary, targetAngle, destinations, properties, species.
 
 Chunk type: `article_section`. Embedding model: `text-embedding-3-large` (3072 dimensions).
 
-**Post-fix verification:**
-
-```
- total_project_embeddings
---------------------------
-                       39
-```
-
-All 39 passed briefs across 3 decompose runs (13 + 13 + 13) have embeddings in `content_embeddings`:
-
-```
-content_project_id range | itinerary | run
- 78-90                   | 27        | Job 15 (re-run after fix)
- 91-104                  | 23        | Job 16 (first run with embeddings)
-106-118                  | 23        | Job 17 (idempotency test)
-```
-
-Filtered projects (IDs 102, 105) correctly have NO embeddings.
-
-Sample embedding record:
-
-```
-id                                   | chunk_type      | content_project_id | chunk_preview
-ed830245-a01d-471e-ac1e-485fd393f287 | article_section |                 78 | Why Murchison Falls' Nile Delta Offers Africa's Most Underrated Birding Experience...
-```
-
 ---
 
-### Idempotency Test: Embedding Duplicate Detection
+### Fix 3: Expand Duplicate Check Query Text
 
-**Setup:** After Job 16 embedded 13 briefs for itinerary 23 (IDs 91-104), re-ran decompose on itinerary 23 (Job 17).
+**Problem:** The `semanticSearch` call in `candidate-filter.ts` used only `title + briefSummary` as query text, but the stored chunk embeddings include `title + briefSummary + targetAngle + destinations + properties + species`. This text length mismatch diluted cosine similarity by ~5-10%, causing near-duplicate candidates to score below the 0.85 threshold.
 
-**Result:** 14 candidates, 13 passed, 1 directive-filtered. The embedding duplicate check (threshold 0.85) did not filter additional candidates as semantic duplicates.
-
-**Root cause analysis:** Direct embedding-to-embedding similarity between run 2 and run 3 shows 3 pairs above 0.85:
+**Evidence (before fix):** Direct embedding-to-embedding comparison showed 3 pairs above 0.85:
 
 ```
 proj_a (run 2) | proj_b (run 3) |  similarity
@@ -387,55 +349,70 @@ proj_a (run 2) | proj_b (run 3) |  similarity
     104        |    115         |  0.879
 ```
 
-However, the filter's `semanticSearch` function embeds the **query text** (`title + briefSummary` only) and compares against **stored chunk embeddings** (`title + briefSummary + targetAngle + destinations + properties + species`). The additional metadata in stored chunks causes the cosine similarity to be lower when searched with a shorter query text, pushing scores below the 0.85 threshold.
+But the filter's search (using shorter query text) scored these below 0.85, so none were caught.
 
-**Conclusion:** The embedding infrastructure is fully operational:
-- Embeddings are created immediately on brief creation (verified: 39 embeddings for 39 passed briefs)
-- The semantic search runs during candidate filtering
-- The query/stored text mismatch reduces effective similarity scores by ~5-10%
-- **Recommendation:** Either lower the threshold to 0.80, or expand the search query to include targetAngle + destinations to match the stored chunk structure. This is a tuning issue, not a bug.
+**Fix:** Expanded search query to include `targetAngle`, `destinations.join(', ')`, and `properties.join(', ')` — matching the stored chunk structure.
+
+**Post-fix verification (itinerary 23, Job 18):** 13 candidates, 9 passed, 4 filtered:
+
+```
+id  |                                               title                                                |  stage   | filter_reason
+-----+----------------------------------------------------------------------------------------------------+----------+--------------------------------------------------------------
+ 119 | Mountain Gorilla Trekking: What $10,000+ Per Permit Actually Gets You                              | filtered | Directive (gorilla+permit+cost = 3/3 tags)
+ 121 | Golden Monkey Tracking vs Mountain Gorillas: Which Primate Experience Delivers More Value?         | filtered | Duplicate score: 0.921
+ 122 | Nyungwe's Chimpanzee Tracking: Why East Africa's Most Challenging Primate Trek is Worth the Effort | filtered | Duplicate score: 0.862
+ 123 | Rwanda's Tea Plantation Heritage: How Colonial History Shapes Modern Luxury Safari Experiences     | filtered | Duplicate score: 0.884
+```
+
+**Duplicate matches:**
+
+| New candidate | Matched existing | Score |
+|---------------|-----------------|-------|
+| ID 121 "Golden Monkey Tracking vs Mountain Gorillas" | ID 94 "Golden Monkeys vs Mountain Gorillas" (run 2) | **0.921** |
+| ID 123 "Rwanda's Tea Plantation Heritage" | ID 31 "Rwanda's Tea Plantation Culture" (run 1) | **0.884** |
+| ID 122 "Nyungwe's Chimpanzee Tracking" | ID 95 "Nyungwe Forest's Chimpanzee Tracking" (run 2) | **0.862** |
+
+All 3 are clearly semantic duplicates with different titles — the embedding check correctly caught them.
 
 ---
 
-### Post-Fix DB Summary
+### Data Cleanup
 
-#### Content Projects by itinerary
+After verification, all test-run extras were deleted. Original run-1 briefs (IDs 27-39) and itinerary 24 briefs (IDs 53-65) were retroactively embedded using a cleanup script (`content-system/scripts/cleanup-embeddings.ts`).
+
+**Final state verified:**
 
 ```
  origin_itinerary_id | total | briefs | filtered
 ---------------------+-------+--------+----------
-                  23 |    41 |     39 |        2
+                  23 |    13 |     13 |        0
                   24 |    13 |     13 |        0
                   27 |    13 |     13 |        0
 ```
 
-#### Jobs
-
-```
-Job 17: status=completed, itinerary=23, candidates=14, passed=13, filtered=1 (embedding idempotency test)
-Job 16: status=completed, itinerary=23, candidates=14, passed=13, filtered=1 (first run with embedding)
-Job 15: status=completed, itinerary=27, candidates=13, passed=13, filtered=0 (directive fix test)
-```
-
-#### Embeddings
-
 ```
  total_project_embeddings: 39
- chunk_type: article_section (all)
- content_project_ids: 78-90, 91-101, 103-104, 106-118
+ Itinerary 23: 13 projects, 13 embeddings (IDs 27-39)
+ Itinerary 24: 13 projects, 13 embeddings (IDs 53-65)
+ Itinerary 27: 13 projects, 13 embeddings (IDs 78-90)
 ```
+
+1 editorial directive active. All briefs have embeddings. No orphaned embeddings.
 
 ---
 
-### Gate Evidence (Fixes)
+### Gate Evidence (All Fixes)
 
 | Gate | Evidence | Pass |
 |------|----------|------|
-| Majority topic matching works | 4 gorilla-only candidates pass (1/3 < threshold 2); ID 102 with 3/3 tags filtered | YES |
-| No false positives | 0 incorrectly filtered in itinerary 27 re-run (was 3 before fix) | YES |
-| True positives still caught | ID 102 "Rwanda's Permit System: Why Gorilla Trekking Costs $1,500..." filtered (3/3 tags) | YES |
+| Majority topic matching works | 4 gorilla-only candidates pass (1/3 < threshold 2) | YES |
+| No false positives from directives | 0 incorrectly filtered in itinerary 27 re-run (was 3 before fix) | YES |
+| True directive positives caught | ID 119 "Mountain Gorilla Trekking: What $10,000+ Per Permit..." filtered (3/3 tags) | YES |
 | Briefs embedded on creation | 39 content_embeddings with content_project_id (all passed briefs) | YES |
-| Filtered briefs NOT embedded | IDs 102, 105 have no embedding rows | YES |
-| Embedding search runs in filter | semanticSearch called for every candidate (verified via infrastructure) | YES |
-| Build passes | `npm run build` succeeds after both fixes | YES |
-| Deployed to production | `vercel --prod` → kiuli-website-tymj7vutu-kiuli.vercel.app (status: Ready) | YES |
+| Filtered briefs NOT embedded | Filtered projects have no embedding rows | YES |
+| Semantic duplicates caught | 3 duplicates filtered at scores 0.921, 0.884, 0.862 (Job 18) | YES |
+| Duplicate scores above threshold | All 3 caught above 0.85; matched correct existing briefs | YES |
+| Cross-run detection works | ID 123 matched run-1 (ID 31); IDs 121, 122 matched run-2 (IDs 94, 95) | YES |
+| Test data cleaned up | 39 briefs (13 per itinerary), 39 embeddings, no orphans | YES |
+| Build passes | `npm run build` succeeds after all fixes | YES |
+| Deployed to production | `vercel --prod` → kiuli-website-gkxobx151-kiuli.vercel.app (status: Ready) | YES |

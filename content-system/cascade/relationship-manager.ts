@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import type { RelationshipAction } from './types'
 import { extractId } from './utils'
+import { query } from '../db'
 
 interface ContentSystemSettings {
   autoPopulateRelationships?: boolean
@@ -10,7 +11,8 @@ interface ContentSystemSettings {
  * Manage bidirectional relationships between itinerary, destinations, and properties.
  * Always reads before writing; merges arrays, never replaces.
  *
- * propToDestMap: propertyId → destinationId (for featuredProperties grouping)
+ * For itineraries: uses direct SQL to avoid Payload's full rels rewrite (159+ rows).
+ * For destinations/properties: uses Payload API (simple schemas, few rels).
  */
 export async function manageRelationships(
   payload: Payload,
@@ -20,7 +22,6 @@ export async function manageRelationships(
   propToDestMap: Map<number, number>,
   dryRun: boolean,
 ): Promise<RelationshipAction[]> {
-  // Check feature flag
   const settings = (await payload.findGlobal({
     slug: 'content-system-settings',
   })) as unknown as ContentSystemSettings
@@ -38,14 +39,12 @@ export async function manageRelationships(
 
   const actions: RelationshipAction[] = []
 
-  // 1. Itinerary → destinations (additive merge)
+  // 1. Itinerary → destinations (direct SQL — avoids full rels rewrite)
   actions.push(
-    await mergeRelationship(
-      payload, 'itineraries', itineraryId, 'destinations', destIds, dryRun,
-    ),
+    await mergeItineraryRels(itineraryId, 'destinations', 'destinations_id', destIds, dryRun),
   )
 
-  // 2. Each destination → relatedItineraries (bidirectional)
+  // 2. Each destination → relatedItineraries (Payload API — simple schema)
   for (const destId of destIds) {
     actions.push(
       await mergeRelationship(
@@ -54,7 +53,7 @@ export async function manageRelationships(
     )
   }
 
-  // 3. Each property → relatedItineraries (bidirectional)
+  // 3. Each property → relatedItineraries (Payload API — simple schema)
   for (const propId of propIds) {
     actions.push(
       await mergeRelationship(
@@ -63,7 +62,7 @@ export async function manageRelationships(
     )
   }
 
-  // 4. Destination → featuredProperties (group by destination, additive merge)
+  // 4. Destination → featuredProperties (Payload API — simple schema)
   const destToProps = new Map<number, number[]>()
   for (const [propId, destId] of propToDestMap) {
     const existing = destToProps.get(destId) || []
@@ -82,7 +81,87 @@ export async function manageRelationships(
 }
 
 /**
+ * Add relationship rows directly to itineraries_rels via SQL.
+ * Avoids payload.update() which triggers a full delete+reinsert of all 159+ rels.
+ */
+async function mergeItineraryRels(
+  itineraryId: number,
+  path: string,
+  targetColumn: string,
+  newIds: number[],
+  dryRun: boolean,
+): Promise<RelationshipAction> {
+  if (newIds.length === 0) {
+    return {
+      sourceCollection: 'itineraries',
+      sourceId: itineraryId,
+      field: path,
+      targetCollection: inferTarget('itineraries', path),
+      addedIds: [],
+      action: 'already_current',
+    }
+  }
+
+  // Read existing IDs for this path
+  const existing = await query(
+    `SELECT ${targetColumn} FROM itineraries_rels WHERE parent_id = $1 AND path = $2`,
+    [itineraryId, path],
+  )
+  const existingIds = new Set(existing.rows.map((r: Record<string, unknown>) => r[targetColumn] as number))
+
+  const toAdd = newIds.filter((id) => !existingIds.has(id))
+
+  if (toAdd.length === 0) {
+    return {
+      sourceCollection: 'itineraries',
+      sourceId: itineraryId,
+      field: path,
+      targetCollection: inferTarget('itineraries', path),
+      addedIds: [],
+      action: 'already_current',
+    }
+  }
+
+  if (dryRun) {
+    return {
+      sourceCollection: 'itineraries',
+      sourceId: itineraryId,
+      field: path,
+      targetCollection: inferTarget('itineraries', path),
+      addedIds: toAdd,
+      action: 'skipped',
+    }
+  }
+
+  // Get current max order for this path
+  const orderResult = await query(
+    `SELECT COALESCE(MAX("order"), 0) as max_order FROM itineraries_rels WHERE parent_id = $1 AND path = $2`,
+    [itineraryId, path],
+  )
+  let nextOrder = (orderResult.rows[0]?.max_order as number) + 1
+
+  // Insert new rows one at a time to keep it simple and reliable
+  for (const targetId of toAdd) {
+    await query(
+      `INSERT INTO itineraries_rels ("order", parent_id, path, ${targetColumn}) VALUES ($1, $2, $3, $4)`,
+      [nextOrder, itineraryId, path, targetId],
+    )
+    nextOrder++
+  }
+
+  return {
+    sourceCollection: 'itineraries',
+    sourceId: itineraryId,
+    field: path,
+    targetCollection: inferTarget('itineraries', path),
+    addedIds: toAdd,
+    action: 'updated',
+  }
+}
+
+/**
  * Read current relationship array, merge new IDs, write if changed.
+ * Used for destinations and properties (simple schemas with few rels).
  */
 async function mergeRelationship(
   payload: Payload,
@@ -103,9 +182,8 @@ async function mergeRelationship(
     }
   }
 
-  // Read current value
   const doc = await payload.findByID({
-    collection: collection as 'itineraries',
+    collection: collection as 'destinations',
     id: recordId,
     depth: 0,
   })
@@ -114,7 +192,6 @@ async function mergeRelationship(
   const currentIds = extractIds(currentRaw)
   const currentSet = new Set(currentIds)
 
-  // Determine which IDs to add
   const toAdd = newIds.filter((id) => !currentSet.has(id))
 
   if (toAdd.length === 0) {
@@ -139,10 +216,9 @@ async function mergeRelationship(
     }
   }
 
-  // Merge and write
   const merged = [...currentIds, ...toAdd]
   await payload.update({
-    collection: collection as 'itineraries',
+    collection: collection as 'destinations',
     id: recordId,
     data: { [field]: merged } as Record<string, unknown>,
   })
@@ -157,7 +233,6 @@ async function mergeRelationship(
   }
 }
 
-/** Extract numeric IDs from a Payload hasMany relationship value. */
 function extractIds(value: unknown): number[] {
   if (!Array.isArray(value)) return []
   return value

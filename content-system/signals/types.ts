@@ -1,19 +1,21 @@
-export interface DecompositionResult {
-  itineraryId: string
-  candidates: ContentCandidate[]
-  entitiesExtracted: string[]
-  timestamp: string
+export interface DecomposeOptions {
+  itineraryId: number
+  jobId?: number
 }
 
-export interface ContentCandidate {
-  title: string
-  contentType: string
-  originPathway: 'itinerary' | 'cascade'
-  briefSummary: string
-  destinations: string[]
-  properties: string[]
-  species: string[]
-  confidence: number
+export interface DecompositionResult {
+  itineraryId: number
+  totalCandidates: number
+  passed: number
+  filtered: number
+  projectsCreated: number[]
+  filteredProjectIds: number[]
+}
+
+// Retained for source-monitor.ts stub compatibility
+export interface SourceMonitorOptions {
+  sourceIds?: string[]
+  forceCheck?: boolean
 }
 
 export interface SourceCheckResult {
@@ -31,14 +33,4 @@ export interface FeedItem {
   publishedAt: string
   summary: string
   category: string
-}
-
-export interface SourceMonitorOptions {
-  sourceIds?: string[]
-  forceCheck?: boolean
-}
-
-export interface DecomposeOptions {
-  itineraryId: string
-  includeEnhancements?: boolean
 }

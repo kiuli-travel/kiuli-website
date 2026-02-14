@@ -130,6 +130,24 @@ export async function runCascade(options: CascadeOptions): Promise<CascadeResult
     result.steps.push(step5)
     result.contentProjects = (step5.detail as ContentProjectAction[]) || []
     await updateJobProgress(payload, jobId, 5, step5)
+
+    // Fire-and-forget: trigger ideation decompose after successful cascade
+    if (!dryRun && !result.error) {
+      const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://kiuli.com'
+      const secret = process.env.CONTENT_SYSTEM_SECRET
+      if (secret) {
+        fetch(`${baseUrl}/api/content/decompose`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${secret}`,
+          },
+          body: JSON.stringify({ itineraryId }),
+        }).catch((err) =>
+          console.error('[cascade] Failed to trigger decompose:', err.message),
+        )
+      }
+    }
   } catch (err) {
     result.error = err instanceof Error ? err.message : String(err)
     // Update job to failed

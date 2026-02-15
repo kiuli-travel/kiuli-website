@@ -40,9 +40,31 @@ export default function ContentEngineDashboard() {
   const [jobs, setJobs] = useState<RecentJob[]>([])
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [loading, setLoading] = useState(true)
+  const [batchLoading, setBatchLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // ── Data fetching ──────────────────────────────────────────────────────
+
+  const applyData = useCallback((data: Record<string, unknown>) => {
+    setProjects(
+      ((data.projects as Record<string, unknown>[]) || []).map((p) => ({
+        ...p,
+        createdAt: new Date(p.createdAt as string),
+      })) as ContentProject[],
+    )
+    setJobs((data.jobs as RecentJob[]) || [])
+    const m = data.metrics as Record<string, unknown> | undefined
+    if (m) {
+      const emb = m.embeddings as Record<string, unknown>
+      setMetrics({
+        ...(m as unknown as DashboardMetrics),
+        embeddings: {
+          ...(emb as unknown as DashboardMetrics['embeddings']),
+          lastUpdated: emb.lastUpdated ? new Date(emb.lastUpdated as string) : null,
+        },
+      })
+    }
+  }, [])
 
   const fetchData = useCallback(async () => {
     try {
@@ -53,31 +75,22 @@ export default function ContentEngineDashboard() {
         const text = await res.text()
         throw new Error(`Failed to load dashboard: ${res.status} ${text}`)
       }
-      const data = await res.json()
-      setProjects(
-        (data.projects || []).map((p: Record<string, unknown>) => ({
-          ...p,
-          createdAt: new Date(p.createdAt as string),
-        })),
-      )
-      setJobs(data.jobs || [])
-      if (data.metrics) {
-        setMetrics({
-          ...data.metrics,
-          embeddings: {
-            ...data.metrics.embeddings,
-            lastUpdated: data.metrics.embeddings.lastUpdated
-              ? new Date(data.metrics.embeddings.lastUpdated)
-              : null,
-          },
-        })
-      }
+      applyData(await res.json())
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [applyData])
+
+  const refetchData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/content/dashboard', { credentials: 'include' })
+      if (res.ok) applyData(await res.json())
+    } catch {
+      // silent — data stays stale until next manual refresh
+    }
+  }, [applyData])
 
   useEffect(() => {
     fetchData()
@@ -136,6 +149,7 @@ export default function ContentEngineDashboard() {
 
   const handleAdvance = useCallback(async () => {
     const ids = Array.from(selectedIds).map(Number)
+    setBatchLoading(true)
     try {
       await fetch('/api/content/dashboard/batch', {
         method: 'POST',
@@ -144,15 +158,18 @@ export default function ContentEngineDashboard() {
         body: JSON.stringify({ action: 'advance', projectIds: ids }),
       })
       setSelectedIds(new Set())
-      fetchData()
+      await refetchData()
     } catch {
       // Error handled silently; user can retry
+    } finally {
+      setBatchLoading(false)
     }
-  }, [selectedIds, fetchData])
+  }, [selectedIds, refetchData])
 
   const handleReject = useCallback(
     async (reason: string, createDirective: boolean) => {
       const ids = Array.from(selectedIds).map(Number)
+      setBatchLoading(true)
       try {
         await fetch('/api/content/dashboard/batch', {
           method: 'POST',
@@ -161,12 +178,14 @@ export default function ContentEngineDashboard() {
           body: JSON.stringify({ action: 'reject', projectIds: ids, reason, createDirective }),
         })
         setSelectedIds(new Set())
-        fetchData()
+        await refetchData()
       } catch {
         // Error handled silently; user can retry
+      } finally {
+        setBatchLoading(false)
       }
     },
-    [selectedIds, fetchData],
+    [selectedIds, refetchData],
   )
 
   const handleRetry = useCallback(
@@ -178,12 +197,12 @@ export default function ContentEngineDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'retry', projectIds: [Number(jobId)] }),
         })
-        fetchData()
+        await refetchData()
       } catch {
         // ignore
       }
     },
-    [fetchData],
+    [refetchData],
   )
 
   const handleTabChange = useCallback((tab: TabValue) => {
@@ -357,6 +376,7 @@ export default function ContentEngineDashboard() {
             selectedCount={selectedIds.size}
             totalCount={filteredProjects.length}
             stage={activeTab}
+            loading={batchLoading}
             onSelectAll={handleSelectAll}
             onClearSelection={handleClearSelection}
             onAdvance={handleAdvance}

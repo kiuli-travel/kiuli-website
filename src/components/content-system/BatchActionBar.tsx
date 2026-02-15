@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Stage } from './types'
 
@@ -8,6 +9,7 @@ interface BatchActionBarProps {
   selectedCount: number
   totalCount: number
   stage: Stage
+  loading?: boolean
   onSelectAll: () => void
   onClearSelection: () => void
   onAdvance: () => void
@@ -18,6 +20,7 @@ export function BatchActionBar({
   selectedCount,
   totalCount,
   stage,
+  loading = false,
   onSelectAll,
   onClearSelection,
   onAdvance,
@@ -71,13 +74,16 @@ export function BatchActionBar({
         <div className="flex items-center gap-2">
           <button
             onClick={onAdvance}
-            className="rounded bg-kiuli-teal px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-kiuli-teal/90"
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded bg-kiuli-teal px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-kiuli-teal/90 disabled:opacity-50"
           >
-            {advanceLabel}
+            {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+            {loading ? 'Advancing...' : advanceLabel}
           </button>
           <button
             onClick={handleRejectClick}
-            className="rounded bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-200"
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-200 disabled:opacity-50"
           >
             Reject Selected
           </button>
@@ -103,10 +109,11 @@ export function BatchActionBar({
           </label>
           <button
             onClick={handleRejectClick}
-            disabled={!rejectReason.trim()}
-            className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-40"
+            disabled={!rejectReason.trim() || loading}
+            className="inline-flex items-center gap-1.5 rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-40"
           >
-            Confirm Reject
+            {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+            {loading ? 'Rejecting...' : 'Confirm Reject'}
           </button>
           <button
             onClick={() => {

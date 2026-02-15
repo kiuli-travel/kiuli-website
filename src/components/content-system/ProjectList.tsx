@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Check,
   AlertCircle,
@@ -54,6 +55,7 @@ export function ProjectList({
   selectedIds,
   onToggleSelect,
 }: ProjectListProps) {
+  const router = useRouter()
   const totalPages = Math.max(1, Math.ceil(projects.length / ITEMS_PER_PAGE))
   const [page, setPage] = useState(1)
 
@@ -104,7 +106,10 @@ export function ProjectList({
 
             {/* Title + metadata */}
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <button className="truncate text-left text-sm font-semibold text-kiuli-charcoal underline-offset-2 hover:underline">
+              <button
+                onClick={() => router.push(`/admin/content-engine/project/${project.id}`)}
+                className="truncate text-left text-sm font-semibold text-kiuli-charcoal underline-offset-2 hover:underline"
+              >
                 {project.title}
               </button>
               {project.filterReason && (

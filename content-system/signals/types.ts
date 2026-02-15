@@ -12,18 +12,18 @@ export interface DecompositionResult {
   filteredProjectIds: number[]
 }
 
-// Retained for source-monitor.ts stub compatibility
 export interface SourceMonitorOptions {
   sourceIds?: string[]
   forceCheck?: boolean
 }
 
 export interface SourceCheckResult {
-  sourceId: string
+  sourceId: number | string
   sourceName: string
-  newItems: FeedItem[]
-  lastCheckedAt: string
-  cursor: string
+  itemsFound: number
+  newItems: number
+  projectsCreated: number
+  error: string | null
 }
 
 export interface FeedItem {

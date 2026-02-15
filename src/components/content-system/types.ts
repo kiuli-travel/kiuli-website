@@ -32,7 +32,7 @@ export interface ContentProject {
   createdAt: Date
 }
 
-export type JobType = 'cascade' | 'decompose' | 'embed' | 'research'
+export type JobType = 'cascade' | 'decompose' | 'embed' | 'research' | 'source_monitor' | 'bootstrap' | 'batch_embed'
 export type JobStatus = 'completed' | 'running' | 'failed'
 
 export interface RecentJob {

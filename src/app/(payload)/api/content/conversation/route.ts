@@ -9,22 +9,16 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: Request) {
   const payload = await getPayload({ config: configPromise })
 
-  // Auth: Payload session or Bearer CONTENT_SYSTEM_SECRET
+  // Auth: Bearer CONTENT_SYSTEM_SECRET or Payload session cookie
   const authHeader = request.headers.get('Authorization')
-  let authenticated = false
-
-  if (
+  const bearerOk =
     authHeader?.startsWith('Bearer ') &&
     authHeader.slice(7) === process.env.CONTENT_SYSTEM_SECRET
-  ) {
-    authenticated = true
-  } else {
+  if (!bearerOk) {
     const { user } = await payload.auth({ headers: request.headers })
-    if (user) authenticated = true
-  }
-
-  if (!authenticated) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   let body: { projectId?: number; message?: string }

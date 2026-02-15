@@ -26,7 +26,7 @@
 ### Workflow
 1. Advanced from `brief` → `research` via Payload API
 2. Triggered research: `POST /api/content/research` with `{"projectId": 27}`
-3. Response: `{"success":true,"projectId":27,"sourceCount":7,"uncertaintyCount":0}`
+3. Response (initial): `{"success":true,"projectId":27,"sourceCount":7,"uncertaintyCount":0}` (see Fix 2 below)
 
 ### DB Evidence
 
@@ -54,7 +54,7 @@ Source 7 | https://www.gorilla-tracking.com/... | other
 
 **Existing site content:** Populated from embedding store — found related articles about Rwanda primate safaris.
 
-**Uncertainty map:** 0 entries (synthesis did not contain `[UNCERTAIN]`/`[FACT]`/`[INFERENCE]` tagged claims).
+**Uncertainty map:** Initially 0 entries due to regex bug (see Fix 2 below). After fix: 6 entries with proper confidence tags.
 
 ## Source Monitor Test
 
@@ -145,8 +145,48 @@ aws events put-targets \
 - Batch endpoint already handles `research → draft` transition in `ARTICLE_ADVANCE` map
 - Source monitor jobs will appear in System Health tab automatically
 
-## Issues
+## Post-Deploy Fixes
+
+### Fix 1: Lambda Job Tracking (commit 5e82b99)
+
+**Problem:** Lambda POST to `/api/content/jobs` failed — that route has GET (list) and PATCH (retry) only, no POST handler. Job ID was always null.
+
+**Fix:** Moved ContentJob creation into the source-monitor Vercel endpoint itself (matching cascade/decompose pattern). Simplified Lambda to just call endpoint.
+
+**Evidence:**
+```
+content_jobs id=19, job_type=source_monitor, status=completed
+started_at=2026-02-15 12:07:29.735+00
+completed_at=2026-02-15 12:07:38.478+00
+```
+
+### Fix 2: Uncertainty Map Extraction (commits 5e82b99, 232b9fc)
+
+**Problem:** Research on project 27 returned `uncertaintyCount: 0` despite synthesis containing tagged claims.
+
+**Root cause:** The section-matching regex used `\z` (a Perl/Ruby end-of-string anchor). In JavaScript, `\z` is treated as the literal character 'z'. This caused the non-greedy `[\s\S]*?` to stop at the first 'z' in the text, truncating the Uncertainty Notes section.
+
+**Fixes applied:**
+1. Updated synthesis prompt with 5 explicit tagged examples and "MUST include at least 5 entries"
+2. Added 4-strategy extractor (tagged suffix, bold tags, prefix tags, fallback bullets)
+3. Changed section regex from `(?=\n## |\n---|\z|$)` to `(?=\n##\s|$)`
+
+**Evidence (re-run on project 27):**
+```json
+{"success":true,"projectId":27,"sourceCount":7,"uncertaintyCount":6}
+```
+
+```
+id                       | claim                                                                                         | confidence
+-------------------------+-----------------------------------------------------------------------------------------------+-----------
+6991b7aa88f5d10004b1a5a9 | Gorilla permit fees are $1,500 per person in Rwanda                                           | fact
+6991b7aa88f5d10004b1a5aa | Only 12 habituated gorilla families are available for trekking in Volcanoes National Park     | uncertain
+6991b7aa88f5d10004b1a5ab | Chimpanzee tracking has higher success rates during wet seasons (March-May, October-November) | inference
+6991b7aa88f5d10004b1a5ac | Gorilla trekking involves 1-6 hour duration depending on family location                      | fact
+6991b7aa88f5d10004b1a5ad | Porter support is available for gorilla trekking                                              | fact
+6991b7aa88f5d10004b1a5ae | Gorilla encounters allow sustained eye contact and close-range photography                    | inference
+```
+
+## Remaining Issues
 
 1. **EventBridge IAM:** `kiuli-payload-uploader` lacks `events:PutRule` permission. Commands documented above for manual setup.
-2. **Lambda job tracking:** The Lambda's POST to `/api/content/jobs` for job creation doesn't match the existing route's expected format. Job ID is null. The core pipeline works end-to-end regardless — job tracking from Lambda is cosmetic.
-3. **Uncertainty map extraction:** The synthesis model didn't produce claims in the `[FACT]`/`[INFERENCE]`/`[UNCERTAIN]` tagged format. The extraction function works but depends on the model following the prompt format. This is a soft issue — designers can manually add uncertainty notes.

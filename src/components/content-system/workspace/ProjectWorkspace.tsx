@@ -144,7 +144,7 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
   }
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="kiuli-view flex h-screen flex-col bg-white">
       <WorkspaceHeader
         project={currentProject}
         projectId={projectId}
@@ -166,7 +166,7 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`relative shrink-0 border-0 bg-transparent px-3.5 py-2.5 text-xs font-medium transition-colors ${
+                  className={`relative shrink-0 px-3.5 py-2.5 text-xs font-medium transition-colors ${
                     isActive
                       ? 'text-kiuli-teal'
                       : 'text-kiuli-charcoal/70 hover:text-kiuli-charcoal'

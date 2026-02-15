@@ -10,3 +10,18 @@
 .table {
   display: table;
 }
+
+/* Reset Payload's default button styling inside Kiuli custom views.
+   Without @tailwind base (preflight), <button> inherits Payload's grey
+   background and border. We wrap our custom views in .kiuli-view and use
+   :where() for zero specificity so any Tailwind utility class (bg-kiuli-clay,
+   bg-kiuli-teal, bg-red-600, etc.) still overrides this reset naturally. */
+:where(.kiuli-view) button {
+  background-color: transparent;
+  border: 0;
+}
+
+/* Same reset for select elements which may inherit Payload admin styles */
+:where(.kiuli-view) select {
+  background-color: white;
+}

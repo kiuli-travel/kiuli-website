@@ -214,7 +214,7 @@ export default function ContentEngineDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="kiuli-view flex min-h-screen items-center justify-center bg-white">
         <div className="flex items-center gap-3 text-kiuli-charcoal/60">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span className="text-sm">Loading Content Engine...</span>
@@ -225,7 +225,7 @@ export default function ContentEngineDashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="kiuli-view flex min-h-screen items-center justify-center bg-white">
         <div className="max-w-md rounded border border-red-200 bg-red-50 p-6 text-center">
           <p className="mb-2 text-sm font-semibold text-red-700">Error loading dashboard</p>
           <p className="mb-4 text-xs text-red-600">{error}</p>
@@ -243,7 +243,7 @@ export default function ContentEngineDashboard() {
   const isStageTab = activeTab !== 'system_health'
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="kiuli-view flex min-h-screen flex-col bg-white">
       {/* Header */}
       <header className="flex flex-col gap-4 border-b border-kiuli-gray/60 px-6 pb-4 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

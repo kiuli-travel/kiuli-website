@@ -1,4 +1,4 @@
-import { getPayload, type Payload } from 'payload'
+import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { callModel } from '../openrouter-client'
 import { extractTextFromLexical } from '../embeddings/lexical-text'
@@ -214,12 +214,15 @@ function validateAction(action: ParsedAction): boolean {
   }
 }
 
-async function applyActions(
-  payload: Payload,
-  projectId: number,
+/**
+ * Process actions and accumulate all DB changes into a single data object.
+ * NO individual payload.update calls — everything is batched into one write.
+ */
+function processActions(
   project: Record<string, unknown>,
   actions: ParsedAction[],
-): Promise<ConversationAction[]> {
+): { data: Record<string, unknown>; appliedActions: ConversationAction[] } {
+  const data: Record<string, unknown> = {}
   const appliedActions: ConversationAction[] = []
 
   for (const action of actions) {
@@ -233,11 +236,7 @@ async function applyActions(
             continue
           }
           const before = (project[action.field!] as string) || ''
-          await payload.update({
-            collection: 'content-projects',
-            id: projectId,
-            data: { [action.field!]: action.value },
-          })
+          data[action.field!] = action.value
           appliedActions.push({
             type: 'edit_field',
             field: action.field,
@@ -252,11 +251,7 @@ async function applyActions(
             ? extractTextFromLexical(project.body).substring(0, 200)
             : ''
           const lexicalBody = markdownToLexical(action.value!)
-          await payload.update({
-            collection: 'content-projects',
-            id: projectId,
-            data: { body: lexicalBody },
-          })
+          data.body = lexicalBody
           appliedActions.push({
             type: 'edit_field',
             field: 'body',
@@ -267,21 +262,18 @@ async function applyActions(
         }
 
         case 'edit_section': {
-          const currentSections =
-            typeof project.sections === 'string'
+          // Build from previously accumulated sections data, or from project
+          const baseSections = (data.sections as Record<string, unknown>) ||
+            (typeof project.sections === 'string'
               ? JSON.parse((project.sections as string) || '{}')
-              : ((project.sections as Record<string, unknown>) || {})
-          const before = currentSections[action.sectionName!] || ''
+              : ((project.sections as Record<string, unknown>) || {}))
+          const before = baseSections[action.sectionName!] || ''
           const beforeStr =
             typeof before === 'string'
               ? before
               : extractTextFromLexical(before)
-          currentSections[action.sectionName!] = action.value
-          await payload.update({
-            collection: 'content-projects',
-            id: projectId,
-            data: { sections: currentSections },
-          })
+          baseSections[action.sectionName!] = action.value
+          data.sections = baseSections
           appliedActions.push({
             type: 'rewrite_section',
             sectionName: action.sectionName,
@@ -292,25 +284,23 @@ async function applyActions(
         }
 
         case 'edit_faq': {
-          const currentFaq = Array.isArray(project.faqSection)
-            ? [...(project.faqSection as Record<string, unknown>[])]
-            : []
+          // Build from previously accumulated FAQ data, or from project
+          const baseFaq = (data.faqSection as Record<string, unknown>[]) ||
+            (Array.isArray(project.faqSection)
+              ? [...(project.faqSection as Record<string, unknown>[])]
+              : [])
           if (action.index === -1) {
-            currentFaq.push({
+            baseFaq.push({
               question: action.question,
               answer: action.answer,
             })
-          } else if (action.index! >= 0 && action.index! < currentFaq.length) {
-            currentFaq[action.index!] = {
+          } else if (action.index! >= 0 && action.index! < baseFaq.length) {
+            baseFaq[action.index!] = {
               question: action.question,
               answer: action.answer,
             }
           }
-          await payload.update({
-            collection: 'content-projects',
-            id: projectId,
-            data: { faqSection: currentFaq },
-          })
+          data.faqSection = baseFaq
           appliedActions.push({
             type: 'edit_field',
             field: `faqSection[${action.index}]`,
@@ -323,17 +313,10 @@ async function applyActions(
           const currentStage = project.stage as string
           const contentType = project.contentType as string
           if (isValidTransition(currentStage, action.newStage!, contentType)) {
-            const newStage = action.newStage as 'idea' | 'brief' | 'research' | 'draft' | 'review' | 'published'
-            await payload.update({
-              collection: 'content-projects',
-              id: projectId,
-              data: {
-                stage: newStage,
-                ...(newStage === 'published'
-                  ? { publishedAt: new Date().toISOString() }
-                  : {}),
-              },
-            })
+            data.stage = action.newStage
+            if (action.newStage === 'published') {
+              data.publishedAt = new Date().toISOString()
+            }
             appliedActions.push({
               type: 'stage_change',
               before: currentStage,
@@ -348,11 +331,11 @@ async function applyActions(
         }
       }
     } catch (err) {
-      console.error(`[conversation] Action failed:`, action, err)
+      console.error(`[conversation] Action processing failed:`, action, err)
     }
   }
 
-  return appliedActions
+  return { data, appliedActions }
 }
 
 export async function handleMessage(
@@ -391,7 +374,7 @@ export async function handleMessage(
   // 4. Parse response
   const parsed = parseModelResponse(result.content)
 
-  // 5. Validate and apply actions
+  // 5. Validate actions
   const validActions = parsed.actions.filter((a) => {
     if (!validateAction(a)) {
       console.warn('[conversation] Invalid action discarded:', a)
@@ -402,19 +385,20 @@ export async function handleMessage(
 
   const payload = await getPayload({ config: configPromise })
 
-  // Re-fetch project for action application (fresh state)
+  // Re-fetch project for fresh state
   const project = (await payload.findByID({
     collection: 'content-projects',
     id: projectId,
     depth: 0,
   })) as unknown as Record<string, unknown>
 
-  const appliedActions =
+  // 6. Process actions into a data object (NO individual DB writes)
+  const { data: actionData, appliedActions } =
     validActions.length > 0
-      ? await applyActions(payload, projectId, project, validActions)
-      : []
+      ? processActions(project, validActions)
+      : { data: {}, appliedActions: [] }
 
-  // 6. Store messages
+  // 7. Build messages
   const designerMessage = {
     role: 'designer' as const,
     content: message,
@@ -426,6 +410,7 @@ export async function handleMessage(
     content: parsed.message,
     timestamp: new Date().toISOString(),
     actions: appliedActions.length > 0 ? appliedActions : undefined,
+    suggestedNextStep: parsed.suggestedNextStep || undefined,
   }
 
   const currentMessages = Array.isArray(project.messages)
@@ -434,10 +419,14 @@ export async function handleMessage(
   currentMessages.push(designerMessage)
   currentMessages.push(kiuliMessage)
 
+  // 8. ONE payload.update — field changes + messages combined
   await payload.update({
     collection: 'content-projects',
     id: projectId,
-    data: { messages: currentMessages },
+    data: {
+      ...actionData,
+      messages: currentMessages,
+    },
   })
 
   return {

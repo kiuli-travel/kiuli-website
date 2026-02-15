@@ -51,9 +51,10 @@ function extractUncertainties(synthesis: string): UncertaintyEntry[] {
     UNCERTAIN: 'uncertain',
   }
 
-  // Find the Uncertainty Notes section
+  // Find the Uncertainty Notes section — everything after the heading until the
+  // next ## heading, a --- divider, or end of string.
   const sectionMatch = synthesis.match(
-    /## Uncertainty Notes\s*\n([\s\S]*?)(?=\n## |\n---|\z|$)/,
+    /## Uncertainty Notes\s*\n([\s\S]*?)(?=\n##\s|$)/,
   )
   if (!sectionMatch) return entries
 

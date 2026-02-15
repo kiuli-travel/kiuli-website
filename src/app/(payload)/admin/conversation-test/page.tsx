@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@payloadcms/ui'
 import ConversationPanel from '@/components/content-system/ConversationPanel'
 
 const PROJECT_ID = 27
@@ -28,14 +29,18 @@ interface ProjectInfo {
 }
 
 export default function ConversationTestPage() {
+  const { token } = useAuth()
   const [project, setProject] = useState<ProjectInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchProject = useCallback(async () => {
     try {
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`/api/content-projects/${PROJECT_ID}?depth=0`, {
         credentials: 'include',
+        headers,
       })
       if (!res.ok) throw new Error(`Failed to fetch project: ${res.status}`)
       const data = await res.json()
@@ -46,7 +51,7 @@ export default function ConversationTestPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     fetchProject()

@@ -6,20 +6,40 @@ export interface ConversationMessage {
 }
 
 export interface ConversationAction {
-  type: 'edit' | 'regenerate' | 'approve' | 'reject' | 'stage_change'
+  type:
+    | 'edit_field'
+    | 'rewrite_section'
+    | 'stage_change'
+    | 'trigger_research'
+    | 'trigger_draft'
   field?: string
+  sectionName?: string
   before?: string
   after?: string
   details?: Record<string, unknown>
 }
 
 export interface ConversationContext {
-  projectId: string
+  projectId: number
+  title: string
   stage: string
   contentType: string
-  brief?: string
-  research?: string
-  draft?: string
+  briefSummary?: string
+  targetAngle?: string
+  competitiveNotes?: string
+  synthesisText?: string
+  sourcesSummary?: string
+  draftText?: string
+  sections?: Record<string, string>
+  faqItems?: Array<{ question: string; answer: string }>
+  metaTitle?: string
+  metaDescription?: string
+  answerCapsule?: string
+  destinations?: string[]
+  properties?: string[]
+  species?: string[]
+  relatedContent?: string
+  activeDirectives?: string
   recentMessages: ConversationMessage[]
 }
 
@@ -30,14 +50,11 @@ export interface ConversationResponse {
 }
 
 export interface HandleMessageOptions {
-  projectId: string
+  projectId: number
   message: string
-  context?: Partial<ConversationContext>
 }
 
 export interface ContextBuilderOptions {
-  projectId: string
+  projectId: number
   maxMessages?: number
-  includeResearch?: boolean
-  includeDraft?: boolean
 }

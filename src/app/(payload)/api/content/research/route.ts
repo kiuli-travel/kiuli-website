@@ -2,71 +2,12 @@ import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { compileResearch } from '../../../../../../content-system/research/research-compiler'
+import { markdownToLexical } from '../../../../../../content-system/conversation/lexical-utils'
 
 export const maxDuration = 120
 export const dynamic = 'force-dynamic'
 
 const ARTICLE_TYPES = ['itinerary_cluster', 'authority', 'designer_insight']
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function markdownToLexical(text: string): any {
-  const lines = text.split('\n')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const children: any[] = []
-  let currentParagraphTexts: string[] = []
-
-  function flushParagraph() {
-    if (currentParagraphTexts.length > 0) {
-      const joined = currentParagraphTexts.join('\n')
-      if (joined.trim()) {
-        children.push({
-          type: 'paragraph',
-          version: 1,
-          children: [{ type: 'text', version: 1, text: joined, format: 0, mode: 'normal', style: '', detail: 0 }],
-          direction: 'ltr' as const,
-          format: '' as const,
-          indent: 0,
-          textFormat: 0,
-          textStyle: '',
-        })
-      }
-      currentParagraphTexts = []
-    }
-  }
-
-  for (const line of lines) {
-    const headingMatch = line.match(/^(#{1,3})\s+(.+)$/)
-    if (headingMatch) {
-      flushParagraph()
-      const level = headingMatch[1].length
-      children.push({
-        type: 'heading',
-        version: 1,
-        tag: `h${level}`,
-        children: [{ type: 'text', version: 1, text: headingMatch[2], format: 0, mode: 'normal', style: '', detail: 0 }],
-        direction: 'ltr' as const,
-        format: '' as const,
-        indent: 0,
-      })
-    } else if (line.trim() === '') {
-      flushParagraph()
-    } else {
-      currentParagraphTexts.push(line)
-    }
-  }
-  flushParagraph()
-
-  return {
-    root: {
-      type: 'root',
-      version: 1,
-      children,
-      direction: 'ltr' as const,
-      format: '' as const,
-      indent: 0,
-    },
-  }
-}
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config: configPromise })

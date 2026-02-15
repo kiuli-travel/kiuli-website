@@ -81,14 +81,13 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
       alert(result.error)
       return
     }
-    // Refresh full project data
     const refreshed = await fetchProjectData(projectId)
     if ('project' in refreshed) {
       setCurrentProject(refreshed.project)
     }
   }, [projectId])
 
-  const handleActionApplied = useCallback(async () => {
+  const refreshProject = useCallback(async () => {
     const refreshed = await fetchProjectData(projectId)
     if ('project' in refreshed) {
       setCurrentProject(refreshed.project)
@@ -104,7 +103,13 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
       case 'Brief':
         return <BriefTab project={currentProject} projectId={projectId} />
       case 'Research':
-        return <ResearchTab project={currentProject} projectId={projectId} />
+        return (
+          <ResearchTab
+            project={currentProject}
+            projectId={projectId}
+            onDataChanged={refreshProject}
+          />
+        )
       case 'Draft':
         return (
           <DraftTab
@@ -196,7 +201,7 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
           <ConversationPanel
             projectId={projectId}
             initialMessages={currentProject.messages}
-            onActionApplied={handleActionApplied}
+            onActionApplied={refreshProject}
             inputValue={inputValue}
             onInputChange={setInputValue}
           />

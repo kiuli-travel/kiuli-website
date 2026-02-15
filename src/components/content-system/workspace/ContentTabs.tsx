@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import {
   isCompoundType,
@@ -26,6 +26,81 @@ const btnSecondary =
   'rounded bg-kiuli-teal px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-kiuli-teal/90 disabled:opacity-40'
 const contentArea = 'rounded border border-kiuli-gray/60 bg-kiuli-ivory/50 p-4'
 
+// ── Simple markdown renderer ─────────────────────────────────────────────────
+
+function renderMarkdownText(text: string) {
+  // Split into paragraphs by double newline
+  const paragraphs = text.split(/\n{2,}/)
+
+  return paragraphs.map((para, i) => {
+    const trimmed = para.trim()
+    if (!trimmed) return null
+
+    // Headings
+    if (trimmed.startsWith('### ')) {
+      return (
+        <h4 key={i} className="mt-4 mb-2 text-sm font-semibold text-kiuli-charcoal first:mt-0">
+          {trimmed.slice(4)}
+        </h4>
+      )
+    }
+    if (trimmed.startsWith('## ')) {
+      return (
+        <h3 key={i} className="mt-5 mb-2 text-sm font-bold text-kiuli-charcoal first:mt-0">
+          {trimmed.slice(3)}
+        </h3>
+      )
+    }
+    if (trimmed.startsWith('# ')) {
+      return (
+        <h2 key={i} className="mt-5 mb-2 text-base font-bold text-kiuli-charcoal first:mt-0">
+          {trimmed.slice(2)}
+        </h2>
+      )
+    }
+
+    // Bullet list (lines starting with -)
+    const lines = trimmed.split('\n')
+    const allBullets = lines.every((l) => l.trim().startsWith('- '))
+    if (allBullets && lines.length > 1) {
+      return (
+        <ul key={i} className="my-2 ml-4 list-disc space-y-1">
+          {lines.map((line, j) => (
+            <li key={j} className="text-sm leading-relaxed text-kiuli-charcoal">
+              {renderInlineMarkdown(line.trim().slice(2))}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    // Regular paragraph — render inline markdown for bold
+    return (
+      <p key={i} className="mb-2 text-sm leading-relaxed text-kiuli-charcoal last:mb-0">
+        {renderInlineMarkdown(trimmed.replace(/\n/g, ' '))}
+      </p>
+    )
+  })
+}
+
+function renderInlineMarkdown(text: string): React.ReactNode {
+  // Strip internal tags like [article_section]
+  const cleaned = text.replace(/\[article_section\]/g, '')
+
+  // Split by **bold** markers
+  const parts = cleaned.split(/(\*\*[^*]+\*\*)/)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      )
+    }
+    return part
+  })
+}
+
 // ── Brief Tab ────────────────────────────────────────────────────────────────
 
 interface BriefTabProps {
@@ -42,6 +117,14 @@ export function BriefTab({ project, projectId }: BriefTabProps) {
   const [notes, setNotes] = useState(project.competitiveNotes || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // Re-sync local state when project prop changes (e.g. after conversation action)
+  useEffect(() => {
+    setSummary(project.briefSummary || '')
+    setAngle(project.targetAngle || '')
+    setAudience((project.targetAudience || []).join(', '))
+    setNotes(project.competitiveNotes || '')
+  }, [project.briefSummary, project.targetAngle, project.targetAudience, project.competitiveNotes])
 
   const handleSave = useCallback(async () => {
     setSaving(true)
@@ -125,9 +208,10 @@ export function BriefTab({ project, projectId }: BriefTabProps) {
 interface ResearchTabProps {
   project: WorkspaceProject
   projectId: number
+  onDataChanged?: () => void
 }
 
-export function ResearchTab({ project, projectId }: ResearchTabProps) {
+export function ResearchTab({ project, projectId, onDataChanged }: ResearchTabProps) {
   const [running, setRunning] = useState(false)
 
   const handleRunResearch = useCallback(async () => {
@@ -137,9 +221,10 @@ export function ResearchTab({ project, projectId }: ResearchTabProps) {
     if ('error' in result) {
       alert(result.error)
     } else {
-      alert(`Research complete: ${result.sourceCount} sources, ${result.uncertaintyCount} uncertainties`)
+      // Refresh project data to show new research
+      if (onDataChanged) onDataChanged()
     }
-  }, [projectId])
+  }, [projectId, onDataChanged])
 
   return (
     <div className="flex flex-col gap-5 p-5">
@@ -163,9 +248,7 @@ export function ResearchTab({ project, projectId }: ResearchTabProps) {
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>Synthesis</label>
           <div className={contentArea}>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-kiuli-charcoal">
-              {project.researchSynthesis}
-            </p>
+            {renderMarkdownText(project.researchSynthesis)}
           </div>
         </div>
       )}
@@ -175,9 +258,7 @@ export function ResearchTab({ project, projectId }: ResearchTabProps) {
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>Existing Site Content</label>
           <div className={contentArea}>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-kiuli-charcoal/70">
-              {project.existingSiteContent}
-            </p>
+            {renderMarkdownText(project.existingSiteContent)}
           </div>
         </div>
       )}
@@ -214,10 +295,10 @@ export function ResearchTab({ project, projectId }: ResearchTabProps) {
                           rel="noopener noreferrer"
                           className="text-kiuli-clay hover:underline"
                         >
-                          {source.title}
+                          {source.title || source.url}
                         </a>
                       ) : (
-                        source.title
+                        source.title || '(untitled)'
                       )}
                     </td>
                     <td className="px-3 py-2">
@@ -276,9 +357,7 @@ export function ResearchTab({ project, projectId }: ResearchTabProps) {
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>Editorial Notes</label>
           <div className={contentArea}>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-kiuli-charcoal/70">
-              {project.editorialNotes}
-            </p>
+            {renderMarkdownText(project.editorialNotes)}
           </div>
         </div>
       )}
@@ -342,9 +421,11 @@ export function DraftTab({ project, projectId, onFocusSection }: DraftTabProps) 
               )}
             </div>
             <div className="p-4">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-kiuli-charcoal">
-                {content || '(empty)'}
-              </p>
+              {content ? (
+                renderMarkdownText(content)
+              ) : (
+                <p className="text-sm text-kiuli-charcoal/40">(empty)</p>
+              )}
             </div>
           </div>
         ))}
@@ -398,9 +479,7 @@ export function DraftTab({ project, projectId, onFocusSection }: DraftTabProps) 
       {/* Body */}
       {project.draftBody ? (
         <div className={contentArea}>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-kiuli-charcoal">
-            {project.draftBody}
-          </p>
+          {renderMarkdownText(project.draftBody)}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-12 text-sm text-kiuli-charcoal/40">
@@ -432,11 +511,14 @@ interface FAQTabProps {
 }
 
 export function FAQTab({ project, projectId }: FAQTabProps) {
-  const [items, setItems] = useState(
-    project.faq || [],
-  )
+  const [items, setItems] = useState(project.faq || [])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // Re-sync when project prop changes (e.g. after conversation adds FAQ)
+  useEffect(() => {
+    setItems(project.faq || [])
+  }, [project.faq])
 
   const handleChange = useCallback(
     (index: number, field: 'question' | 'answer', value: string) => {
@@ -557,6 +639,13 @@ export function DistributionTab({ project, projectId }: DistributionTabProps) {
   const [pinnedComment, setPinnedComment] = useState(dist?.facebookPinnedComment || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // Re-sync when project prop changes
+  useEffect(() => {
+    setLinkedin(project.distribution?.linkedinSummary || '')
+    setFacebook(project.distribution?.facebookSummary || '')
+    setPinnedComment(project.distribution?.facebookPinnedComment || '')
+  }, [project.distribution])
 
   const handleSave = useCallback(async () => {
     setSaving(true)

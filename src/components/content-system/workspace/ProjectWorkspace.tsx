@@ -169,7 +169,7 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
                   className={`relative shrink-0 px-3.5 py-2.5 text-xs font-medium transition-colors ${
                     isActive
                       ? 'text-kiuli-teal'
-                      : 'text-kiuli-charcoal/50 hover:text-kiuli-charcoal'
+                      : 'text-kiuli-charcoal/70 hover:text-kiuli-charcoal'
                   }`}
                 >
                   {tab}

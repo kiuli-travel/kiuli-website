@@ -1,6 +1,7 @@
 /**
  * Extract plain text from Payload's Lexical JSON rich text format.
  * Recursively walks all children arrays, collecting leaf text nodes.
+ * Preserves paragraph boundaries with double newlines for downstream rendering.
  */
 export function extractTextFromLexical(lexicalJson: unknown): string {
   if (!lexicalJson || typeof lexicalJson !== 'object') return ''
@@ -29,9 +30,17 @@ function extractNode(node: unknown): string {
       const text = extractNode(child)
       if (text) parts.push(text)
     }
-    // Join paragraphs/blocks with newline, inline content without separator
-    const isParagraph = n.type === 'paragraph' || n.type === 'heading' || n.type === 'listitem'
-    return isParagraph ? parts.join('') : parts.join('\n')
+
+    const type = n.type as string | undefined
+
+    // Inline containers (paragraph, heading, listitem): join children without separator
+    if (type === 'paragraph' || type === 'heading' || type === 'listitem') {
+      return parts.join('')
+    }
+
+    // Block containers (root, list, etc.): join children with double newline
+    // to preserve paragraph boundaries
+    return parts.join('\n\n')
   }
 
   return ''

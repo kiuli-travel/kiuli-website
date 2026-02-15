@@ -28,12 +28,28 @@ Angles where Kiuli's designer expertise could add unique value that competitors 
 Facts that may change — permit prices, visa requirements, seasonal access, conservation status.
 
 ## Uncertainty Notes
-Claims that could not be verified from multiple sources, or where sources disagree. Mark each as [FACT], [INFERENCE], or [UNCERTAIN].
+IMPORTANT: You MUST include at least 5 entries in this section. For EVERY key factual claim in the research, assess its confidence and list it as a bullet point with a tag at the end. Use EXACTLY this format:
+
+- Gorilla permit fees are $1,500 per person in Rwanda [FACT]
+- Chimpanzee trekking has a higher success rate than gorilla trekking [INFERENCE]
+- The new luxury lodge near Volcanoes NP opens in Q3 2026 [UNCERTAIN]
+- Rwanda's gorilla population has grown 26% in the last decade [FACT]
+- Private gorilla trekking experiences are available for $15,000+ [UNCERTAIN]
+
+Each line must end with exactly one of: [FACT], [INFERENCE], or [UNCERTAIN].
+- [FACT] = verified by multiple authoritative sources
+- [INFERENCE] = reasonable conclusion from available data but not directly stated
+- [UNCERTAIN] = single source, conflicting information, or cannot be independently verified
 
 Write for an expert travel designer who will use this research to produce luxury safari content. Be specific — include numbers, dates, source names. Do not be generic.`
 
 function extractUncertainties(synthesis: string): UncertaintyEntry[] {
   const entries: UncertaintyEntry[] = []
+  const confidenceMap: Record<string, UncertaintyEntry['confidence']> = {
+    FACT: 'fact',
+    INFERENCE: 'inference',
+    UNCERTAIN: 'uncertain',
+  }
 
   // Find the Uncertainty Notes section
   const sectionMatch = synthesis.match(
@@ -42,16 +58,13 @@ function extractUncertainties(synthesis: string): UncertaintyEntry[] {
   if (!sectionMatch) return entries
 
   const section = sectionMatch[1]
-  // Match lines like: - Some claim [FACT] or [INFERENCE] or [UNCERTAIN]
-  const linePattern = /[-*]\s*(.+?)\s*\[(FACT|INFERENCE|UNCERTAIN)\]\s*(.*)/gi
+
+  // Strategy 1: Bullet lines ending with [FACT], [INFERENCE], or [UNCERTAIN]
+  // Handles: "- Some claim [FACT]" and "- Some claim [FACT] extra notes"
+  const taggedLinePattern = /[-*]\s*(.+?)\s*\[(FACT|INFERENCE|UNCERTAIN)\]\s*(.*)/gi
   let match: RegExpExecArray | null
 
-  while ((match = linePattern.exec(section)) !== null) {
-    const confidenceMap: Record<string, UncertaintyEntry['confidence']> = {
-      FACT: 'fact',
-      INFERENCE: 'inference',
-      UNCERTAIN: 'uncertain',
-    }
+  while ((match = taggedLinePattern.exec(section)) !== null) {
     entries.push({
       claim: match[1].trim(),
       confidence: confidenceMap[match[2].toUpperCase()] || 'uncertain',
@@ -59,19 +72,44 @@ function extractUncertainties(synthesis: string): UncertaintyEntry[] {
     })
   }
 
-  // Also try inline tags anywhere in the text for broader capture
+  // Strategy 2: If no tagged lines found, try **bold tags** like **FACT**:
+  // Handles: "- **FACT**: Gorilla permits cost $1,500"
   if (entries.length === 0) {
-    const inlinePattern = /\[([^\]]+)\]\s*\[(FACT|INFERENCE|UNCERTAIN)\]/gi
-    while ((match = inlinePattern.exec(synthesis)) !== null) {
-      const confidenceMap: Record<string, UncertaintyEntry['confidence']> = {
-        FACT: 'fact',
-        INFERENCE: 'inference',
-        UNCERTAIN: 'uncertain',
-      }
+    const boldTagPattern = /[-*]\s*\*\*(FACT|INFERENCE|UNCERTAIN)\*\*[:\s]*(.+)/gi
+    while ((match = boldTagPattern.exec(section)) !== null) {
       entries.push({
-        claim: match[1].trim(),
-        confidence: confidenceMap[match[2].toUpperCase()] || 'uncertain',
+        claim: match[2].trim(),
+        confidence: confidenceMap[match[1].toUpperCase()] || 'uncertain',
         notes: '',
+      })
+    }
+  }
+
+  // Strategy 3: If still nothing, try tags at start of line:
+  // Handles: "- [FACT] Gorilla permits cost $1,500"
+  if (entries.length === 0) {
+    const prefixTagPattern = /[-*]\s*\[(FACT|INFERENCE|UNCERTAIN)\]\s*(.+)/gi
+    while ((match = prefixTagPattern.exec(section)) !== null) {
+      entries.push({
+        claim: match[2].trim(),
+        confidence: confidenceMap[match[1].toUpperCase()] || 'uncertain',
+        notes: '',
+      })
+    }
+  }
+
+  // Strategy 4: Fallback — if the section has bullet points but no tags at all,
+  // treat each bullet as an uncertain claim
+  if (entries.length === 0) {
+    const bulletPattern = /[-*]\s+(.{15,})/g
+    while ((match = bulletPattern.exec(section)) !== null) {
+      const text = match[1].trim()
+      // Skip lines that look like headers or meta-text
+      if (text.startsWith('#') || text.startsWith('IMPORTANT')) continue
+      entries.push({
+        claim: text,
+        confidence: 'uncertain',
+        notes: 'Auto-extracted — no confidence tag provided by model',
       })
     }
   }

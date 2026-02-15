@@ -204,6 +204,7 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
             onActionApplied={refreshProject}
             inputValue={inputValue}
             onInputChange={setInputValue}
+            activeTab={activeTab}
           />
         </div>
       </div>

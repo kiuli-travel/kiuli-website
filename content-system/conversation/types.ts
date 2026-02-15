@@ -52,6 +52,7 @@ export interface ConversationResponse {
 export interface HandleMessageOptions {
   projectId: number
   message: string
+  activeTab?: string
 }
 
 export interface ContextBuilderOptions {

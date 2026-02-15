@@ -119,7 +119,7 @@ export function WorkspaceHeader({
       {/* Back button */}
       <button
         onClick={onBack}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-kiuli-charcoal/60 transition-colors hover:bg-kiuli-ivory hover:text-kiuli-charcoal"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded border-0 bg-transparent text-kiuli-charcoal/60 transition-colors hover:bg-kiuli-ivory hover:text-kiuli-charcoal"
         aria-label="Back to dashboard"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -139,7 +139,7 @@ export function WorkspaceHeader({
         ) : (
           <button
             onClick={() => setIsEditing(true)}
-            className="min-w-0 truncate text-left text-sm font-semibold text-kiuli-charcoal hover:underline hover:underline-offset-2"
+            className="min-w-0 truncate border-0 bg-transparent text-left text-sm font-semibold text-kiuli-charcoal hover:underline hover:underline-offset-2"
             title="Click to edit title"
           >
             {project.title}
@@ -184,7 +184,7 @@ export function WorkspaceHeader({
           <button
             onClick={handleAdvanceClick}
             disabled={isProcessing || advancing}
-            className="rounded bg-kiuli-clay px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-kiuli-clay/90 disabled:opacity-40"
+            className="rounded border-0 bg-kiuli-clay px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-kiuli-clay/90 disabled:opacity-40"
           >
             {advancing ? (
               <Loader2 className="inline h-3 w-3 animate-spin" />
@@ -198,7 +198,7 @@ export function WorkspaceHeader({
         <div ref={dropdownRef} className="relative">
           <button
             onClick={() => setDropdownOpen((prev) => !prev)}
-            className="flex h-8 w-8 items-center justify-center rounded text-kiuli-charcoal/50 transition-colors hover:bg-kiuli-ivory hover:text-kiuli-charcoal"
+            className="flex h-8 w-8 items-center justify-center rounded border-0 bg-transparent text-kiuli-charcoal/50 transition-colors hover:bg-kiuli-ivory hover:text-kiuli-charcoal"
             aria-label="More actions"
           >
             <MoreVertical className="h-4 w-4" />
@@ -208,7 +208,7 @@ export function WorkspaceHeader({
             <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded border border-kiuli-gray bg-white py-1 text-sm text-kiuli-charcoal shadow-sm">
               <button
                 onClick={handleReject}
-                className="w-full px-3 py-1.5 text-left text-xs hover:bg-kiuli-ivory"
+                className="w-full border-0 bg-transparent px-3 py-1.5 text-left text-xs hover:bg-kiuli-ivory"
               >
                 Reject
               </button>

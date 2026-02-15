@@ -67,6 +67,7 @@ interface ConversationPanelProps {
   onActionApplied?: () => void
   inputValue?: string
   onInputChange?: (value: string) => void
+  activeTab?: string
 }
 
 export function ConversationPanel({
@@ -75,6 +76,7 @@ export function ConversationPanel({
   onActionApplied,
   inputValue: externalInput,
   onInputChange: externalOnInputChange,
+  activeTab,
 }: ConversationPanelProps) {
   const [messages, setMessages] = useState<ConversationMessage[]>(initialMessages)
   const [internalInput, setInternalInput] = useState('')
@@ -114,7 +116,7 @@ export function ConversationPanel({
     setIsLoading(true)
 
     try {
-      const result = await sendConversationMessage(projectId, text)
+      const result = await sendConversationMessage(projectId, text, activeTab)
 
       if ('error' in result && result.error) {
         setError(result.error)
@@ -138,7 +140,7 @@ export function ConversationPanel({
       setIsLoading(false)
       textareaRef.current?.focus()
     }
-  }, [inputValue, isLoading, projectId, setInputValue, onActionApplied])
+  }, [inputValue, isLoading, projectId, setInputValue, onActionApplied, activeTab])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -281,7 +283,7 @@ export function ConversationPanel({
           <button
             onClick={handleSend}
             disabled={!inputValue.trim() || isLoading}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-kiuli-clay text-white transition-colors hover:bg-kiuli-clay/90 disabled:opacity-40"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded border-0 bg-kiuli-clay text-white transition-colors hover:bg-kiuli-clay/90 disabled:opacity-40"
             aria-label="Send message"
           >
             <Send className="h-4 w-4" />

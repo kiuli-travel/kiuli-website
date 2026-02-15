@@ -212,7 +212,7 @@ function transformProject(raw: Record<string, unknown>): WorkspaceProject {
 
 // ── Action 1: Send Conversation Message ──────────────────────────────────────
 
-export async function sendConversationMessage(projectId: number, message: string) {
+export async function sendConversationMessage(projectId: number, message: string, activeTab?: string) {
   const { payload, user } = await authenticate()
 
   if (!user) {
@@ -236,7 +236,7 @@ export async function sendConversationMessage(projectId: number, message: string
   }
 
   try {
-    const response = await handleMessage({ projectId, message })
+    const response = await handleMessage({ projectId, message, activeTab })
 
     try {
       await payload.update({

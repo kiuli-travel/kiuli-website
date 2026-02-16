@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { useAuth } from '@payloadcms/ui'
 
 interface ConversationAction {
   type: string
@@ -21,6 +20,7 @@ interface ConversationMessage {
 
 interface ConversationPanelProps {
   projectId: number
+  authToken?: string | null
   initialMessages?: ConversationMessage[]
   onActionApplied?: () => void
 }
@@ -56,10 +56,10 @@ function actionLabel(action: ConversationAction): string {
 
 export default function ConversationPanel({
   projectId,
+  authToken,
   initialMessages = [],
   onActionApplied,
 }: ConversationPanelProps) {
-  const { token } = useAuth()
   const [messages, setMessages] = useState<ConversationMessage[]>(initialMessages)
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -99,8 +99,8 @@ export default function ConversationPanel({
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+      if (authToken) {
+        headers['Authorization'] = `JWT ${authToken}`
       }
       const res = await fetch('/api/content/conversation', {
         method: 'POST',

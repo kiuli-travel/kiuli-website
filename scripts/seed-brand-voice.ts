@@ -13,7 +13,7 @@ async function seedBrandVoice() {
   const payload = await getPayload({ config })
 
   console.log('[seed] Loading existing voice-configuration records for migration...')
-  let legacyConfigs: Record<string, Record<string, unknown>> = {}
+  const legacyConfigs: Record<string, Record<string, unknown>> = {}
   try {
     const result = await payload.find({
       collection: 'voice-configuration',
@@ -24,7 +24,7 @@ async function seedBrandVoice() {
       legacyConfigs[String(d.name)] = d
     }
     console.log(`[seed] Found ${Object.keys(legacyConfigs).length} legacy voice-configuration records`)
-  } catch (err) {
+  } catch {
     console.log('[seed] No legacy voice-configuration records found (or collection missing), proceeding with defaults')
   }
 
@@ -537,7 +537,8 @@ async function seedBrandVoice() {
 
   console.log('[seed] Writing BrandVoice global...')
 
-  await payload.updateGlobal({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (payload.updateGlobal as any)({
     slug: 'brand-voice',
     data: {
       voiceSummary: voiceSummary,

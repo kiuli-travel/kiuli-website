@@ -7,6 +7,7 @@ import { handleMessage } from '../../../../../../../content-system/conversation/
 import { extractTextFromLexical } from '../../../../../../../content-system/embeddings/lexical-text'
 import { compileResearch } from '../../../../../../../content-system/research/research-compiler'
 import { markdownToLexical } from '../../../../../../../content-system/conversation/lexical-utils'
+import { dispatchDraft } from '../../../../../../../content-system/drafting'
 import {
   isArticleType,
   isCompoundType,
@@ -541,26 +542,32 @@ export async function triggerResearch(
   }
 }
 
-// ── Action 7: Trigger Draft (stub) ──────────────────────────────────────────
+// ── Action 7: Trigger Draft ──────────────────────────────────────────────────
 
 export async function triggerDraft(
   projectId: number,
-): Promise<{ error: string }> {
-  // Verify auth so the status update is protected
+): Promise<{ success: true } | { error: string }> {
   const { payload, user } = await authenticate()
 
   if (!user) {
     return { error: 'Not authenticated' }
   }
 
-  // Verify project exists
   try {
     await payload.findByID({ collection: 'content-projects', id: projectId, depth: 0 })
   } catch {
     return { error: 'Project not found' }
   }
 
-  return { error: 'Draft generation not yet implemented (Phase 11)' }
+  try {
+    // dispatchDraft handles processingStatus internally
+    await dispatchDraft(projectId)
+    return { success: true }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    // processingStatus is already set to 'failed' by the drafter
+    return { error: errorMessage }
+  }
 }
 
 // ── Action 8: Save FAQ Items ─────────────────────────────────────────────────

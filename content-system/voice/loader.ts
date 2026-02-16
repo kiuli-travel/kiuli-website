@@ -77,6 +77,10 @@ let cachedGlobal: Record<string, unknown> | null = null
 let cacheTimestamp = 0
 const CACHE_TTL_MS = 10_000 // 10 seconds — prevents repeated reads within a single request chain
 
+// brand-voice slug is not yet in generated Payload types — use slug cast
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const BRAND_VOICE_SLUG = 'brand-voice' as any
+
 async function loadGlobal(): Promise<Record<string, unknown>> {
   const now = Date.now()
   if (cachedGlobal && now - cacheTimestamp < CACHE_TTL_MS) {
@@ -84,7 +88,7 @@ async function loadGlobal(): Promise<Record<string, unknown>> {
   }
 
   const payload = await getPayload({ config: configPromise })
-  const data = await payload.findGlobal({ slug: 'brand-voice' })
+  const data = await payload.findGlobal({ slug: BRAND_VOICE_SLUG })
   cachedGlobal = data as unknown as Record<string, unknown>
   cacheTimestamp = now
   return cachedGlobal

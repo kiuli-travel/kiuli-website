@@ -306,7 +306,8 @@ async function processVoiceActions(
   if (voiceActions.length === 0) return []
 
   const payload = await getPayload({ config: configPromise })
-  const brandVoice = await payload.findGlobal({ slug: 'brand-voice' }) as Record<string, unknown>
+  // Cast through unknown — brand-voice slug not yet in generated Payload types
+  const brandVoice = (await payload.findGlobal({ slug: 'brand-voice' as 'header' })) as unknown as Record<string, unknown>
 
   const appliedActions: ConversationAction[] = []
 
@@ -398,7 +399,8 @@ async function processVoiceActions(
         })
         updateData.evolutionLog = existingLog
 
-        await payload.updateGlobal({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (payload.updateGlobal as any)({
           slug: 'brand-voice',
           data: updateData,
         })

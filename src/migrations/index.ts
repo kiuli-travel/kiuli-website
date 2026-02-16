@@ -47,6 +47,7 @@ import * as migration_20260210_fix_locked_documents_rels from './20260210_fix_lo
 import * as migration_20260210_fix_version_block_id_defaults from './20260210_fix_version_block_id_defaults';
 import * as migration_20260213_133332 from './20260213_133332';
 import * as migration_20260213_133845 from './20260213_133845';
+import * as migration_20260216_add_brand_voice_global from './20260216_add_brand_voice_global';
 
 export const migrations = [
   {
@@ -292,6 +293,11 @@ export const migrations = [
   {
     up: migration_20260213_133845.up,
     down: migration_20260213_133845.down,
-    name: '20260213_133845'
+    name: '20260213_133845',
+  },
+  {
+    up: migration_20260216_add_brand_voice_global.up,
+    down: migration_20260216_add_brand_voice_global.down,
+    name: '20260216_add_brand_voice_global',
   },
 ];

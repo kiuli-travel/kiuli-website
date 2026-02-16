@@ -12,6 +12,7 @@ export interface ConversationAction {
     | 'stage_change'
     | 'trigger_research'
     | 'trigger_draft'
+    | 'update_voice'
   field?: string
   sectionName?: string
   before?: string

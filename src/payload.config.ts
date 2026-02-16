@@ -32,6 +32,7 @@ import { Header } from './Header/config'
 import { PropertyNameMappings } from './globals/PropertyNameMappings'
 import { ContentSystemSettings } from './globals/ContentSystemSettings'
 import { DestinationNameMappings } from './globals/DestinationNameMappings'
+import { BrandVoice } from './globals/BrandVoice'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
 import { getServerSideURL } from './utilities/getURL'
@@ -87,7 +88,7 @@ export default buildConfig({
   }),
   collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, DestinationNameMappings],
+  globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, DestinationNameMappings, BrandVoice],
   plugins: [
     makeS3StoragePlugin(),
     ...plugins,

@@ -1,198 +1,183 @@
-import { getPayload } from 'payload';
-import config from '@payload-config';
+import { loadVoiceForSection } from '../../content-system/voice/loader'
+import { buildVoicePrompt } from '../../content-system/voice/prompt-builder'
 
 // Types
-interface VoiceConfig {
-  name: string;
-  systemPrompt: string;
-  userPromptTemplate: string;
-  maxWords: number | null;
-  temperature: number;
-  examples?: Array<{ before: string; after: string }>;
-  antiPatterns?: Array<{ pattern: string; reason: string }>;
-}
-
 interface EnhanceResult {
-  enhanced: string;
-  tokensUsed: number;
-  configUsed: string;
+  enhanced: string
+  tokensUsed: number
+  configUsed: string
 }
 
 interface OpenRouterResponse {
   choices: Array<{
     message: {
-      content: string;
-    };
-  }>;
+      content: string
+    }
+  }>
   usage?: {
-    total_tokens: number;
-  };
+    total_tokens: number
+  }
+}
+
+// Legacy voice-configuration name → BrandVoice sectionKey mapping
+const VOICE_CONFIG_TO_SECTION_KEY: Record<string, string> = {
+  'overview-summary': 'overview',
+  'segment-description': 'segment_description',
+  'day-title': 'day_title',
+  'faq-answer': 'faq_answer',
+  'investment-includes': 'investment_includes',
+  'why-kiuli': 'why_kiuli',
 }
 
 /**
- * Fetch voice configuration from Payload CMS
+ * Resolve a config name — accepts either legacy voice-configuration names
+ * or new BrandVoice sectionKeys. Returns a sectionKey.
  */
-async function getVoiceConfig(configName: string): Promise<VoiceConfig> {
-  const payload = await getPayload({ config });
-
-  const result = await payload.find({
-    collection: 'voice-configuration',
-    where: { name: { equals: configName } },
-    limit: 1,
-  });
-
-  if (!result.docs[0]) {
-    throw new Error(`Voice configuration '${configName}' not found`);
-  }
-
-  return result.docs[0] as unknown as VoiceConfig;
+function resolveSectionKey(configNameOrKey: string): string {
+  return VOICE_CONFIG_TO_SECTION_KEY[configNameOrKey] || configNameOrKey
 }
 
 /**
- * Build the system prompt from voice config
- */
-function buildSystemPrompt(voiceConfig: VoiceConfig): string {
-  let systemPrompt = voiceConfig.systemPrompt;
-
-  // Add anti-patterns if defined
-  if (voiceConfig.antiPatterns?.length) {
-    systemPrompt += '\n\nAVOID THESE PATTERNS:\n';
-    voiceConfig.antiPatterns.forEach(ap => {
-      systemPrompt += `- "${ap.pattern}" — ${ap.reason}\n`;
-    });
-  }
-
-  // Add examples if defined
-  if (voiceConfig.examples?.length) {
-    systemPrompt += '\n\nEXAMPLES:\n';
-    voiceConfig.examples.forEach((ex, i) => {
-      systemPrompt += `\nExample ${i + 1}:\n`;
-      systemPrompt += `BEFORE: ${ex.before}\n`;
-      systemPrompt += `AFTER: ${ex.after}\n`;
-    });
-  }
-
-  return systemPrompt;
-}
-
-/**
- * Build the user prompt from template and context
+ * Build user prompt from section template and context.
+ * Falls back to a generic template if no promptTemplate is defined.
  */
 function buildUserPrompt(
-  template: string,
+  template: string | undefined,
   content: string,
   context: Record<string, string>,
-  maxWords: number | null
+  wordCountRange?: string,
 ): string {
-  let userPrompt = template;
-
-  // Replace context placeholders
-  for (const [key, value] of Object.entries(context)) {
-    userPrompt = userPrompt.replace(new RegExp(`{{${key}}}`, 'g'), value || '');
+  if (template) {
+    let prompt = template
+    // Replace context placeholders
+    for (const [key, value] of Object.entries(context)) {
+      prompt = prompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '')
+    }
+    prompt = prompt.replace(/\{\{content\}\}/g, content)
+    if (wordCountRange) {
+      prompt = prompt.replace(/\{\{maxWords\}\}/g, wordCountRange)
+    }
+    return prompt
   }
 
-  // Replace content placeholder
-  userPrompt = userPrompt.replace(/{{content}}/g, content);
-
-  // Replace maxWords placeholder
-  if (maxWords) {
-    userPrompt = userPrompt.replace(/{{maxWords}}/g, String(maxWords));
+  // Generic fallback
+  let fallback = `Enhance the following content for Kiuli's luxury safari website.\n\n`
+  if (Object.keys(context).length > 0) {
+    fallback += `CONTEXT:\n`
+    for (const [key, value] of Object.entries(context)) {
+      if (value) fallback += `- ${key}: ${value}\n`
+    }
+    fallback += '\n'
   }
-
-  return userPrompt;
+  fallback += `ORIGINAL TEXT:\n${content}\n\n`
+  if (wordCountRange) {
+    fallback += `TARGET LENGTH: ${wordCountRange} words\n\n`
+  }
+  fallback += `Return ONLY the enhanced text, no explanations.`
+  return fallback
 }
 
 /**
- * Main enhancement function using OpenRouter
+ * Main enhancement function using BrandVoice + OpenRouter
  */
 export async function enhanceContent(
   content: string,
-  configName: string,
-  context: Record<string, string> = {}
+  configNameOrKey: string,
+  context: Record<string, string> = {},
 ): Promise<EnhanceResult> {
   // Validate API key
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY environment variable not set');
+    throw new Error('OPENROUTER_API_KEY environment variable not set')
   }
 
-  // 1. Fetch voice configuration
-  const voiceConfig = await getVoiceConfig(configName);
+  const sectionKey = resolveSectionKey(configNameOrKey)
 
-  // 2. Build prompts
-  const systemPrompt = buildSystemPrompt(voiceConfig);
+  // Load voice context from BrandVoice global
+  const voice = await loadVoiceForSection('itinerary_enhancement', sectionKey)
+
+  // Build system prompt from voice context
+  const systemPrompt = buildVoicePrompt(voice)
+
+  // Find the matching section guidance for the prompt template
+  const section = voice.sections?.find((s) => s.sectionKey === sectionKey)
+
+  // Build user prompt
   const userPrompt = buildUserPrompt(
-    voiceConfig.userPromptTemplate,
+    section?.promptTemplate,
     content,
     context,
-    voiceConfig.maxWords
-  );
+    section?.wordCountRange,
+  )
 
-  // 3. Call OpenRouter API with Claude
+  // Determine temperature from content type guidance or default
+  const temperature = voice.contentType?.temperature ?? 0.7
+
+  // Call OpenRouter API
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://kiuli.com',
       'X-Title': 'Kiuli Enhancement Service',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet
+      model: 'anthropic/claude-sonnet-4',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      max_tokens: voiceConfig.maxWords ? voiceConfig.maxWords * 4 : 1000,
-      temperature: voiceConfig.temperature,
+      max_tokens: 2000,
+      temperature,
     }),
-  });
+  })
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    const errorText = await response.text()
+    throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`)
   }
 
-  const data = (await response.json()) as OpenRouterResponse;
+  const data = (await response.json()) as OpenRouterResponse
 
-  const enhanced = data.choices[0]?.message?.content?.trim();
+  const enhanced = data.choices[0]?.message?.content?.trim()
   if (!enhanced) {
-    throw new Error('No content in OpenRouter response');
+    throw new Error('No content in OpenRouter response')
   }
 
-  const tokensUsed = data.usage?.total_tokens || 0;
+  const tokensUsed = data.usage?.total_tokens || 0
 
   return {
     enhanced,
     tokensUsed,
-    configUsed: configName,
-  };
+    configUsed: sectionKey,
+  }
 }
 
 /**
  * Extract plain text from Payload RichText format
  */
 export function extractTextFromRichText(richText: unknown): string {
-  if (!richText || typeof richText !== 'object') return '';
+  if (!richText || typeof richText !== 'object') return ''
 
-  const root = (richText as { root?: unknown }).root;
-  if (!root || typeof root !== 'object') return '';
+  const root = (richText as { root?: unknown }).root
+  if (!root || typeof root !== 'object') return ''
 
   function extractText(node: unknown): string {
-    if (!node || typeof node !== 'object') return '';
+    if (!node || typeof node !== 'object') return ''
 
-    const n = node as { type?: string; text?: string; children?: unknown[] };
+    const n = node as { type?: string; text?: string; children?: unknown[] }
 
     if (n.type === 'text' && typeof n.text === 'string') {
-      return n.text;
+      return n.text
     }
 
     if (Array.isArray(n.children)) {
-      return n.children.map(extractText).join(' ');
+      return n.children.map(extractText).join(' ')
     }
 
-    return '';
+    return ''
   }
 
-  return extractText(root).trim();
+  return extractText(root).trim()
 }

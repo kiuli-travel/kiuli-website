@@ -4,6 +4,8 @@ import { callModel } from '../openrouter-client'
 import { extractTextFromLexical } from '../embeddings/lexical-text'
 import { buildContext } from './context-builder'
 import { markdownToLexical } from './lexical-utils'
+import { loadVoiceForContentType, invalidateVoiceCache } from '../voice/loader'
+import { buildVoicePrompt } from '../voice/prompt-builder'
 import type {
   HandleMessageOptions,
   ConversationResponse,
@@ -47,6 +49,17 @@ interface ParsedAction {
   question?: string
   answer?: string
   newStage?: string
+  // update_voice fields
+  operation?: string
+  phrase?: string
+  reason?: string
+  alternative?: string
+  excerpt?: string
+  context?: string
+  pattern?: string
+  explanation?: string
+  principle?: string
+  example?: string
 }
 
 const ALLOWED_FIELDS = [
@@ -75,12 +88,19 @@ const TAB_CONTEXT: Record<string, string> = {
   Images: 'The Images tab is a placeholder. No actions available for images yet.',
 }
 
-function buildSystemPrompt(ctx: ConversationContext, activeTab?: string): string {
+async function buildSystemPrompt(ctx: ConversationContext, activeTab?: string): Promise<string> {
   const parts: string[] = []
 
   parts.push(
     `You are Kiuli, a content assistant for a luxury African safari travel company. You are collaborating with a travel designer on a content project.`,
   )
+
+  // Load and inject brand voice context
+  const voice = await loadVoiceForContentType(ctx.contentType)
+  const voicePrompt = buildVoicePrompt(voice)
+  if (voicePrompt) {
+    parts.push(`\n${voicePrompt}`)
+  }
 
   // Active tab context — tell the model what the designer is looking at
   if (activeTab && TAB_CONTEXT[activeTab]) {
@@ -176,15 +196,29 @@ AVAILABLE ACTIONS:
    { "type": "stage_change", "newStage": "review" }
    Only suggest stage changes when the designer explicitly asks (e.g., "advance to review", "this looks good, move it forward")
 
+6. update_voice — Update the Kiuli brand voice configuration (the global voice that shapes ALL future content)
+   { "type": "update_voice", "operation": "add_banned_phrase", "phrase": "...", "reason": "...", "alternative": "..." }
+   { "type": "update_voice", "operation": "add_gold_standard", "excerpt": "...", "context": "..." }
+   { "type": "update_voice", "operation": "add_anti_pattern", "pattern": "...", "explanation": "..." }
+   { "type": "update_voice", "operation": "add_principle", "principle": "...", "explanation": "...", "example": "..." }
+   { "type": "update_voice", "operation": "update_summary", "value": "..." }
+
+   CRITICAL: Only use update_voice when the designer explicitly talks about how Kiuli should write IN GENERAL — not about this specific content.
+   "Kiuli should never say 'nestled'" → add_banned_phrase (this is about all future content)
+   "This paragraph is perfect, save this voice" → add_gold_standard (this is about Kiuli's taste)
+   "Make this warmer" → NO update_voice (that's about this specific content, use edit actions)
+   "We should always lead with specifics" → add_principle (this is a general writing rule)
+
 RULES:
 - Only include actions when the designer requests a change. Conversational messages (questions, feedback, discussion) need no actions.
 - When editing, show the specific change in your message ("I've updated the meta title to: ...").
 - Respect all editorial directives. If a designer request would violate a directive, explain why and suggest an alternative.
 - Be specific about safari destinations, properties, and wildlife. Use your knowledge of the project context.
 - Keep meta titles under 60 characters. Keep meta descriptions under 160 characters. Keep answer capsules between 50-70 words.
-- For body/section edits, write in Kiuli's brand voice: understated luxury, expert but warm, specific not generic. No safari cliches.
+- All content must follow the Kiuli voice identity, principles, and banned phrases listed above.
 - Do NOT use emojis in any field values. Keep content professional and clean.
-- briefSummary should be 2-3 concise sentences describing the article's scope. Never dump research content into the brief.`)
+- briefSummary should be 2-3 concise sentences describing the article's scope. Never dump research content into the brief.
+- When using update_voice, confirm the change to the designer and explain that it will affect all future Kiuli content.`)
 
   return parts.join('\n')
 }
@@ -237,23 +271,181 @@ function validateAction(action: ParsedAction): boolean {
       )
     case 'stage_change':
       return typeof action.newStage === 'string'
+    case 'update_voice':
+      return typeof action.operation === 'string' && validateVoiceAction(action)
+    default:
+      return false
+  }
+}
+
+function validateVoiceAction(action: ParsedAction): boolean {
+  switch (action.operation) {
+    case 'add_banned_phrase':
+      return typeof action.phrase === 'string' && typeof action.reason === 'string'
+    case 'add_gold_standard':
+      return typeof action.excerpt === 'string' && typeof action.context === 'string'
+    case 'add_anti_pattern':
+      return typeof action.pattern === 'string' && typeof action.explanation === 'string'
+    case 'add_principle':
+      return typeof action.principle === 'string' && typeof action.explanation === 'string'
+    case 'update_summary':
+      return typeof action.value === 'string'
     default:
       return false
   }
 }
 
 /**
- * Process actions and accumulate all DB changes into a single data object.
+ * Process update_voice actions — writes directly to BrandVoice global.
+ * Returns ConversationActions for the log.
+ */
+async function processVoiceActions(
+  actions: ParsedAction[],
+): Promise<ConversationAction[]> {
+  const voiceActions = actions.filter((a) => a.type === 'update_voice')
+  if (voiceActions.length === 0) return []
+
+  const payload = await getPayload({ config: configPromise })
+  const brandVoice = await payload.findGlobal({ slug: 'brand-voice' }) as Record<string, unknown>
+
+  const appliedActions: ConversationAction[] = []
+
+  for (const action of voiceActions) {
+    try {
+      const updateData: Record<string, unknown> = {}
+
+      switch (action.operation) {
+        case 'add_banned_phrase': {
+          const existing = Array.isArray(brandVoice.bannedPhrases) ? [...brandVoice.bannedPhrases] : []
+          existing.push({
+            phrase: action.phrase,
+            reason: action.reason,
+            alternative: action.alternative || null,
+          })
+          updateData.bannedPhrases = existing
+          appliedActions.push({
+            type: 'update_voice',
+            details: { operation: 'add_banned_phrase', phrase: action.phrase },
+          })
+          break
+        }
+
+        case 'add_gold_standard': {
+          const existing = Array.isArray(brandVoice.goldStandard) ? [...brandVoice.goldStandard] : []
+          existing.push({
+            excerpt: action.excerpt,
+            contentType: 'general',
+            context: action.context,
+            addedAt: new Date().toISOString(),
+          })
+          updateData.goldStandard = existing
+          appliedActions.push({
+            type: 'update_voice',
+            details: { operation: 'add_gold_standard', context: action.context },
+          })
+          break
+        }
+
+        case 'add_anti_pattern': {
+          const existing = Array.isArray(brandVoice.antiPatterns) ? [...brandVoice.antiPatterns] : []
+          existing.push({
+            pattern: action.pattern,
+            explanation: action.explanation,
+          })
+          updateData.antiPatterns = existing
+          appliedActions.push({
+            type: 'update_voice',
+            details: { operation: 'add_anti_pattern', pattern: action.pattern },
+          })
+          break
+        }
+
+        case 'add_principle': {
+          const existing = Array.isArray(brandVoice.principles) ? [...brandVoice.principles] : []
+          existing.push({
+            principle: action.principle,
+            explanation: action.explanation,
+            example: action.example || null,
+          })
+          updateData.principles = existing
+          appliedActions.push({
+            type: 'update_voice',
+            details: { operation: 'add_principle', principle: action.principle },
+          })
+          break
+        }
+
+        case 'update_summary': {
+          updateData.voiceSummary = action.value
+          appliedActions.push({
+            type: 'update_voice',
+            before: String(brandVoice.voiceSummary || '').substring(0, 200),
+            after: String(action.value).substring(0, 200),
+            details: { operation: 'update_summary' },
+          })
+          break
+        }
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        // Append to evolution log
+        const existingLog = Array.isArray(brandVoice.evolutionLog) ? [...brandVoice.evolutionLog] : []
+        existingLog.push({
+          date: new Date().toISOString(),
+          change: describeVoiceChange(action),
+          reason: `Designer requested via conversation`,
+          source: 'designer_conversation',
+        })
+        updateData.evolutionLog = existingLog
+
+        await payload.updateGlobal({
+          slug: 'brand-voice',
+          data: updateData,
+        })
+
+        // Invalidate cache so subsequent reads get fresh data
+        invalidateVoiceCache()
+      }
+    } catch (err) {
+      console.error(`[conversation] Voice update failed:`, action, err)
+    }
+  }
+
+  return appliedActions
+}
+
+function describeVoiceChange(action: ParsedAction): string {
+  switch (action.operation) {
+    case 'add_banned_phrase':
+      return `Added banned phrase: "${action.phrase}"`
+    case 'add_gold_standard':
+      return `Added gold standard example: ${action.context}`
+    case 'add_anti_pattern':
+      return `Added anti-pattern: "${action.pattern}"`
+    case 'add_principle':
+      return `Added principle: "${action.principle}"`
+    case 'update_summary':
+      return `Updated voice summary`
+    default:
+      return `Voice update: ${action.operation}`
+  }
+}
+
+/**
+ * Process non-voice actions and accumulate all DB changes into a single data object.
  * NO individual payload.update calls — everything is batched into one write.
  */
-function processActions(
+function processProjectActions(
   project: Record<string, unknown>,
   actions: ParsedAction[],
 ): { data: Record<string, unknown>; appliedActions: ConversationAction[] } {
   const data: Record<string, unknown> = {}
   const appliedActions: ConversationAction[] = []
 
-  for (const action of actions) {
+  // Filter out update_voice actions — those are handled separately
+  const projectActions = actions.filter((a) => a.type !== 'update_voice')
+
+  for (const action of projectActions) {
     try {
       switch (action.type) {
         case 'edit_field': {
@@ -375,7 +567,7 @@ export async function handleMessage(
   const ctx = await buildContext({ projectId })
 
   // 2. Format system prompt + conversation history
-  const systemPrompt = buildSystemPrompt(ctx, activeTab)
+  const systemPrompt = await buildSystemPrompt(ctx, activeTab)
 
   const messages: Array<{
     role: 'system' | 'user' | 'assistant'
@@ -411,6 +603,9 @@ export async function handleMessage(
     return true
   })
 
+  // 6. Process voice actions first (write to BrandVoice global)
+  const voiceAppliedActions = await processVoiceActions(validActions)
+
   const payload = await getPayload({ config: configPromise })
 
   // Re-fetch project for fresh state
@@ -420,13 +615,15 @@ export async function handleMessage(
     depth: 0,
   })) as unknown as Record<string, unknown>
 
-  // 6. Process actions into a data object (NO individual DB writes)
-  const { data: actionData, appliedActions } =
-    validActions.length > 0
-      ? processActions(project, validActions)
+  // 7. Process project actions into a data object (NO individual DB writes)
+  const { data: actionData, appliedActions: projectAppliedActions } =
+    validActions.some((a) => a.type !== 'update_voice')
+      ? processProjectActions(project, validActions)
       : { data: {}, appliedActions: [] }
 
-  // 7. Build messages
+  const allAppliedActions = [...projectAppliedActions, ...voiceAppliedActions]
+
+  // 8. Build messages
   const designerMessage = {
     role: 'designer' as const,
     content: message,
@@ -437,7 +634,7 @@ export async function handleMessage(
     role: 'kiuli' as const,
     content: parsed.message,
     timestamp: new Date().toISOString(),
-    actions: appliedActions.length > 0 ? appliedActions : undefined,
+    actions: allAppliedActions.length > 0 ? allAppliedActions : undefined,
     suggestedNextStep: parsed.suggestedNextStep || undefined,
   }
 
@@ -447,7 +644,7 @@ export async function handleMessage(
   currentMessages.push(designerMessage)
   currentMessages.push(kiuliMessage)
 
-  // 8. ONE payload.update — field changes + messages combined
+  // 9. ONE payload.update — field changes + messages combined
   await payload.update({
     collection: 'content-projects',
     id: projectId,
@@ -459,7 +656,7 @@ export async function handleMessage(
 
   return {
     message: parsed.message,
-    actions: appliedActions,
+    actions: allAppliedActions,
     suggestedNextStep: parsed.suggestedNextStep,
   }
 }

@@ -819,3 +819,117 @@ export async function resolveConsistencyIssue(
     return { error: error instanceof Error ? error.message : String(error) }
   }
 }
+
+// ── Action 11: Trigger Publish ───────────────────────────────────────────────
+
+export async function triggerPublish(
+  projectId: number,
+): Promise<{ success: true; result: { targetCollection: string; targetId: number } } | { error: string }> {
+  const { payload, user } = await authenticate()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  try {
+    const project = await payload.findByID({
+      collection: 'content-projects',
+      id: projectId,
+      depth: 0,
+    }) as unknown as Record<string, unknown>
+
+    // Must be in review stage
+    if ((project.stage as string) !== 'review') {
+      return { error: `Cannot publish from stage '${project.stage}'. Must be in review.` }
+    }
+
+    // Block if unresolved hard contradictions
+    if ((project.consistencyCheckResult as string) === 'hard_contradiction') {
+      const issues = Array.isArray(project.consistencyIssues) ? project.consistencyIssues as Record<string, unknown>[] : []
+      const unresolvedHard = issues.filter((i) => i.issueType === 'hard' && i.resolution === 'pending')
+      if (unresolvedHard.length > 0) {
+        return { error: `${unresolvedHard.length} unresolved hard contradiction(s). Resolve them first.` }
+      }
+    }
+
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      data: { processingStatus: 'processing', processingError: null },
+    })
+
+    const contentType = project.contentType as string
+    let publishResult: import('../../../../../../../content-system/publishing/types').PublishResult
+
+    switch (contentType) {
+      case 'itinerary_cluster':
+      case 'authority':
+      case 'designer_insight': {
+        const { publishArticle } = await import('../../../../../../../content-system/publishing/article-publisher')
+        publishResult = await publishArticle(projectId)
+        break
+      }
+      case 'destination_page': {
+        const { publishDestinationPage } = await import('../../../../../../../content-system/publishing/destination-page-publisher')
+        publishResult = await publishDestinationPage(projectId)
+        break
+      }
+      case 'property_page': {
+        const { publishPropertyPage } = await import('../../../../../../../content-system/publishing/property-page-publisher')
+        publishResult = await publishPropertyPage(projectId)
+        break
+      }
+      case 'itinerary_enhancement': {
+        const { publishEnhancement } = await import('../../../../../../../content-system/publishing/enhancement-publisher')
+        publishResult = await publishEnhancement(projectId)
+        break
+      }
+      case 'page_update': {
+        const { publishUpdate } = await import('../../../../../../../content-system/publishing/update-publisher')
+        publishResult = await publishUpdate(projectId)
+        break
+      }
+      default:
+        return { error: `No publisher for content type: ${contentType}` }
+    }
+
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      data: {
+        stage: 'published',
+        publishedAt: publishResult.publishedAt,
+        processingStatus: 'completed',
+        processingError: null,
+      },
+    })
+
+    // Trigger embedding
+    try {
+      const secret = process.env.CONTENT_SYSTEM_SECRET
+      if (secret) {
+        const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://kiuli.com'
+        fetch(`${baseUrl}/api/content/embed`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${secret}`,
+          },
+          body: JSON.stringify({ contentProjectId: projectId }),
+        }).catch(() => {})
+      }
+    } catch {}
+
+    return { success: true, result: { targetCollection: publishResult.targetCollection, targetId: publishResult.targetId } }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    try {
+      await payload.update({
+        collection: 'content-projects',
+        id: projectId,
+        data: { processingStatus: 'failed', processingError: message },
+      })
+    } catch {}
+    return { error: message }
+  }
+}

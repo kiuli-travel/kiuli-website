@@ -277,9 +277,9 @@ export interface Post {
   id: number;
   title: string;
   /**
-   * Featured image for the article (required)
+   * Featured image for the article
    */
-  heroImage: number | Media;
+  heroImage?: (number | null) | Media;
   /**
    * 1-2 sentence summary for cards and listings (max 300 chars)
    */
@@ -1672,6 +1672,114 @@ export interface Destination {
    * Seasonal guide for visiting this destination
    */
   bestTimeToVisit?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Editorial content: what makes this destination special vs alternatives
+   */
+  whyChoose?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Editorial content: signature activities and encounters
+   */
+  keyExperiences?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Logistics: flights, transfers, access routes
+   */
+  gettingThere?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Health requirements, safety considerations, malaria, visas
+   */
+  healthSafety?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Pricing context and value framing for this destination
+   */
+  investmentExpectation?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Editorial overview of the best properties at this destination
+   */
+  topLodgesContent?: {
     root: {
       type: string;
       children: {
@@ -4877,6 +4985,12 @@ export interface DestinationsSelect<T extends boolean = true> {
         id?: T;
       };
   bestTimeToVisit?: T;
+  whyChoose?: T;
+  keyExperiences?: T;
+  gettingThere?: T;
+  healthSafety?: T;
+  investmentExpectation?: T;
+  topLodgesContent?: T;
   faqItems?:
     | T
     | {

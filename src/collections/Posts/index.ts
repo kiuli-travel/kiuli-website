@@ -79,9 +79,8 @@ export const Posts: CollectionConfig<'posts'> = {
               name: 'heroImage',
               type: 'upload',
               relationTo: 'media',
-              required: true,
               admin: {
-                description: 'Featured image for the article (required)',
+                description: 'Featured image for the article',
               },
             },
             {

@@ -48,6 +48,7 @@ import * as migration_20260210_fix_version_block_id_defaults from './20260210_fi
 import * as migration_20260213_133332 from './20260213_133332';
 import * as migration_20260213_133845 from './20260213_133845';
 import * as migration_20260216_add_brand_voice_global from './20260216_add_brand_voice_global';
+import * as migration_20260217_add_destination_content_fields from './20260217_add_destination_content_fields';
 
 export const migrations = [
   {
@@ -299,5 +300,10 @@ export const migrations = [
     up: migration_20260216_add_brand_voice_global.up,
     down: migration_20260216_add_brand_voice_global.down,
     name: '20260216_add_brand_voice_global',
+  },
+  {
+    up: migration_20260217_add_destination_content_fields.up,
+    down: migration_20260217_add_destination_content_fields.down,
+    name: '20260217_add_destination_content_fields',
   },
 ];

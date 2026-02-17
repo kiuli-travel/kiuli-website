@@ -162,6 +162,54 @@ export const Destinations: CollectionConfig = {
       },
     },
     {
+      name: 'whyChoose',
+      type: 'richText',
+      label: 'Why Choose This Destination',
+      admin: {
+        description: 'Editorial content: what makes this destination special vs alternatives',
+      },
+    },
+    {
+      name: 'keyExperiences',
+      type: 'richText',
+      label: 'Key Experiences',
+      admin: {
+        description: 'Editorial content: signature activities and encounters',
+      },
+    },
+    {
+      name: 'gettingThere',
+      type: 'richText',
+      label: 'Getting There',
+      admin: {
+        description: 'Logistics: flights, transfers, access routes',
+      },
+    },
+    {
+      name: 'healthSafety',
+      type: 'richText',
+      label: 'Health & Safety',
+      admin: {
+        description: 'Health requirements, safety considerations, malaria, visas',
+      },
+    },
+    {
+      name: 'investmentExpectation',
+      type: 'richText',
+      label: 'Investment Expectation',
+      admin: {
+        description: 'Pricing context and value framing for this destination',
+      },
+    },
+    {
+      name: 'topLodgesContent',
+      type: 'richText',
+      label: 'Top Lodges Editorial',
+      admin: {
+        description: 'Editorial overview of the best properties at this destination',
+      },
+    },
+    {
       name: 'faqItems',
       type: 'array',
       label: 'FAQ Items',

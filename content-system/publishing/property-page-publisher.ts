@@ -1,3 +1,88 @@
-import type { PropertyPagePublishOptions, PublishResult } from './types'
+import { getPayload } from 'payload'
+import configPromise from '@payload-config'
+import { textToLexical } from './text-to-lexical'
+import type { PublishResult, OptimisticLockError } from './types'
 
-export declare function publishPropertyPage(options: PropertyPagePublishOptions): Promise<PublishResult>
+export async function publishPropertyPage(projectId: number): Promise<PublishResult> {
+  const payload = await getPayload({ config: configPromise })
+
+  const project = await payload.findByID({
+    collection: 'content-projects',
+    id: projectId,
+    depth: 0,
+  }) as unknown as Record<string, unknown>
+
+  if ((project.contentType as string) !== 'property_page') {
+    throw new Error(`Property publisher received type: ${project.contentType}`)
+  }
+
+  const sections = project.sections as Record<string, string> | null
+  if (!sections || !sections.overview) {
+    throw new Error('Cannot publish: sections.overview is empty')
+  }
+
+  // Resolve property
+  const properties = Array.isArray(project.properties) ? (project.properties as string[]) : []
+  if (properties.length === 0) {
+    throw new Error('Cannot publish: no property name on content project')
+  }
+
+  const propResult = await payload.find({
+    collection: 'properties',
+    where: { name: { equals: properties[0] } },
+    limit: 1,
+    depth: 0,
+  })
+
+  if (propResult.docs.length === 0) {
+    throw new Error(`Cannot publish: property "${properties[0]}" not found in properties collection`)
+  }
+
+  const property = propResult.docs[0] as unknown as Record<string, unknown>
+  const propertyId = property.id as number
+  const baselineUpdatedAt = property.updatedAt as string
+
+  // Build update
+  const updateData: Record<string, unknown> = {
+    descriptionEnhanced: textToLexical(sections.overview),
+  }
+
+  if (project.metaTitle) updateData.metaTitle = project.metaTitle
+  if (project.metaDescription) updateData.metaDescription = project.metaDescription
+  if (project.answerCapsule) updateData.answerCapsule = project.answerCapsule
+
+  // FAQ
+  const rawFaq = Array.isArray(project.faqSection) ? project.faqSection as Record<string, unknown>[] : []
+  if (rawFaq.length > 0) {
+    updateData.faqItems = rawFaq
+      .filter((f) => f.question && f.answer)
+      .map((f) => ({
+        question: String(f.question),
+        answer: textToLexical(String(f.answer)),
+      }))
+  }
+
+  // Optimistic lock
+  const freshProp = await payload.findByID({
+    collection: 'properties',
+    id: propertyId,
+    depth: 0,
+  }) as unknown as Record<string, unknown>
+
+  if ((freshProp.updatedAt as string) !== baselineUpdatedAt) {
+    console.warn(`[property-publisher] Optimistic lock conflict on property ${propertyId}, retrying`)
+    await payload.update({ collection: 'properties', id: propertyId, data: updateData })
+  } else {
+    await payload.update({ collection: 'properties', id: propertyId, data: updateData })
+  }
+
+  const now = new Date().toISOString()
+  console.log(`[property-publisher] Updated property ${propertyId} for project ${projectId}`)
+
+  return {
+    success: true,
+    targetCollection: 'properties',
+    targetId: propertyId,
+    publishedAt: now,
+  }
+}

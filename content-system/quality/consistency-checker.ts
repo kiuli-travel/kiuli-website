@@ -197,5 +197,40 @@ Be conservative — only flag genuine contradictions, not mere differences in de
     `[consistency-checker] Project ${projectId}: detected ${issues.length} issues (result: ${overallResult})`,
   )
 
+  // ── Step 5b: Generate page_update projects for staleness signals ──────
+
+  const stalenessIssues = issues.filter(i => i.issueType === 'staleness')
+  if (stalenessIssues.length > 0) {
+    console.log(`[consistency-checker] Project ${projectId}: generating ${stalenessIssues.length} page_update project(s) for staleness`)
+
+    for (const stale of stalenessIssues) {
+      // Check if a page_update already exists for this specific staleness
+      const existing = await payload.find({
+        collection: 'content-projects',
+        where: {
+          contentType: { equals: 'page_update' },
+          stage: { not_in: ['published', 'rejected', 'filtered'] },
+          // Match by title pattern to avoid duplicates
+          title: { contains: stale.sourceRecord.slice(0, 50) },
+        },
+        limit: 1,
+      })
+
+      if (existing.docs.length === 0) {
+        await payload.create({
+          collection: 'content-projects',
+          data: {
+            title: `Update: ${stale.sourceRecord}`.slice(0, 200),
+            contentType: 'page_update',
+            stage: 'proposed',
+            processingStatus: 'idle',
+            originPathway: 'cascade',
+            briefSummary: `[Staleness from project ${projectId}] Existing content may be outdated. New content states: "${stale.newContent}". Existing content: "${stale.existingContent}". Source: ${stale.sourceRecord}.`,
+          },
+        })
+      }
+    }
+  }
+
   return { overallResult, issues }
 }

@@ -11,6 +11,7 @@ import type {
   UncertaintyItem,
   FAQItem,
   ConversationMessage,
+  ConsistencyIssueDisplay,
 } from '@/components/content-system/workspace-types'
 import { ProjectWorkspace } from '@/components/content-system/workspace/ProjectWorkspace'
 
@@ -92,6 +93,20 @@ function transformProject(raw: Record<string, unknown>): WorkspaceProject {
 
   const targetAudience = parseJsonArray(raw.targetAudience)
 
+  // Parse consistency issues
+  const rawConsistencyIssues = Array.isArray(raw.consistencyIssues) ? raw.consistencyIssues : []
+  const consistencyIssues: ConsistencyIssueDisplay[] = rawConsistencyIssues.map(
+    (ci: Record<string, unknown>) => ({
+      id: (ci.id as string) || '',
+      issueType: (ci.issueType as ConsistencyIssueDisplay['issueType']) || 'soft',
+      existingContent: (ci.existingContent as string) || '',
+      newContent: (ci.newContent as string) || '',
+      sourceRecord: (ci.sourceRecord as string) || '',
+      resolution: (ci.resolution as ConsistencyIssueDisplay['resolution']) || 'pending',
+      resolutionNote: (ci.resolutionNote as string) || undefined,
+    }),
+  )
+
   return {
     id: raw.id as number,
     title: (raw.title as string) || '',
@@ -126,6 +141,8 @@ function transformProject(raw: Record<string, unknown>): WorkspaceProject {
     targetField: (raw.targetField as string) || undefined,
     targetRecordId: (raw.targetRecordId as number) || undefined,
     faq: faq.length > 0 ? faq : undefined,
+    consistencyCheckResult: (raw.consistencyCheckResult as WorkspaceProject['consistencyCheckResult']) || undefined,
+    consistencyIssues: consistencyIssues.length > 0 ? consistencyIssues : undefined,
     distribution:
       raw.linkedinSummary || raw.facebookSummary
         ? {

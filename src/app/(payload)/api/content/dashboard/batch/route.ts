@@ -56,6 +56,8 @@ export async function POST(request: Request) {
   let updated = 0
 
   try {
+    const skipped: Array<{ id: number; reason: string }> = []
+
     if (action === 'advance') {
       for (const id of projectIds) {
         const project = await payload.findByID({
@@ -80,7 +82,10 @@ export async function POST(request: Request) {
                 (i) => i.issueType === 'hard' && i.resolution === 'pending'
               )
               if (unresolvedHard.length > 0) {
-                // Skip this project — do not advance
+                skipped.push({
+                  id,
+                  reason: `${unresolvedHard.length} unresolved hard contradiction(s)`,
+                })
                 continue
               }
             }
@@ -101,6 +106,49 @@ export async function POST(request: Request) {
             data: updateData,
           })
           updated++
+
+          // Auto-trigger consistency check when entering review
+          if (nextStage === 'review') {
+            try {
+              await payload.update({
+                collection: 'content-projects',
+                id,
+                data: { processingStatus: 'processing' },
+              })
+              const { checkConsistency } = await import(
+                '../../../../../../../content-system/quality/consistency-checker'
+              )
+              const result = await checkConsistency(id)
+              await payload.update({
+                collection: 'content-projects',
+                id,
+                data: {
+                  consistencyCheckResult: result.overallResult,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  consistencyIssues: result.issues.map((issue: any) => ({
+                    issueType: issue.issueType,
+                    existingContent: issue.existingContent,
+                    newContent: issue.newContent,
+                    sourceRecord: issue.sourceRecord,
+                    resolution: issue.resolution,
+                    resolutionNote: issue.resolutionNote || null,
+                  })),
+                  processingStatus: 'completed',
+                  processingError: null,
+                },
+              })
+            } catch (error) {
+              const msg = error instanceof Error ? error.message : String(error)
+              console.error(`[batch-advance] Consistency check failed for project ${id}:`, msg)
+              try {
+                await payload.update({
+                  collection: 'content-projects',
+                  id,
+                  data: { processingStatus: 'failed', processingError: `Consistency check failed: ${msg}` },
+                })
+              } catch {}
+            }
+          }
         }
       }
     } else if (action === 'reject') {
@@ -149,7 +197,7 @@ export async function POST(request: Request) {
       )
     }
 
-    return NextResponse.json({ success: true, updated })
+    return NextResponse.json({ success: true, updated, skipped })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return NextResponse.json({ error: message }, { status: 500 })

@@ -45,9 +45,3 @@ export interface HardGatesOptions {
   metaDescription?: string
 }
 
-export interface ConsistencyCheckOptions {
-  projectId: string
-  draftContent: string
-  targetCollection: string
-  targetRecordId?: string
-}

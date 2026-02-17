@@ -6,12 +6,15 @@ import {
   isCompoundType,
   sectionLabels,
   type WorkspaceProject,
+  type ConsistencyIssueDisplay,
 } from '../workspace-types'
 import {
   saveProjectFields,
   triggerResearch,
   triggerDraft,
   saveFaqItems,
+  triggerConsistencyCheck,
+  resolveConsistencyIssue,
 } from '@/app/(payload)/admin/content-engine/project/[id]/actions'
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -621,6 +624,208 @@ export function ImagesTab() {
   return (
     <div className="flex items-center justify-center py-16 text-sm text-kiuli-charcoal/40">
       Image management coming in a future phase.
+    </div>
+  )
+}
+
+// ── Consistency Tab ──────────────────────────────────────────────────────────
+
+interface ConsistencyTabProps {
+  project: WorkspaceProject
+  projectId: number
+  onDataChanged?: () => void
+}
+
+const resultBannerStyles: Record<string, { bg: string; text: string; label: string }> = {
+  pass: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', label: 'No contradictions found' },
+  soft_contradiction: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700', label: 'Soft contradictions detected' },
+  hard_contradiction: { bg: 'bg-red-50 border-red-200', text: 'text-red-700', label: 'Hard contradictions detected' },
+  not_checked: { bg: 'bg-gray-50 border-gray-200', text: 'text-gray-500', label: 'Not yet checked' },
+}
+
+const issueTypeBadge: Record<string, { bg: string; text: string }> = {
+  hard: { bg: 'bg-red-100', text: 'text-red-700' },
+  soft: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  staleness: { bg: 'bg-blue-100', text: 'text-blue-700' },
+}
+
+const resolutionBadge: Record<string, { bg: string; text: string; label: string }> = {
+  pending: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Pending' },
+  updated_draft: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Draft Updated' },
+  updated_existing: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Existing Updated' },
+  overridden: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Overridden' },
+}
+
+export function ConsistencyTab({ project, projectId, onDataChanged }: ConsistencyTabProps) {
+  const [running, setRunning] = useState(false)
+  const [overrideIssueId, setOverrideIssueId] = useState<string | null>(null)
+  const [overrideNote, setOverrideNote] = useState('')
+  const [resolving, setResolving] = useState<string | null>(null)
+
+  const result = project.consistencyCheckResult || 'not_checked'
+  const issues = project.consistencyIssues || []
+  const banner = resultBannerStyles[result] || resultBannerStyles.not_checked
+
+  const handleRunCheck = useCallback(async () => {
+    setRunning(true)
+    const res = await triggerConsistencyCheck(projectId)
+    setRunning(false)
+    if ('error' in res) {
+      alert(res.error)
+    } else if (onDataChanged) {
+      onDataChanged()
+    }
+  }, [projectId, onDataChanged])
+
+  const handleResolve = useCallback(async (
+    issueId: string,
+    resolution: 'updated_draft' | 'updated_existing' | 'overridden',
+    note?: string,
+  ) => {
+    setResolving(issueId)
+    const res = await resolveConsistencyIssue(projectId, issueId, resolution, note)
+    setResolving(null)
+    if ('error' in res) {
+      alert(res.error)
+    } else {
+      setOverrideIssueId(null)
+      setOverrideNote('')
+      if (onDataChanged) onDataChanged()
+    }
+  }, [projectId, onDataChanged])
+
+  return (
+    <div className="flex flex-col gap-5 p-5">
+      {/* Header + Run button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-kiuli-charcoal">Consistency Check</h3>
+        <button onClick={handleRunCheck} disabled={running} className={btnSecondary}>
+          {running ? (
+            <>
+              <Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" />
+              Checking...
+            </>
+          ) : (
+            'Run Consistency Check'
+          )}
+        </button>
+      </div>
+
+      {/* Result banner */}
+      <div className={`rounded border p-3 ${banner.bg}`}>
+        <span className={`text-sm font-medium ${banner.text}`}>{banner.label}</span>
+        {issues.length > 0 && (
+          <span className={`ml-2 text-xs ${banner.text}`}>
+            ({issues.length} issue{issues.length !== 1 ? 's' : ''})
+          </span>
+        )}
+      </div>
+
+      {/* Issues */}
+      {issues.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {issues.map((issue: ConsistencyIssueDisplay) => {
+            const typeBadge = issueTypeBadge[issue.issueType] || issueTypeBadge.soft
+            const resBadge = resolutionBadge[issue.resolution] || resolutionBadge.pending
+            const isResolving = resolving === issue.id
+
+            return (
+              <div key={issue.id} className="rounded border border-kiuli-gray/60 bg-white p-4">
+                {/* Badges row */}
+                <div className="mb-3 flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${typeBadge.bg} ${typeBadge.text}`}>
+                    {issue.issueType}
+                  </span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${resBadge.bg} ${resBadge.text}`}>
+                    {resBadge.label}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="mb-2">
+                  <label className={labelClass}>New Content (Draft)</label>
+                  <p className="mt-0.5 text-sm text-kiuli-charcoal">{issue.newContent}</p>
+                </div>
+                <div className="mb-2">
+                  <label className={labelClass}>Existing Content</label>
+                  <p className="mt-0.5 text-sm text-kiuli-charcoal/70">{issue.existingContent}</p>
+                </div>
+                <div className="mb-3">
+                  <label className={labelClass}>Source</label>
+                  <p className="mt-0.5 text-xs text-kiuli-charcoal/50">{issue.sourceRecord}</p>
+                </div>
+
+                {/* Resolution note if resolved */}
+                {issue.resolutionNote && (
+                  <div className="mb-3 rounded bg-gray-50 p-2">
+                    <label className={labelClass}>Resolution Note</label>
+                    <p className="mt-0.5 text-xs text-kiuli-charcoal/70">{issue.resolutionNote}</p>
+                  </div>
+                )}
+
+                {/* Action buttons for pending issues */}
+                {issue.resolution === 'pending' && (
+                  <div className="flex flex-wrap items-center gap-2 border-t border-kiuli-gray/30 pt-3">
+                    <button
+                      onClick={() => handleResolve(issue.id, 'updated_draft')}
+                      disabled={isResolving}
+                      className="rounded bg-kiuli-teal/10 px-3 py-1.5 text-[11px] font-medium text-kiuli-teal transition-colors hover:bg-kiuli-teal/20 disabled:opacity-40"
+                    >
+                      {isResolving ? <Loader2 className="inline h-3 w-3 animate-spin" /> : 'Update Draft'}
+                    </button>
+                    <button
+                      onClick={() => handleResolve(issue.id, 'updated_existing')}
+                      disabled={isResolving}
+                      className="rounded bg-blue-50 px-3 py-1.5 text-[11px] font-medium text-blue-600 transition-colors hover:bg-blue-100 disabled:opacity-40"
+                    >
+                      Update Existing
+                    </button>
+                    {overrideIssueId === issue.id ? (
+                      <div className="flex w-full items-center gap-2 pt-1">
+                        <input
+                          className="flex-1 rounded border border-kiuli-gray bg-white px-2 py-1 text-xs text-kiuli-charcoal focus:border-kiuli-teal focus:outline-none"
+                          placeholder="Why override? (required)"
+                          value={overrideNote}
+                          onChange={(e) => setOverrideNote(e.target.value)}
+                        />
+                        <button
+                          onClick={() => handleResolve(issue.id, 'overridden', overrideNote)}
+                          disabled={!overrideNote.trim() || isResolving}
+                          className="rounded bg-purple-50 px-3 py-1 text-[11px] font-medium text-purple-600 hover:bg-purple-100 disabled:opacity-40"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => { setOverrideIssueId(null); setOverrideNote('') }}
+                          className="text-[11px] text-kiuli-charcoal/50 hover:text-kiuli-charcoal"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setOverrideIssueId(issue.id)}
+                        disabled={isResolving}
+                        className="rounded bg-purple-50 px-3 py-1.5 text-[11px] font-medium text-purple-600 transition-colors hover:bg-purple-100 disabled:opacity-40"
+                      >
+                        Override
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {result === 'not_checked' && issues.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-8 text-sm text-kiuli-charcoal/40">
+          <p>No consistency check has been run yet.</p>
+          <p className="mt-1 text-xs">Click &quot;Run Consistency Check&quot; to scan for contradictions.</p>
+        </div>
+      )}
     </div>
   )
 }

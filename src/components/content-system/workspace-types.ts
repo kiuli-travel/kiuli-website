@@ -78,6 +78,16 @@ export interface DistributionData {
   facebookPosted: boolean
 }
 
+export interface ConsistencyIssueDisplay {
+  id: string
+  issueType: 'hard' | 'soft' | 'staleness'
+  existingContent: string
+  newContent: string
+  sourceRecord: string
+  resolution: 'pending' | 'updated_draft' | 'updated_existing' | 'overridden'
+  resolutionNote?: string
+}
+
 export interface WorkspaceProject {
   id: number
   title: string
@@ -122,6 +132,10 @@ export interface WorkspaceProject {
 
   // FAQ
   faq?: FAQItem[]
+
+  // Consistency
+  consistencyCheckResult?: 'pass' | 'hard_contradiction' | 'soft_contradiction' | 'not_checked'
+  consistencyIssues?: ConsistencyIssueDisplay[]
 
   // Distribution (articles)
   distribution?: DistributionData
@@ -189,16 +203,16 @@ export function isCompoundType(type: WorkspaceContentType | string): boolean {
 
 export function getTabsForContentType(type: WorkspaceContentType | string): string[] {
   if (isArticleType(type)) {
-    return ['Brief', 'Research', 'Draft', 'FAQ', 'Images', 'Distribution', 'Metadata']
+    return ['Brief', 'Research', 'Draft', 'FAQ', 'Consistency', 'Images', 'Distribution', 'Metadata']
   }
   if (isCompoundType(type)) {
-    return ['Draft', 'FAQ', 'Images', 'Metadata']
+    return ['Draft', 'FAQ', 'Consistency', 'Images', 'Metadata']
   }
   if (type === 'itinerary_enhancement') {
-    return ['Draft', 'Metadata']
+    return ['Draft', 'Consistency', 'Metadata']
   }
   if (type === 'page_update') {
-    return ['Current vs Proposed', 'Metadata']
+    return ['Current vs Proposed', 'Consistency', 'Metadata']
   }
   return ['Draft', 'Metadata']
 }

@@ -19,6 +19,7 @@ import {
   type UncertaintyItem,
   type FAQItem,
   type ConversationMessage,
+  type ConsistencyIssueDisplay,
 } from '@/components/content-system/workspace-types'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -149,6 +150,20 @@ function transformProject(raw: Record<string, unknown>): WorkspaceProject {
   // Parse targetAudience
   const targetAudience = parseJsonArray(raw.targetAudience)
 
+  // Parse consistency issues
+  const rawConsistencyIssues = Array.isArray(raw.consistencyIssues) ? raw.consistencyIssues : []
+  const consistencyIssues: ConsistencyIssueDisplay[] = rawConsistencyIssues.map(
+    (ci: Record<string, unknown>) => ({
+      id: (ci.id as string) || '',
+      issueType: (ci.issueType as ConsistencyIssueDisplay['issueType']) || 'soft',
+      existingContent: (ci.existingContent as string) || '',
+      newContent: (ci.newContent as string) || '',
+      sourceRecord: (ci.sourceRecord as string) || '',
+      resolution: (ci.resolution as ConsistencyIssueDisplay['resolution']) || 'pending',
+      resolutionNote: (ci.resolutionNote as string) || undefined,
+    }),
+  )
+
   return {
     id: raw.id as number,
     title: (raw.title as string) || '',
@@ -193,6 +208,10 @@ function transformProject(raw: Record<string, unknown>): WorkspaceProject {
 
     // FAQ
     faq: faq.length > 0 ? faq : undefined,
+
+    // Consistency
+    consistencyCheckResult: (raw.consistencyCheckResult as WorkspaceProject['consistencyCheckResult']) || undefined,
+    consistencyIssues: consistencyIssues.length > 0 ? consistencyIssues : undefined,
 
     // Distribution
     distribution:
@@ -360,6 +379,50 @@ export async function advanceProjectStage(
       id: projectId,
       data: updateData,
     })
+
+    // Auto-trigger consistency check when entering review stage
+    if (nextStage === 'review') {
+      try {
+        await payload.update({
+          collection: 'content-projects',
+          id: projectId,
+          data: { processingStatus: 'processing' },
+        })
+
+        const { checkConsistency } = await import(
+          '../../../../../../../content-system/quality/consistency-checker'
+        )
+        const result = await checkConsistency(projectId)
+        await payload.update({
+          collection: 'content-projects',
+          id: projectId,
+          data: {
+            consistencyCheckResult: result.overallResult,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            consistencyIssues: result.issues.map((issue: any) => ({
+              issueType: issue.issueType,
+              existingContent: issue.existingContent,
+              newContent: issue.newContent,
+              sourceRecord: issue.sourceRecord,
+              resolution: issue.resolution,
+              resolutionNote: issue.resolutionNote || null,
+            })),
+            processingStatus: 'completed',
+            processingError: null,
+          },
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`[advanceProjectStage] Consistency check failed for project ${projectId}:`, message)
+        try {
+          await payload.update({
+            collection: 'content-projects',
+            id: projectId,
+            data: { processingStatus: 'failed', processingError: `Consistency check failed: ${message}` },
+          })
+        } catch {}
+      }
+    }
 
     return { success: true, newStage: nextStage }
   } catch (error) {
@@ -684,5 +747,75 @@ export async function triggerConsistencyCheck(
       })
     } catch {}
     return { error: message }
+  }
+}
+
+// ── Action 10: Resolve Consistency Issue ─────────────────────────────────────
+
+export async function resolveConsistencyIssue(
+  projectId: number,
+  issueId: string,
+  resolution: 'updated_draft' | 'updated_existing' | 'overridden',
+  resolutionNote?: string,
+): Promise<{ success: true } | { error: string }> {
+  const { payload, user } = await authenticate()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  if (resolution === 'overridden' && (!resolutionNote || resolutionNote.trim().length === 0)) {
+    return { error: 'Override requires a note explaining why.' }
+  }
+
+  try {
+    const project = await payload.findByID({
+      collection: 'content-projects',
+      id: projectId,
+      depth: 0,
+    }) as unknown as Record<string, unknown>
+
+    const issues = Array.isArray(project.consistencyIssues)
+      ? (project.consistencyIssues as Record<string, unknown>[])
+      : []
+
+    const updatedIssues = issues.map((issue) => {
+      if (issue.id === issueId) {
+        return {
+          ...issue,
+          resolution,
+          resolutionNote: resolutionNote || null,
+        }
+      }
+      return issue
+    })
+
+    // Recalculate overall result
+    const unresolvedHard = updatedIssues.filter(
+      (i) => i.issueType === 'hard' && i.resolution === 'pending'
+    )
+    const unresolvedSoft = updatedIssues.filter(
+      (i) => i.issueType === 'soft' && i.resolution === 'pending'
+    )
+
+    let newOverallResult: 'pass' | 'hard_contradiction' | 'soft_contradiction' = 'pass'
+    if (unresolvedHard.length > 0) {
+      newOverallResult = 'hard_contradiction'
+    } else if (unresolvedSoft.length > 0) {
+      newOverallResult = 'soft_contradiction'
+    }
+
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      data: {
+        consistencyIssues: updatedIssues,
+        consistencyCheckResult: newOverallResult,
+      },
+    })
+
+    return { success: true }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) }
   }
 }

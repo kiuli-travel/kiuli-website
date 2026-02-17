@@ -1,0 +1,50 @@
+{
+  "enhancer_imports_loadVoiceForSection": [
+    "1:import { loadVoiceForSection } from '../../content-system/voice/loader'"
+  ],
+  "enhancer_calls_loadVoiceForSection": [
+    "1:import { loadVoiceForSection } from '../../content-system/voice/loader'",
+    "97:  const voice = await loadVoiceForSection('itinerary_enhancement', sectionKey)"
+  ],
+  "handler_imports_voice_loader": [
+    "7:import { loadVoiceForContentType, invalidateVoiceCache } from '../voice/loader'"
+  ],
+  "handler_calls_invalidateVoiceCache": [
+    "7:import { loadVoiceForContentType, invalidateVoiceCache } from '../voice/loader'",
+    "409:        invalidateVoiceCache()"
+  ],
+  "handler_writes_brand_voice": [
+    "309:  // Cast through unknown — brand-voice slug not yet in generated Payload types",
+    "310:  const brandVoice = (await payload.findGlobal({ slug: 'brand-voice' as 'header' })) as unknown as Record<string, unknown>",
+    "404:          slug: 'brand-voice',"
+  ],
+  "article_drafter_imports": [
+    "6:import { loadVoiceForContentType } from '../voice/loader'"
+  ],
+  "destination_drafter_imports": [
+    "5:import { loadFullVoice } from '../voice/loader'"
+  ],
+  "segment_enhancer_imports": [
+    "5:import { loadVoiceForSection } from '../voice/loader'"
+  ],
+  "draft_route_imports_dispatch": [
+    "4:import { dispatchDraft } from '../../../../../../content-system/drafting'"
+  ],
+  "dispatch_imports_all_drafters": [
+    "1:import { getPayload } from 'payload'",
+    "2:import configPromise from '@payload-config'",
+    "3:import { draftArticle } from './article-drafter'",
+    "4:import { draftDestinationPage } from './destination-page-drafter'",
+    "5:import { draftPropertyPage } from './property-page-drafter'",
+    "6:import { enhanceSegment } from './segment-enhancer'",
+    "7:import { generateSocialSummaries } from './social-summariser'"
+  ],
+  "payload_config_includes_brandvoice": [
+    "35:import { BrandVoice } from './globals/BrandVoice'",
+    "91:  globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, DestinationNameMappings, BrandVoice],"
+  ],
+  "enhancer_backwards_compat_mapping": [
+    "23:const VOICE_CONFIG_TO_SECTION_KEY: Record<string, string> = {",
+    "37:  return VOICE_CONFIG_TO_SECTION_KEY[configNameOrKey] || configNameOrKey"
+  ]
+}

@@ -40,3 +40,14 @@ lambda/handler.js
 design-references/
 v0-zips/
 .env.vercel
+
+# Runtime logs
+tools/mcp-server/server.log
+tools/mcp-server/server-error.log
+tools/mcp-filesystem-server/
+
+# Build cache
+tsconfig.tsbuildinfo
+
+# Env check file (contains secrets)
+.env.vercel-check

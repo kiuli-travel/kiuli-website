@@ -174,3 +174,105 @@ Sitemap generated: https://kiuli.com/sitemap.xml
 | Test data cleaned up | Yes, final total = 143 |
 
 All gates PASS.
+
+---
+
+## 8. Content Type Verification
+
+**Date:** February 13, 2026
+**Prompt:** `content-engine/prompts/phase4-verify-all-types.md`
+
+Phase 4 originally only tested the `authority` content type. This verification tests the four remaining types plus cross-type semantic search.
+
+### Test 1: destination_page (Project ID: 3)
+
+Created with 3 sections (overview, whyChoose, bestTimeToVisit) + 1 FAQ.
+
+**Embed result:** 4 chunks — `["destination_section", "destination_section", "destination_section", "faq_answer"]`
+
+**DB verification:**
+```
+destination_section | overview — The Serengeti National Park is Tanzania most iconi...
+destination_section | whyChoose — What sets a Serengeti safari apart is the sheer s...
+destination_section | bestTimeToVisit — The Serengeti offers excellent game viewing...
+faq_answer          | Q: How many days should I spend in the Serengeti? A: We reco...
+```
+
+**PASS** — 3 destination_section + 1 faq_answer = 4 chunks. `chunkSections()` correctly iterates section keys.
+
+### Test 2: property_page (Project ID: 4)
+
+Created with 2 sections (overview, accommodation), no FAQ.
+
+**Embed result:** 2 chunks — `["property_section", "property_section"]`
+
+**DB verification:**
+```
+property_section | overview — Singita Grumeti is a private concession bordering...
+property_section | accommodation — The suites blend contemporary African design...
+```
+
+**PASS** — 2 property_section chunks.
+
+### Test 3: itinerary_enhancement (Project ID: 5)
+
+Created with Lexical body containing 2 H2 sections (Morning Game Drive, Sundowner Experience).
+
+**Embed result:** 2 chunks — `["itinerary_segment", "itinerary_segment"]`
+
+**DB verification:**
+```
+itinerary_segment | Morning Game Drive — The early morning game drive departs bef...
+itinerary_segment | Sundowner Experience — As the afternoon light softens your gu...
+```
+
+**PASS** — 2 itinerary_segment chunks. H2 splitting works correctly for this content type.
+
+### Test 4: page_update (Project ID: 6)
+
+Created with Lexical body containing a single paragraph (no headings).
+
+**Embed result:** 1 chunk — `["page_section"]`
+
+**DB verification:**
+```
+page_section | Updated information about gorilla trekking permits in Rwanda...
+```
+
+**PASS** — 1 page_section chunk. Single-body fallback works correctly.
+
+### Test 5: Cross-type semantic search
+
+Query: "Serengeti wildlife migration"
+
+```
+[destination_section] score=0.655 project=3 overview — The Serengeti National Park...
+[destination_section] score=0.617 project=3 whyChoose — What sets a Serengeti safari...
+[destination_section] score=0.575 project=3 bestTimeToVisit — The Serengeti offers...
+[itinerary_segment]   score=0.506 project=bootstrap — Immerse yourself in the unbelievable...
+[property_section]    score=0.506 project=bootstrap — Immerse yourself in the unbelievable...
+```
+
+**PASS** — Returns mixed content types ranked by relevance. Test destination_section chunks score highest for Serengeti query. Bootstrap itinerary_segment and property_section chunks also returned.
+
+### Cleanup
+
+| Step | Result |
+|------|--------|
+| Delete embeddings for projects 3, 4, 5, 6 | 4 + 2 + 2 + 1 = 9 deleted |
+| Delete content projects 3, 4, 5, 6 | All returned "Deleted successfully" |
+| Final embedding count | **143** (matches baseline) |
+
+### Verification Summary
+
+| Content Type | Chunks Expected | Chunks Actual | Chunk Types | Result |
+|---|---|---|---|---|
+| destination_page | 4 | 4 | 3 destination_section + 1 faq_answer | **PASS** |
+| property_page | 2 | 2 | 2 property_section | **PASS** |
+| itinerary_enhancement | 2 | 2 | 2 itinerary_segment | **PASS** |
+| page_update | 1 | 1 | 1 page_section | **PASS** |
+
+**Bugs found:** 0
+**Code changes required:** None
+
+All content types produce correct chunk types and counts. The `chunkSections()` code path (used by destination_page and property_page) works as designed. Final embedding count: 143.

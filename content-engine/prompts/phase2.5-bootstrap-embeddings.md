@@ -1,45 +1,100 @@
-# Phase 2.5: Bootstrap Embeddings — CLI Prompt
+# Phase 2.5: Bootstrap Embeddings
 
-**Date:** 2026-02-11
-**Author:** Claude.ai (Strategic)
-**Executor:** Claude CLI (Tactical)
-**Phase:** 2.5 of 15
-**Depends on:** Phase 2 (complete)
-
----
-
-## Context
-
-The embedding store exists but is empty. This phase seeds it with existing content so consistency checking and research retrieval have useful data from day one. The bootstrap script reads content from the database, extracts plain text from Lexical richtext JSON, calls OpenAI to generate embeddings, and inserts them into the `content_embeddings` table.
-
-Read this prompt completely before writing any code.
+**Date:** February 13, 2026  
+**Author:** Claude (Strategist)  
+**Executor:** Claude CLI (Tactician)  
+**Depends on:** Phase 1 (complete), Phase 2 (complete)  
+**Specification:** KIULI_CONTENT_SYSTEM_DEVELOPMENT_PLAN_V4.md Phase 2.5
 
 ---
 
-## Current Content Inventory (Verified via DB Queries)
+## Problem
 
-| Source | Count | Has Content | Notes |
-|--------|-------|-------------|-------|
-| Itineraries | 6 | All 6 have segments | 1 published, 5 draft — all contain real iTrvl content |
-| Stay segments | 30 | 30 have `description_itrvl` | Avg ~1300 chars Lexical JSON (~800 chars text) |
-| Activity segments | 38 | 37 have `description_itrvl` | Avg ~700 chars Lexical JSON |
-| Transfer segments | 112 | 53 have `description_itrvl` | Avg ~400 chars — logistical, low value |
-| FAQ items | 24 | 24 have `question_itrvl` + `answer_itrvl` | Short Q&A pairs |
-| Destinations | 10 | 1 (Rwanda) has description | 9 are empty drafts |
-| Properties | 0 | — | Collection exists but no records |
-
-**Decision: Embed all 6 itineraries regardless of `_status`.** The V4 plan says "published/live content only" but all 6 contain real iTrvl content that will be published before launch. Embedding only 1 published itinerary (~10 chunks) would be nearly useless. This deviation is justified by the data reality and will be noted in the report.
-
-**Skip transfers.** Logistical text ("Drive from X to Y") has minimal value for consistency checking.
-
-**Expected output: ~92 chunks** (30 stay + 37 activity + 24 FAQ + 1 destination description).
+The content_embeddings table exists and is correct (17 columns, HNSW index, all scalar/GIN indexes). But it has 0 rows. The content-system/embeddings/ directory has type definitions but every module is a stub. We need real implementations and we need to seed the store with existing content.
 
 ---
 
-## Lexical RichText Extraction
+## Outcomes
 
-All description and answer fields are stored as Lexical richtext JSON. The structure is:
+1. `content-system/embeddings/chunker.ts` is a real implementation that chunks itinerary segments, FAQ answers, destination sections, and property sections
+2. `content-system/embeddings/embedder.ts` is a real implementation that calls OpenAI text-embedding-3-large and inserts into content_embeddings
+3. `content-system/embeddings/query.ts` is a real implementation that does cosine similarity search with metadata filtering
+4. `content-system/embeddings/bootstrap.ts` orchestrates: reads all content from DB, chunks, embeds, stores
+5. A utility function `extractTextFromLexical(lexicalJson)` exists and correctly extracts plain text from Payload's Lexical JSON rich text format
+6. The bootstrap has been run and content_embeddings contains rows
+7. Similarity search returns relevant results
+8. The bootstrap is idempotent — running it again does not create duplicates
 
+---
+
+## Data to Embed
+
+All content regardless of draft/published status. This is test data that will be wiped before launch.
+
+### Source tables and fields:
+
+**Itinerary stays** (34 rows with content):
+```sql
+SELECT s.id, s._parent_id as itinerary_id, s.accommodation_name, s.description_itrvl, 
+       s.location, s.country, s.property_id
+FROM itineraries_blocks_stay s 
+WHERE s.description_itrvl IS NOT NULL
+```
+- chunk_type: `itinerary_segment`
+- itinerary_id: `s._parent_id`
+- property_id: `s.property_id` (may be null)
+- destinations: `[s.country]` if not null
+- properties: `[s.accommodation_name]` if not null
+
+**Itinerary activities** (41 rows with content):
+```sql
+SELECT a.id, a._parent_id as itinerary_id, a.title, a.description_itrvl
+FROM itineraries_blocks_activity a 
+WHERE a.description_itrvl IS NOT NULL
+```
+- chunk_type: `itinerary_segment`
+- itinerary_id: `a._parent_id`
+
+**Itinerary FAQ items** (49 rows):
+```sql
+SELECT f.id, f._parent_id as itinerary_id, f.question, f.answer_itrvl
+FROM itineraries_faq_items f 
+WHERE f.answer_itrvl IS NOT NULL
+```
+- chunk_type: `faq_answer`
+- itinerary_id: `f._parent_id`
+- chunk_text: combine question and answer text: `Q: {question}\nA: {answer_text}`
+
+**Properties** (33 rows with content):
+```sql
+SELECT p.id, p.name, p.slug, p.description_itrvl, p.destination_id
+FROM properties p 
+WHERE p.description_itrvl IS NOT NULL
+```
+- chunk_type: `property_section`
+- property_id: `p.id`
+- destination_id: `p.destination_id` (may be null)
+- properties: `[p.name]`
+
+**Destinations** (only Rwanda has content):
+```sql
+SELECT d.id, d.name, d.slug, d.description, d.answer_capsule, d.best_time_to_visit
+FROM destinations d 
+WHERE d.description IS NOT NULL
+```
+- chunk_type: `destination_section`
+- destination_id: `d.id`
+- destinations: `[d.name]`
+
+---
+
+## Implementation Details
+
+### Lexical Text Extraction
+
+Create a utility at `content-system/embeddings/lexical-text.ts`.
+
+Payload stores rich text as Lexical JSON. The structure is:
 ```json
 {
   "root": {
@@ -48,7 +103,7 @@ All description and answer fields are stored as Lexical richtext JSON. The struc
       {
         "type": "paragraph",
         "children": [
-          { "text": "Actual text content here..." }
+          { "text": "The actual text content..." }
         ]
       }
     ]
@@ -56,353 +111,396 @@ All description and answer fields are stored as Lexical richtext JSON. The struc
 }
 ```
 
-The bootstrap script must include a `extractTextFromLexical(json)` function that:
-- Recursively walks the tree
-- Collects all `text` property values from leaf nodes
-- Joins with spaces
-- Trims and normalises whitespace
-- Returns empty string for null/undefined/invalid input
-- Handles nested structures (paragraphs within list items, etc.)
+The extractor must:
+- Recursively walk all `children` arrays
+- Collect all leaf nodes with a `text` property
+- Join paragraphs with `\n`
+- Handle null/undefined/empty input (return empty string)
+- Handle malformed JSON (return empty string, don't throw)
 
----
+Test it against real data from the database before proceeding. If any description_itrvl value fails to extract text, stop and report the structure.
 
-## Task 1: Create Bootstrap Script
+### Chunker (`content-system/embeddings/chunker.ts`)
 
-**File:** `content-system/embeddings/bootstrap.ts`
+Replace the stub with a real implementation. Keep the existing types from `types.ts`.
 
-This is a standalone TypeScript script runnable via `npx tsx content-system/embeddings/bootstrap.ts`.
+For bootstrap, we need four chunk strategies:
 
-### Imports and Setup
+1. **itinerary_segment** — One chunk per stay or activity. Text is the extracted description. Skip chunks with fewer than 20 words.
 
-```typescript
-import { getPool, query, end } from '../db'
-```
+2. **faq_answer** — One chunk per FAQ item. Text is `Q: {question}\nA: {extracted_answer}`. Skip if answer text is fewer than 10 words.
 
-For OpenAI embeddings, use `fetch` directly against the OpenAI API. Do NOT install the `openai` npm package. The API call is simple:
+3. **property_section** — One chunk per property. Text is the extracted description. Skip chunks with fewer than 20 words.
 
-```typescript
-const response = await fetch('https://api.openai.com/v1/embeddings', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    model: 'text-embedding-3-large',
-    input: texts,  // array of strings, max 20 per batch
-    dimensions: 3072,
-  }),
-})
-```
+4. **destination_section** — One chunk per destination. Text is the extracted description. If answer_capsule exists, prepend it. Skip chunks with fewer than 20 words.
 
-The response shape is:
-```json
-{
-  "data": [
-    { "embedding": [0.123, -0.456, ...], "index": 0 },
-    { "embedding": [...], "index": 1 }
-  ],
-  "usage": { "prompt_tokens": 123, "total_tokens": 123 }
-}
-```
+Each chunk must carry metadata:
+- `itinerary_id` (for itinerary segments and FAQs)
+- `destination_id` (for destination sections, and properties that have one)
+- `property_id` (for property sections, and stays that have one)
+- `destinations` array (country/destination names)
+- `properties` array (property/accommodation names)
 
-### Functions Required
+### Embedder (`content-system/embeddings/embedder.ts`)
 
-#### `extractTextFromLexical(richtext: unknown): string`
-As described above. Returns plain text. Returns empty string on any error or invalid input.
+Replace the stub with a real implementation.
 
-#### `async fetchChunks(): Promise<ContentChunk[]>`
+- Call OpenAI API directly via fetch (no npm package needed)
+- Endpoint: `https://api.openai.com/v1/embeddings`
+- Model: `text-embedding-3-large`
+- Dimensions: 3072
+- API key: `process.env.OPENAI_API_KEY`
+- Batch size: 20 texts per API call (OpenAI supports up to 2048, but 20 keeps requests manageable)
+- On API failure: retry once after 2 seconds. If second attempt fails, throw with the error details.
 
-Query the database directly using the pg Pool (NOT the Payload REST API — we need direct SQL for efficiency):
-
-**Stay segments:**
-```sql
-SELECT s.id, s.accommodation_name, s.description_itrvl, s._parent_id,
-       i.title as itinerary_title, i.slug as itinerary_slug
-FROM itineraries_blocks_stay s
-JOIN itineraries i ON s._parent_id = i.id
-WHERE s.description_itrvl IS NOT NULL
-ORDER BY s._parent_id, s._order
-```
-- chunk_type: `'itinerary_segment'`
-- itinerary_id: `s._parent_id`
-- Extract text from `description_itrvl`
-- Skip chunks with <20 words of extracted text
-
-**Activity segments:**
-```sql
-SELECT a.id, a.title, a.description_itrvl, a._parent_id,
-       i.title as itinerary_title, i.slug as itinerary_slug
-FROM itineraries_blocks_activity a
-JOIN itineraries i ON a._parent_id = i.id
-WHERE a.description_itrvl IS NOT NULL
-ORDER BY a._parent_id, a._order
-```
-- chunk_type: `'itinerary_segment'`
-- itinerary_id: `a._parent_id`
-- Extract text from `description_itrvl`
-- Skip chunks with <20 words
-
-**FAQ items:**
-```sql
-SELECT f.id, f.question_itrvl, f.answer_itrvl, f._parent_id,
-       i.title as itinerary_title, i.slug as itinerary_slug
-FROM itineraries_faq_items f
-JOIN itineraries i ON f._parent_id = i.id
-WHERE f.question_itrvl IS NOT NULL AND f.answer_itrvl IS NOT NULL
-ORDER BY f._parent_id, f._order
-```
-- chunk_type: `'faq_answer'`
-- itinerary_id: `f._parent_id`
-- chunk_text: `"Q: {question}\nA: {answer}"` — combine question and extracted answer text
-- Skip if answer text is <10 words
-
-**Destination descriptions:**
-```sql
-SELECT d.id, d.name, d.slug, d.description, d.answer_capsule
-FROM destinations d
-WHERE d.description IS NOT NULL
-```
-- chunk_type: `'destination_section'`
-- destination_id: `d.id`
-- Extract text from `description`
-- If `answer_capsule` exists and is ≥20 words, create a second chunk with chunk_type `'destination_section'` and chunk_text being the answer capsule text
-- Skip chunks with <20 words
-
-#### `async checkExisting(itineraryIds: number[], destinationIds: number[]): Promise<Set<string>>`
-
-Query content_embeddings to find which source records already have embeddings:
-
-```sql
-SELECT DISTINCT
-  CASE
-    WHEN itinerary_id IS NOT NULL THEN 'itinerary_' || itinerary_id
-    WHEN destination_id IS NOT NULL THEN 'destination_' || destination_id
-  END as source_key
-FROM content_embeddings
-WHERE itinerary_id = ANY($1) OR destination_id = ANY($2)
-```
-
-Return a Set of source keys. In the main loop, skip any chunk whose source key is already in the set. This provides idempotency — re-running the bootstrap won't create duplicates.
-
-**Important:** Idempotency is at the source record level (per itinerary, per destination), not per individual chunk. If an itinerary has any existing embeddings, skip ALL chunks for that itinerary. This ensures complete re-processing if needed (delete old + re-embed) rather than partial states.
-
-#### `async embedBatch(texts: string[]): Promise<number[][]>`
-
-Call OpenAI embeddings API. Batch size: max 20 texts per API call. Includes:
-- Retry once on 429 (rate limit) or 5xx errors, with 5-second backoff
-- Throw on persistent failure with human-readable message
-- Log token usage from response
-
-#### `async insertEmbeddings(chunks: ChunkWithEmbedding[]): Promise<void>`
-
-Insert into content_embeddings using parameterised query:
+Insert into content_embeddings using the pg Pool from `content-system/db.ts`:
 
 ```sql
 INSERT INTO content_embeddings (
   chunk_type, chunk_text, embedding,
   itinerary_id, destination_id, property_id,
-  content_type, destinations, properties
-) VALUES ($1, $2, $3::vector(3072), $4, $5, $6, $7, $8, $9)
-```
-
-**Note:** Insert the embedding as `$3::vector(3072)` — the full precision vector. The HNSW index automatically casts to halfvec for indexing. Store full precision, index at half precision.
-
-Batch inserts in groups of 10 (10 INSERT statements per transaction) for efficiency without risking huge transactions.
-
-#### `async bootstrapEmbeddings(): Promise<BootstrapResult>`
-
-Main orchestrator:
-
-1. Fetch all chunks
-2. Check existing embeddings (idempotency)
-3. Filter out already-embedded sources
-4. Log: `"Found {total} chunks, {skipped} already embedded, {toProcess} to process"`
-5. If nothing to process, log and return early
-6. Batch embed (20 per API call)
-7. Insert embeddings (10 per transaction)
-8. Log progress every 20 chunks: `"Embedded {done}/{total} chunks"`
-9. Return summary: total, embedded, skipped, errors, token usage
-
-### Script Entry Point
-
-When run directly (`npx tsx content-system/embeddings/bootstrap.ts`):
-
-1. Check `OPENAI_API_KEY` and `DATABASE_URL_UNPOOLED` are set — exit with clear error if not
-2. Run `bootstrapEmbeddings()`
-3. Print summary
-4. Call `end()` to close the pool
-5. Exit with code 0 on success, 1 on failure
-
----
-
-## Task 2: Update Lambda Handler
-
-**File:** `lambda/content-batch-embed/handler.js`
-
-Update the existing stub to be a real (but simple) handler that could invoke the bootstrap. Since Lambda env isn't configured yet (deferred from Phase 0), this handler should be structurally complete but won't run on AWS until Phase 5.
-
-The handler should:
-- Log invocation with requestId
-- Return `{ statusCode: 200, body: { status: 'bootstrap_ready', message: 'Lambda env not yet configured. Run bootstrap locally via npx tsx content-system/embeddings/bootstrap.ts' } }`
-
-Keep it simple. The real Lambda implementation comes in Phase 4-5 when the full embeddings engine is built.
-
----
-
-## Task 3: Run the Bootstrap
-
-Execute:
-
-```bash
-npx tsx content-system/embeddings/bootstrap.ts
-```
-
-Capture the full output. If it fails, debug and fix before proceeding. Do not move on until the bootstrap completes with zero errors.
-
----
-
-## Task 4: Verify Embeddings
-
-After bootstrap completes, run these verification queries:
-
-```bash
-# 1. Total embedding count
-psql "$DATABASE_URL_UNPOOLED" -c "SELECT COUNT(*) as total FROM content_embeddings;"
-
-# 2. Breakdown by chunk type
-psql "$DATABASE_URL_UNPOOLED" -c "
-SELECT chunk_type, COUNT(*) as count
-FROM content_embeddings
-GROUP BY chunk_type
-ORDER BY count DESC;
-"
-
-# 3. Breakdown by itinerary
-psql "$DATABASE_URL_UNPOOLED" -c "
-SELECT i.title, COUNT(*) as chunks
-FROM content_embeddings ce
-JOIN itineraries i ON ce.itinerary_id = i.id
-WHERE ce.itinerary_id IS NOT NULL
-GROUP BY i.title
-ORDER BY chunks DESC;
-"
-
-# 4. Destination embeddings
-psql "$DATABASE_URL_UNPOOLED" -c "
-SELECT d.name, COUNT(*) as chunks
-FROM content_embeddings ce
-JOIN destinations d ON ce.destination_id = d.id
-WHERE ce.destination_id IS NOT NULL
-GROUP BY d.name;
-"
-
-# 5. Similarity search — find content similar to "gorilla trekking"
-psql "$DATABASE_URL_UNPOOLED" -c "
-SELECT LEFT(chunk_text, 120) as text_preview, chunk_type,
-  1 - (embedding::halfvec(3072) <=> (
-    SELECT embedding::halfvec(3072) FROM content_embeddings
-    WHERE chunk_text ILIKE '%gorilla%' LIMIT 1
-  )) as similarity
-FROM content_embeddings
-ORDER BY embedding::halfvec(3072) <=> (
-  SELECT embedding::halfvec(3072) FROM content_embeddings
-  WHERE chunk_text ILIKE '%gorilla%' LIMIT 1
+  destinations, properties, created_at, updated_at
+) VALUES (
+  $1, $2, $3::vector(3072),
+  $4, $5, $6,
+  $7, $8, NOW(), NOW()
 )
+```
+
+Note: `content_project_id` is null for bootstrap embeddings (no ContentProject exists yet). `species`, `freshness_category`, `audience_relevance`, `content_type`, `published_at` are also null for bootstrap data.
+
+### Query (`content-system/embeddings/query.ts`)
+
+Replace the stub with a real implementation.
+
+```typescript
+async function semanticSearch(
+  queryText: string, 
+  options?: {
+    topK?: number,           // default 10
+    minScore?: number,       // default 0.0
+    chunkTypes?: string[],
+    destinationId?: number,
+    propertyId?: number,
+    itineraryId?: number,
+    excludeProjectId?: number,
+  }
+): Promise<SimilarityResult[]>
+```
+
+Implementation:
+1. Embed the query text using the same OpenAI model
+2. Query content_embeddings with cosine distance using halfvec cast:
+
+```sql
+SELECT id, chunk_type, chunk_text,
+       1 - (embedding::halfvec(3072) <=> $1::halfvec(3072)) as similarity,
+       itinerary_id, destination_id, property_id,
+       destinations, properties
+FROM content_embeddings
+WHERE 1=1
+  [AND chunk_type = ANY($N) -- if chunkTypes filter provided]
+  [AND destination_id = $N  -- if destinationId filter provided]
+  [AND property_id = $N     -- if propertyId filter provided]
+  [AND itinerary_id = $N    -- if itineraryId filter provided]
+  [AND content_project_id != $N -- if excludeProjectId provided]
+ORDER BY embedding::halfvec(3072) <=> $1::halfvec(3072)
+LIMIT $N
+```
+
+3. Filter results below minScore after the query
+4. Return as `SimilarityResult[]` matching the type in types.ts
+
+### Bootstrap (`content-system/embeddings/bootstrap.ts`)
+
+New file. Orchestrates the full bootstrap:
+
+1. Query all source data (stays, activities, FAQs, properties, destinations) using the SQL from the "Data to Embed" section above
+2. Extract text from Lexical JSON for each record
+3. Create chunks using the chunker
+4. Skip empty/too-short chunks (log count of skipped)
+5. Embed all chunks using the embedder (in batches of 20)
+6. Log progress: "Embedding batch N/M (X chunks)"
+7. Return summary: total chunks, by type, skipped count
+
+**Idempotency:** Before inserting, check if embeddings already exist for the source:
+
+```sql
+-- For itinerary segments:
+DELETE FROM content_embeddings 
+WHERE chunk_type = 'itinerary_segment' AND itinerary_id = $1;
+
+-- For FAQ answers:
+DELETE FROM content_embeddings 
+WHERE chunk_type = 'faq_answer' AND itinerary_id = $1;
+
+-- For property sections:
+DELETE FROM content_embeddings 
+WHERE chunk_type = 'property_section' AND property_id = $1;
+
+-- For destination sections:
+DELETE FROM content_embeddings 
+WHERE chunk_type = 'destination_section' AND destination_id = $1;
+```
+
+Delete-then-insert per source record. This means re-running bootstrap replaces old embeddings cleanly.
+
+### Runner Script
+
+Create `scripts/bootstrap-embeddings.ts`:
+
+```typescript
+import { bootstrap } from '../content-system/embeddings/bootstrap'
+import { end } from '../content-system/db'
+
+async function main() {
+  console.log('Starting embedding bootstrap...')
+  const result = await bootstrap()
+  console.log('Bootstrap complete:', JSON.stringify(result, null, 2))
+  await end()
+  process.exit(0)
+}
+
+main().catch(e => {
+  console.error('Bootstrap failed:', e)
+  process.exit(1)
+})
+```
+
+Run with: `npx tsx scripts/bootstrap-embeddings.ts`
+
+This requires OPENAI_API_KEY and DATABASE_URL_UNPOOLED in the environment.
+
+---
+
+## Environment Variables Required
+
+- `OPENAI_API_KEY` — for text-embedding-3-large calls
+- `DATABASE_URL_UNPOOLED` — direct Neon connection (not pooled)
+
+Both are already set on Vercel. For local execution, source from `.env.local` or `.env.vercel-prod` or pass directly.
+
+---
+
+## Step-by-Step Execution
+
+### Step 1: Implement lexical-text.ts
+
+Create `content-system/embeddings/lexical-text.ts`. Test it against real data:
+
+```bash
+npx tsx -e "
+const { query } = require('./content-system/db');
+const { extractTextFromLexical } = require('./content-system/embeddings/lexical-text');
+async function test() {
+  const res = await query('SELECT description_itrvl FROM itineraries_blocks_stay WHERE description_itrvl IS NOT NULL LIMIT 3');
+  for (const row of res.rows) {
+    const text = extractTextFromLexical(row.description_itrvl);
+    console.log('---');
+    console.log('Words:', text.split(/\s+/).length);
+    console.log('Preview:', text.substring(0, 200));
+  }
+  process.exit(0);
+}
+test();
+"
+```
+
+Must extract readable text. If it returns empty strings, the Lexical structure is different from expected — inspect the raw JSON and fix the extractor.
+
+### Step 2: Implement chunker.ts
+
+Replace the stub. Test:
+
+```bash
+# Verify it creates chunks from real data
+npx tsx -e "
+// Quick test: manually chunk one stay
+"
+```
+
+### Step 3: Implement embedder.ts
+
+Replace the stub. Test with a single text to verify OpenAI API works:
+
+```bash
+npx tsx -e "
+const { embedTexts } = require('./content-system/embeddings/embedder');
+async function test() {
+  const result = await embedTexts(['This is a test of the embedding API.']);
+  console.log('Dimensions:', result[0].length);
+  console.log('First 5 values:', result[0].slice(0, 5));
+  process.exit(0);
+}
+test();
+"
+```
+
+Must return an array of 3072 floats.
+
+### Step 4: Implement query.ts
+
+Replace the stub. Will be tested after bootstrap populates data.
+
+### Step 5: Implement bootstrap.ts and runner script
+
+### Step 6: Run the bootstrap
+
+```bash
+npx tsx scripts/bootstrap-embeddings.ts
+```
+
+Watch the output. Every batch must succeed. If any API call fails after retry, stop and report.
+
+### Step 7: Verify
+
+```bash
+# Total embeddings
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT COUNT(*) FROM content_embeddings;"
+
+# Breakdown by type
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT chunk_type, COUNT(*) FROM content_embeddings GROUP BY chunk_type ORDER BY chunk_type;"
+
+# Verify no empty chunk_text
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT COUNT(*) FROM content_embeddings WHERE chunk_text = '' OR chunk_text IS NULL;"
+# Must be 0
+
+# Verify all embeddings have 3072 dimensions
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT COUNT(*) FROM content_embeddings WHERE array_length(embedding::real[], 1) != 3072;"
+# Must be 0 (note: this may need vector_dims() depending on pgvector version)
+
+# Verify itinerary_id is populated for itinerary segments and FAQs
+psql "$DATABASE_URL_UNPOOLED" -c "
+SELECT chunk_type, COUNT(*), 
+       SUM(CASE WHEN itinerary_id IS NOT NULL THEN 1 ELSE 0 END) as has_itinerary_id
+FROM content_embeddings 
+WHERE chunk_type IN ('itinerary_segment', 'faq_answer')
+GROUP BY chunk_type;
+"
+# has_itinerary_id should equal count for both types
+
+# Verify property_id is populated for property sections
+psql "$DATABASE_URL_UNPOOLED" -c "
+SELECT COUNT(*), SUM(CASE WHEN property_id IS NOT NULL THEN 1 ELSE 0 END) as has_property_id
+FROM content_embeddings WHERE chunk_type = 'property_section';
+"
+
+# Test similarity search
+psql "$DATABASE_URL_UNPOOLED" -c "
+SELECT chunk_type, LEFT(chunk_text, 80) as preview,
+       1 - (embedding::halfvec(3072) <=> (SELECT embedding::halfvec(3072) FROM content_embeddings WHERE chunk_type = 'itinerary_segment' LIMIT 1)) as similarity
+FROM content_embeddings
+ORDER BY embedding::halfvec(3072) <=> (SELECT embedding::halfvec(3072) FROM content_embeddings WHERE chunk_type = 'itinerary_segment' LIMIT 1)
 LIMIT 5;
 "
-
-# 6. Verify idempotency — run bootstrap again
-npx tsx content-system/embeddings/bootstrap.ts
-# Should report "0 to process" and exit cleanly
-
-# 7. Verify Payload still works
-curl -s -o /dev/null -w "%{http_code}" https://admin.kiuli.com/admin
+# Must return 5 rows with decreasing similarity scores. Top result should be itself (similarity ≈ 1.0)
 ```
 
----
-
-## Task 5: Build Verification
+### Step 8: Test the query module
 
 ```bash
-npm run build
+npx tsx -e "
+const { semanticSearch } = require('./content-system/embeddings/query');
+const { end } = require('./content-system/db');
+async function test() {
+  // Search for gorilla-related content
+  const results = await semanticSearch('gorilla trekking Rwanda');
+  console.log('Results:', results.length);
+  for (const r of results.slice(0, 5)) {
+    console.log(\`[\${r.chunkType}] score=\${r.similarity.toFixed(3)} \${r.chunkText.substring(0, 100)}\`);
+  }
+  await end();
+  process.exit(0);
+}
+test();
+"
 ```
 
-Must pass.
+Must return results. The top results should be related to gorillas or Rwanda.
 
----
+### Step 9: Test idempotency
 
-## DO NOT
+Run the bootstrap again:
 
-- Do not install the `openai` npm package — use fetch directly
-- Do not use the Payload REST API for reading content — use direct SQL via db.ts Pool
-- Do not embed transfer segments (logistical, low value)
-- Do not embed chunks with <20 words of extracted text (noise)
-- Do not create API routes (deferred to Phase 4)
-- Do not modify any Payload collections, globals, or migrations
-- Do not modify the content_embeddings table schema
-- Do not use pooled connection (POSTGRES_URL) for any vector operations
+```bash
+npx tsx scripts/bootstrap-embeddings.ts
+```
 
----
+Then verify the total count hasn't doubled:
 
-## Verification & Report
+```bash
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT COUNT(*) FROM content_embeddings;"
+```
 
-Write results to `content-engine/reports/phase2.5-bootstrap-embeddings.md`:
+Must be the same count as Step 7 (not 2x).
 
-### 1. Bootstrap Output
-Full console output from running the bootstrap script.
-
-### 2. Verification Query Results
-Output of all 7 verification queries.
-
-### 3. Embedding Statistics
-Total chunks, breakdown by type, breakdown by source, token usage, API cost estimate.
-
-### 4. Idempotency Proof
-Output of second bootstrap run showing 0 chunks to process.
-
-### 5. Similarity Search Results
-The top 5 results from the "gorilla trekking" similarity search, demonstrating the embeddings are semantically meaningful.
-
-### 6. Build Output
-Last 20 lines of `npm run build`.
-
-### 7. Deviation Note
-Document that all 6 itineraries were embedded regardless of `_status`, with justification.
-
-### 8. Git Commit
+### Step 10: Commit
 
 ```bash
 git add -A
 git commit -m "feat(content-engine): Phase 2.5 — bootstrap embeddings
 
-Seeded content_embeddings with existing site content:
-- Itinerary stay/activity segments, FAQ Q&A pairs
-- Destination descriptions
-- OpenAI text-embedding-3-large (3072 dimensions)
-- Idempotent: skips already-embedded source records
-All 6 itineraries embedded (including drafts — real iTrvl content)."
+Implemented real chunker, embedder, query, and bootstrap modules.
+Seeded content_embeddings with itinerary segments, FAQ answers,
+property descriptions, and destination content.
+Replaced all stubs in content-system/embeddings/ with working code."
 git push
 ```
 
-### 9. Status Update
+---
 
-Update `content-engine/status.md`:
-- Mark Phase 2.5 as COMPLETED with date
-- Record total embedding count and breakdown
-- Note the draft content deviation with justification
+## Do Not
+
+- Do NOT install the `openai` npm package — use fetch directly
+- Do NOT modify the content_embeddings table schema
+- Do NOT modify any existing collection definitions
+- Do NOT create Lambda functions (not needed for ~160 chunks)
+- Do NOT create API endpoints yet (bootstrap is a one-time script)
+- Do NOT modify db.ts except to add real implementations for the declare stubs IF needed by bootstrap
+- Do NOT modify types.ts unless the existing types are genuinely incompatible with the implementation
+- Do NOT skip the Lexical text extraction test (Step 1) — if it doesn't work, nothing else will
 
 ---
 
-## Success Criteria
+## Gate Evidence
 
-Phase 2.5 is complete when ALL of the following are true:
+Every one of these must pass:
 
-1. `content_embeddings` table contains embeddings for all 6 itineraries (stays, activities, FAQs) and Rwanda destination
-2. Total chunk count is ~80-100 (exact number depends on content filtering)
-3. Embeddings are 3072 dimensions (text-embedding-3-large)
-4. Similarity search returns semantically relevant results
-5. Re-running bootstrap produces 0 new embeddings (idempotent)
-6. `npm run build` passes
-7. Payload admin unaffected
-8. Git clean, committed, pushed
+```bash
+# 1. Embedding count > 0
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT COUNT(*) FROM content_embeddings;"
+
+# 2. Breakdown by type (expect ~4 types with counts)
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT chunk_type, COUNT(*) FROM content_embeddings GROUP BY chunk_type ORDER BY count DESC;"
+
+# 3. No empty chunks
+psql "$DATABASE_URL_UNPOOLED" -c "SELECT COUNT(*) FROM content_embeddings WHERE chunk_text = '' OR chunk_text IS NULL;"
+# Must be 0
+
+# 4. Semantic search returns relevant results for 'gorilla trekking Rwanda'
+# (paste the test output from Step 8)
+
+# 5. Idempotency: count after second run equals count after first run
+# (paste both counts)
+
+# 6. Build passes
+npm run build 2>&1 | tail -5
+```
+
+---
+
+## Report
+
+Write report to `content-engine/reports/phase2.5-bootstrap-embeddings.md` with:
+
+1. Lexical text extraction test results (sample outputs)
+2. OpenAI embedding API test result (dimensions confirmed)
+3. Bootstrap run output (batch progress, totals)
+4. Verification query results (counts by type, nulls check, similarity search)
+5. Semantic search test results
+6. Idempotency test results
+7. Any chunks that were skipped and why
+8. Build output
+9. Git commit hash
+
+Then update `content-engine/status.md` — mark Phase 2.5 as COMPLETED only if every gate passes.

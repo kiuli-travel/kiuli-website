@@ -147,6 +147,7 @@ export interface Config {
     'property-name-mappings': PropertyNameMapping;
     'content-system-settings': ContentSystemSetting;
     'destination-name-mappings': DestinationNameMapping;
+    'brand-voice': BrandVoice;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
@@ -154,6 +155,7 @@ export interface Config {
     'property-name-mappings': PropertyNameMappingsSelect<false> | PropertyNameMappingsSelect<true>;
     'content-system-settings': ContentSystemSettingsSelect<false> | ContentSystemSettingsSelect<true>;
     'destination-name-mappings': DestinationNameMappingsSelect<false> | DestinationNameMappingsSelect<true>;
+    'brand-voice': BrandVoiceSelect<false> | BrandVoiceSelect<true>;
   };
   locale: null;
   user: User;
@@ -5685,6 +5687,238 @@ export interface DestinationNameMapping {
   createdAt?: string | null;
 }
 /**
+ * The Kiuli Way — voice, principles, and content guidance that shapes all content production
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "brand-voice".
+ */
+export interface BrandVoice {
+  id: number;
+  /**
+   * Who Kiuli is as a writer — 2-3 sentences that anchor every piece of content
+   */
+  voiceSummary?: string | null;
+  /**
+   * Core voice principles that apply to all Kiuli content
+   */
+  principles?:
+    | {
+        /**
+         * The principle name, e.g. "Specificity over generality"
+         */
+        principle: string;
+        /**
+         * What this principle means in practice
+         */
+        explanation: string;
+        /**
+         * Optional concrete example of the principle in action
+         */
+        example?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Who we are writing for — their expectations, sophistication level, what they respond to
+   */
+  audience?: string | null;
+  /**
+   * How Kiuli differentiates from competitors — what we can say that they cannot
+   */
+  positioning?: string | null;
+  /**
+   * Words and phrases that must never appear in Kiuli content
+   */
+  bannedPhrases?:
+    | {
+        /**
+         * The banned word or phrase
+         */
+        phrase: string;
+        /**
+         * Why this should be avoided
+         */
+        reason: string;
+        /**
+         * What to use instead (optional)
+         */
+        alternative?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Writing patterns to avoid — broader than single phrases
+   */
+  antiPatterns?:
+    | {
+        /**
+         * The pattern to avoid, e.g. "Opening with a question"
+         */
+        pattern: string;
+        /**
+         * Why this pattern is problematic
+         */
+        explanation: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Exemplary Kiuli writing — excerpts that define "what good looks like". Grows over time.
+   */
+  goldStandard?:
+    | {
+        /**
+         * The actual text that exemplifies great Kiuli writing
+         */
+        excerpt: string;
+        /**
+         * Which content type this example best represents
+         */
+        contentType?: ('general' | 'article' | 'destination_page' | 'property_page' | 'itinerary_enhancement') | null;
+        /**
+         * Where this came from and why it is good
+         */
+        context?: string | null;
+        /**
+         * When this was added
+         */
+        addedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Per-content-type voice guidance — objective, tone, structure, temperature
+   */
+  contentTypeGuidance?:
+    | {
+        /**
+         * Which content type this guidance applies to
+         */
+        contentType:
+          | 'itinerary_cluster'
+          | 'authority'
+          | 'designer_insight'
+          | 'destination_page'
+          | 'property_page'
+          | 'itinerary_enhancement';
+        /**
+         * Human-readable name, e.g. "Destination Page"
+         */
+        label: string;
+        /**
+         * What this content type exists to achieve — its job in the funnel
+         */
+        objective: string;
+        /**
+         * How tone shifts for this type relative to core voice
+         */
+        toneShift?: string | null;
+        /**
+         * Structural expectations — length, sections, pacing
+         */
+        structuralNotes?: string | null;
+        /**
+         * LLM temperature for this content type (0 = conservative, 1 = creative)
+         */
+        temperature?: number | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Section-specific objectives, tone, word counts, do/don't lists, examples, and prompt templates
+   */
+  sectionGuidance?:
+    | {
+        /**
+         * Which content type this section belongs to
+         */
+        contentType: 'destination_page' | 'property_page' | 'itinerary_enhancement';
+        /**
+         * Machine key: overview, when_to_visit, segment_description, faq_answer, etc.
+         */
+        sectionKey: string;
+        /**
+         * Human-readable label: Overview, When to Visit, etc.
+         */
+        sectionLabel: string;
+        /**
+         * What this section must achieve
+         */
+        objective: string;
+        /**
+         * Section-specific tone shifts
+         */
+        toneNotes?: string | null;
+        /**
+         * Target word count range, e.g. "150-200"
+         */
+        wordCountRange?: string | null;
+        /**
+         * Things to do when writing this section
+         */
+        doList?:
+          | {
+              item: string;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * Things to avoid when writing this section
+         */
+        dontList?:
+          | {
+              item: string;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * Before/after pairs showing the transformation this section should achieve
+         */
+        examples?:
+          | {
+              /**
+               * Original text
+               */
+              before: string;
+              /**
+               * Enhanced text
+               */
+              after: string;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * User prompt template with {{content}}, {{context}} etc. placeholders. Used by scraper enhance and section drafters.
+         */
+        promptTemplate?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Chronological record of voice changes
+   */
+  evolutionLog?:
+    | {
+        date: string;
+        /**
+         * What was changed
+         */
+        change: string;
+        /**
+         * Why it was changed
+         */
+        reason: string;
+        /**
+         * How this change originated
+         */
+        source: 'designer_conversation' | 'direct_edit' | 'performance_insight' | 'initial_setup';
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "header_select".
  */
@@ -5776,6 +6010,101 @@ export interface DestinationNameMappingsSelect<T extends boolean = true> {
         canonical?: T;
         aliases?: T;
         destination?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "brand-voice_select".
+ */
+export interface BrandVoiceSelect<T extends boolean = true> {
+  voiceSummary?: T;
+  principles?:
+    | T
+    | {
+        principle?: T;
+        explanation?: T;
+        example?: T;
+        id?: T;
+      };
+  audience?: T;
+  positioning?: T;
+  bannedPhrases?:
+    | T
+    | {
+        phrase?: T;
+        reason?: T;
+        alternative?: T;
+        id?: T;
+      };
+  antiPatterns?:
+    | T
+    | {
+        pattern?: T;
+        explanation?: T;
+        id?: T;
+      };
+  goldStandard?:
+    | T
+    | {
+        excerpt?: T;
+        contentType?: T;
+        context?: T;
+        addedAt?: T;
+        id?: T;
+      };
+  contentTypeGuidance?:
+    | T
+    | {
+        contentType?: T;
+        label?: T;
+        objective?: T;
+        toneShift?: T;
+        structuralNotes?: T;
+        temperature?: T;
+        id?: T;
+      };
+  sectionGuidance?:
+    | T
+    | {
+        contentType?: T;
+        sectionKey?: T;
+        sectionLabel?: T;
+        objective?: T;
+        toneNotes?: T;
+        wordCountRange?: T;
+        doList?:
+          | T
+          | {
+              item?: T;
+              id?: T;
+            };
+        dontList?:
+          | T
+          | {
+              item?: T;
+              id?: T;
+            };
+        examples?:
+          | T
+          | {
+              before?: T;
+              after?: T;
+              id?: T;
+            };
+        promptTemplate?: T;
+        id?: T;
+      };
+  evolutionLog?:
+    | T
+    | {
+        date?: T;
+        change?: T;
+        reason?: T;
+        source?: T;
         id?: T;
       };
   updatedAt?: T;

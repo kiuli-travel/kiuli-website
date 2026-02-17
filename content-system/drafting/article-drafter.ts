@@ -210,24 +210,52 @@ function parseArticleOutput(raw: string): ArticleDraftOutput {
     text = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
   }
 
+  console.log(`[article-drafter] Raw LLM response (${text.length} chars):`, text.substring(0, 500))
+
   const parsed = JSON.parse(text)
 
+  // Validate body
   if (!parsed.body || typeof parsed.body !== 'string') {
     throw new Error('Article draft missing body field')
   }
-  if (!Array.isArray(parsed.faqSection) || parsed.faqSection.length === 0) {
-    throw new Error('Article draft missing or empty faqSection')
+  if (parsed.body.length < 500) {
+    throw new Error(`Article draft body too short: ${parsed.body.length} chars (minimum 500)`)
+  }
+
+  // Validate FAQ
+  if (!Array.isArray(parsed.faqSection) || parsed.faqSection.length < 5) {
+    throw new Error(`Article draft has ${Array.isArray(parsed.faqSection) ? parsed.faqSection.length : 0} FAQ items (minimum 5)`)
+  }
+  for (let i = 0; i < parsed.faqSection.length; i++) {
+    const f = parsed.faqSection[i]
+    if (!f.question || typeof f.question !== 'string' || f.question.trim().length === 0) {
+      throw new Error(`FAQ item ${i} has empty question`)
+    }
+    if (!f.answer || typeof f.answer !== 'string' || f.answer.trim().length === 0) {
+      throw new Error(`FAQ item ${i} has empty answer`)
+    }
+  }
+
+  // Validate meta fields
+  if (!parsed.metaTitle || typeof parsed.metaTitle !== 'string' || parsed.metaTitle.trim().length === 0) {
+    throw new Error('Article draft missing metaTitle')
+  }
+  if (!parsed.metaDescription || typeof parsed.metaDescription !== 'string' || parsed.metaDescription.trim().length === 0) {
+    throw new Error('Article draft missing metaDescription')
+  }
+  if (!parsed.answerCapsule || typeof parsed.answerCapsule !== 'string' || parsed.answerCapsule.trim().length === 0) {
+    throw new Error('Article draft missing answerCapsule')
   }
 
   return {
     body: parsed.body,
     faqSection: parsed.faqSection.map((f: Record<string, unknown>) => ({
-      question: String(f.question || ''),
-      answer: String(f.answer || ''),
+      question: String(f.question).trim(),
+      answer: String(f.answer).trim(),
     })),
-    metaTitle: String(parsed.metaTitle || '').substring(0, 60),
-    metaDescription: String(parsed.metaDescription || '').substring(0, 160),
-    answerCapsule: String(parsed.answerCapsule || ''),
+    metaTitle: String(parsed.metaTitle).trim().substring(0, 60),
+    metaDescription: String(parsed.metaDescription).trim().substring(0, 160),
+    answerCapsule: String(parsed.answerCapsule).trim(),
   }
 }
 

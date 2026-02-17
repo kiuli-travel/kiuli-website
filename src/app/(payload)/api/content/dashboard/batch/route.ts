@@ -70,7 +70,12 @@ export async function POST(request: Request) {
         )
 
         if (nextStage) {
-          const updateData: Record<string, unknown> = { stage: nextStage }
+          const updateData: Record<string, unknown> = {
+            stage: nextStage,
+            processingStatus: 'idle',
+            processingError: null,
+            processingStartedAt: null,
+          }
           if (nextStage === 'published') {
             updateData.publishedAt = new Date().toISOString()
           }

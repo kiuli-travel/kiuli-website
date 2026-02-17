@@ -536,6 +536,9 @@ function processProjectActions(
           const contentType = project.contentType as string
           if (isValidTransition(currentStage, action.newStage!, contentType)) {
             data.stage = action.newStage
+            data.processingStatus = 'idle'
+            data.processingError = null
+            data.processingStartedAt = null
             if (action.newStage === 'published') {
               data.publishedAt = new Date().toISOString()
             }

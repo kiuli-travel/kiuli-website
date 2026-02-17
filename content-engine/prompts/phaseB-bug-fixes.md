@@ -1,6 +1,6 @@
-# Phase B: Bug Fixes — Status Reset, Draft Output, Ghost Completions
+# Phase B: Bug Fixes and Re-Draft
 
-**Context:** Phase A has completed. Git is clean, database state is audited, all routes are reachable. Three bugs must be fixed before any new features are built.
+**Context:** Phase A passed all gates. Three ghost completions identified (79, 87, 89). Two additional projects need re-drafting (27 partial, 53 failed). Two bugs cause these failures and must be fixed before re-drafting.
 
 **Strategist:** Claude.ai (Graham's project)  
 **Tactician:** You (Claude CLI)
@@ -9,365 +9,514 @@
 
 ## Rules
 
-1. **Fix ONLY the bugs described here.** Do not refactor unrelated code.
-2. **Every fix must be verifiable via production database query.** Not "it looks right" — prove it works.
-3. **Log raw evidence for every test.** Paste actual curl responses and SQL results into the report.
-4. **If any fix has unexpected side effects, STOP and report.**
-5. **Write your report to `content-engine/reports/phaseB-bug-fixes.md` as you go.**
+1. **Follow the task order exactly.** Tasks 1-3 must complete before Task 4. Task 4 must complete before Task 5.
+2. **Every code change must use exact before/after blocks.** Do not refactor surrounding code.
+3. **Build must pass after each code task.** If build fails, stop and report.
+4. **Write your report as you go** to `content-engine/reports/phaseB-bug-fixes.md`.
+5. **The report must contain raw output of every command and query.** Not paraphrased.
+6. **Do not proceed past a failed gate.**
 
 ---
 
-## BUG-1: Stage Advance Does Not Reset processingStatus
+## Task 1: Fix BUG-1 — Stage Advance Does Not Reset processingStatus
 
-### Problem
+When a project is advanced from one stage to the next, `processingStatus` is not reset. A project that completed research arrives at `draft` stage with `processingStatus: 'completed'` — appearing as if drafting already finished. This is the ghost completion mechanism.
 
-Two code paths advance a project's `stage` without resetting `processingStatus` to `'idle'`:
+Three locations need the same fix.
 
-1. **`src/app/(payload)/api/content/dashboard/batch/route.ts`** — the `advance` action (around line 77) sets `stage: nextStage` but does NOT include `processingStatus: 'idle'`.
-2. **`content-system/conversation/handler.ts`** — the `stage_change` case inside `processProjectActions` (around line 534) sets `data.stage = action.newStage` but does NOT set `data.processingStatus = 'idle'`.
+### 1a: `src/app/(payload)/api/content/dashboard/batch/route.ts` — advance action
 
-### Fix — File 1: `src/app/(payload)/api/content/dashboard/batch/route.ts`
-
-Find the `advance` action block. Currently it does:
+Find this exact code in the `advance` block:
 
 ```typescript
-const updateData: Record<string, unknown> = { stage: nextStage }
-if (nextStage === 'published') {
-  updateData.publishedAt = new Date().toISOString()
-}
+        if (nextStage) {
+          const updateData: Record<string, unknown> = { stage: nextStage }
+          if (nextStage === 'published') {
 ```
 
-Change it to:
+Replace with:
 
 ```typescript
-const updateData: Record<string, unknown> = {
-  stage: nextStage,
-  processingStatus: 'idle',
-  processingError: null,
-  processingStartedAt: null,
-}
-if (nextStage === 'published') {
-  updateData.publishedAt = new Date().toISOString()
-}
+        if (nextStage) {
+          const updateData: Record<string, unknown> = {
+            stage: nextStage,
+            processingStatus: 'idle',
+            processingError: null,
+            processingStartedAt: null,
+          }
+          if (nextStage === 'published') {
 ```
 
-### Fix — File 2: `content-system/conversation/handler.ts`
+### 1b: Same file — retry action
 
-Find the `stage_change` case inside `processProjectActions`. Currently it does:
+Find this exact code in the `retry` block:
 
 ```typescript
-case 'stage_change': {
-  const currentStage = project.stage as string
-  const contentType = project.contentType as string
-  if (isValidTransition(currentStage, action.newStage!, contentType)) {
-    data.stage = action.newStage
-    if (action.newStage === 'published') {
-      data.publishedAt = new Date().toISOString()
-    }
+          data: {
+            processingStatus: 'idle',
+            processingError: null,
+          },
 ```
 
-Add the status reset:
+Replace with:
 
 ```typescript
-case 'stage_change': {
-  const currentStage = project.stage as string
-  const contentType = project.contentType as string
-  if (isValidTransition(currentStage, action.newStage!, contentType)) {
-    data.stage = action.newStage
-    data.processingStatus = 'idle'
-    data.processingError = null
-    data.processingStartedAt = null
-    if (action.newStage === 'published') {
-      data.publishedAt = new Date().toISOString()
-    }
+          data: {
+            processingStatus: 'idle',
+            processingError: null,
+            processingStartedAt: null,
+          },
 ```
 
-### Verification for BUG-1
+### 1c: `content-system/conversation/handler.ts` — stage_change case
 
-After deploying, use the batch API to advance a test project and then query the database:
+Find this exact code inside the `stage_change` case in `processProjectActions`:
 
-```sql
--- Pick a project in 'idea' or 'brief' stage to test with
-SELECT id, title, stage, processing_status FROM content_projects WHERE stage = 'idea' LIMIT 1;
+```typescript
+          if (isValidTransition(currentStage, action.newStage!, contentType)) {
+            data.stage = action.newStage
+            if (action.newStage === 'published') {
 ```
 
-Record the project id. Then advance it via curl:
+Replace with:
+
+```typescript
+          if (isValidTransition(currentStage, action.newStage!, contentType)) {
+            data.stage = action.newStage
+            data.processingStatus = 'idle'
+            data.processingError = null
+            data.processingStartedAt = null
+            if (action.newStage === 'published') {
+```
+
+### 1d: Build check
 
 ```bash
-# You'll need the CONTENT_SYSTEM_SECRET from Vercel env. Use Bearer auth.
-curl -X POST https://kiuli.com/api/content/dashboard/batch \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $CONTENT_SYSTEM_SECRET" \
-  -d '{"action": "advance", "projectIds": [PROJECT_ID]}'
+npm run build 2>&1 | tail -20
+echo "EXIT: $?"
 ```
 
-Wait — the batch route uses Payload session auth, not Bearer. You cannot test this via curl without a session cookie. Instead, verify the fix by:
-
-1. Reading the code diff and confirming the 4 fields are set.
-2. Checking that `npm run build` passes with no errors.
-3. After deploy, use a direct SQL query to verify the mechanism. Manually update a test project's processing_status to 'completed' and stage to 'idea', then use the dashboard batch API from the admin UI to advance it, then check the database.
-
-**Alternative verification (recommended):** Write a one-off Node.js script that:
-1. Finds a project at 'idea' stage
-2. Calls Payload's update API to set its processingStatus to 'completed' (simulating the bug state)
-3. Calls the batch advance endpoint internally
-4. Queries the database and asserts processingStatus is 'idle'
-
-Place this script at `content-engine/scripts/verify-bug1-fix.ts`. DO NOT delete it after — it serves as regression evidence.
-
-### Gate B1: Status Reset on Advance
+### Gate 1: BUG-1 Fix Compiles
 
 ```
-PASS criteria:
-1. Both files contain `processingStatus: 'idle'` in the stage advance path (diff evidence)
-2. Build passes
-3. Verification script runs and prints: "PASS: processingStatus is 'idle' after advance"
+PASS criteria: Build exit code 0.
+FAIL action: Record full error output and STOP.
 ```
 
 ---
 
-## BUG-2: Article Drafter Incomplete Output
+## Task 2: Fix BUG-2 — Silent Defaults in Draft Output Validation
 
-### Problem
+The article drafter's `parseArticleOutput` silently converts missing/empty fields to empty strings instead of throwing. This is how project 27 ended up with body but no metaDescription or answerCapsule. The same pattern exists in the destination and property page drafters.
 
-`content-system/drafting/article-drafter.ts` has two issues:
+### 2a: `content-system/drafting/article-drafter.ts` — add raw response logging
 
-1. **No raw LLM response logging.** When the model returns malformed JSON or truncated output, there's no way to diagnose what happened. The catch block logs `errorMessage` but by then the raw response is lost.
-
-2. **parseArticleOutput silently defaults missing fields.** If the LLM omits `metaDescription` or `answerCapsule`, they get `String(undefined || '')` which is `''`. The drafter then writes empty strings to the database and marks status as `completed`. Project 27 is evidence: it has a body and metaTitle but empty metaDescription and answerCapsule.
-
-### Fix — `content-system/drafting/article-drafter.ts`
-
-**Fix 2a: Add raw response logging.**
-
-After the `callModel` call (step 10), before parsing, add:
+Find this exact line (around line 172):
 
 ```typescript
-// 10. Call model
-const result = await callModel('drafting', [
-  { role: 'system', content: systemPrompt },
-  { role: 'user', content: userPrompt },
-], {
-  maxTokens: 8192,
-  temperature,
-})
-
-// 10a. Log raw response for diagnostics (truncated for sanity)
-console.log(`[article-drafter] Raw response length: ${result.content.length} chars`)
-console.log(`[article-drafter] Raw response preview: ${result.content.substring(0, 500)}`)
+    const output = parseArticleOutput(result.content)
 ```
 
-**Fix 2b: Validate all required fields in parseArticleOutput.**
-
-Replace the current `parseArticleOutput` function with:
+Replace with:
 
 ```typescript
-function parseArticleOutput(raw: string): ArticleDraftOutput {
-  let text = raw.trim()
+    console.log(`[article-drafter] Raw LLM response for project ${projectId} (first 500 chars):`, result.content.substring(0, 500))
+    const output = parseArticleOutput(result.content)
+```
 
-  // Strip markdown fences
-  if (text.startsWith('```')) {
-    text = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
-  }
+### 2b: Same file — replace parseArticleOutput validation
 
-  let parsed: Record<string, unknown>
-  try {
-    parsed = JSON.parse(text)
-  } catch (err) {
-    // Log the raw text that failed to parse
-    console.error(`[article-drafter] JSON parse failed. Raw text (first 1000 chars): ${text.substring(0, 1000)}`)
-    throw new Error(`Article draft response is not valid JSON: ${err instanceof Error ? err.message : String(err)}`)
-  }
+Find the entire `return` block inside `parseArticleOutput`, starting from:
 
-  // Validate body (required, must be non-trivial)
-  if (!parsed.body || typeof parsed.body !== 'string') {
-    throw new Error('Article draft missing body field')
-  }
-  if (parsed.body.length < 500) {
-    throw new Error(`Article draft body too short: ${parsed.body.length} chars (minimum 500)`)
-  }
-
-  // Validate faqSection (required, minimum 5 items)
-  if (!Array.isArray(parsed.faqSection) || parsed.faqSection.length < 5) {
-    throw new Error(`Article draft has ${Array.isArray(parsed.faqSection) ? parsed.faqSection.length : 0} FAQ items (minimum 5)`)
-  }
-
-  // Validate metaTitle (required, non-empty)
-  if (!parsed.metaTitle || typeof parsed.metaTitle !== 'string' || parsed.metaTitle.trim().length === 0) {
-    throw new Error('Article draft missing or empty metaTitle')
-  }
-
-  // Validate metaDescription (required, non-empty)
-  if (!parsed.metaDescription || typeof parsed.metaDescription !== 'string' || parsed.metaDescription.trim().length === 0) {
-    throw new Error('Article draft missing or empty metaDescription')
-  }
-
-  // Validate answerCapsule (required, non-empty)
-  if (!parsed.answerCapsule || typeof parsed.answerCapsule !== 'string' || parsed.answerCapsule.trim().length === 0) {
-    throw new Error('Article draft missing or empty answerCapsule')
-  }
-
+```typescript
   return {
     body: parsed.body,
     faqSection: parsed.faqSection.map((f: Record<string, unknown>) => ({
       question: String(f.question || ''),
       answer: String(f.answer || ''),
     })),
-    metaTitle: String(parsed.metaTitle).substring(0, 60),
-    metaDescription: String(parsed.metaDescription).substring(0, 160),
-    answerCapsule: String(parsed.answerCapsule),
+    metaTitle: String(parsed.metaTitle || '').substring(0, 60),
+    metaDescription: String(parsed.metaDescription || '').substring(0, 160),
+    answerCapsule: String(parsed.answerCapsule || ''),
   }
-}
 ```
 
-This ensures:
-- Body must be at least 500 characters
-- FAQ must have at least 5 items (relaxed from 8 to account for LLM variability — the prompt still asks for 8-10)
-- metaTitle, metaDescription, answerCapsule must all be non-empty strings
-- If any validation fails, the drafter throws, and the catch block marks `processingStatus: 'failed'` with the error message
+Replace with:
 
-### Gate B2: Drafter Validates All Fields
+```typescript
+  // Strict validation — throw on incomplete output
+  if (parsed.body.length < 500) {
+    throw new Error(`Article body too short: ${parsed.body.length} chars (minimum 500)`)
+  }
+  if (parsed.faqSection.length < 5) {
+    throw new Error(`Article FAQ too few items: ${parsed.faqSection.length} (minimum 5)`)
+  }
 
-```
-PASS criteria:
-1. parseArticleOutput throws on: empty body, body < 500 chars, missing FAQ, < 5 FAQ items, empty metaTitle, empty metaDescription, empty answerCapsule (write a unit test or verification script that calls parseArticleOutput with bad inputs and confirms it throws for each case)
-2. Build passes
-3. Raw response logging is present (grep the code)
-```
+  const metaTitle = String(parsed.metaTitle || '').trim()
+  const metaDescription = String(parsed.metaDescription || '').trim()
+  const answerCapsule = String(parsed.answerCapsule || '').trim()
 
-Place the verification at `content-engine/scripts/verify-bug2-fix.ts`. This script must:
-- Import `parseArticleOutput` (you may need to export it)
-- Call it with 7 different invalid inputs (one for each validation rule)
-- Confirm each throws with the expected error message
-- Call it with one valid input and confirm it returns the correct shape
-- Print PASS/FAIL for each case
+  if (!metaTitle) throw new Error('Article draft has empty metaTitle')
+  if (!metaDescription) throw new Error('Article draft has empty metaDescription')
+  if (!answerCapsule) throw new Error('Article draft has empty answerCapsule')
 
----
+  const faqSection = parsed.faqSection.map((f: Record<string, unknown>, i: number) => {
+    const question = String(f.question || '').trim()
+    const answer = String(f.answer || '').trim()
+    if (!question) throw new Error(`FAQ item ${i} has empty question`)
+    if (!answer) throw new Error(`FAQ item ${i} has empty answer`)
+    return { question, answer }
+  })
 
-## Task 3: Reset Ghost Completions
-
-After both bug fixes are committed and the build passes, reset the ghost completion projects identified in Phase A.
-
-Run the following SQL queries via MCP db_query:
-
-```sql
--- Identify ghost completions: processing_status = 'completed' but no body and no sections
-SELECT id, title, content_type, stage, processing_status
-FROM content_projects
-WHERE processing_status = 'completed'
-  AND body IS NULL
-  AND (sections IS NULL OR sections::text = '{}' OR sections::text = 'null');
+  return {
+    body: parsed.body,
+    faqSection,
+    metaTitle: metaTitle.substring(0, 60),
+    metaDescription: metaDescription.substring(0, 160),
+    answerCapsule,
+  }
 ```
 
-For each ghost completion found, reset it:
+### 2c: `content-system/drafting/destination-page-drafter.ts` — strict meta validation
 
-```sql
--- DO NOT run this yet. Record the list of IDs first and show them.
--- Then, after Graham confirms, execute this for each ID:
-UPDATE content_projects
-SET processing_status = 'idle',
-    processing_error = NULL,
-    processing_started_at = NULL
-WHERE id = [ID]
-  AND processing_status = 'completed'
-  AND body IS NULL;
+Find the return block inside `generateMeta` (near end of function):
+
+```typescript
+  return {
+    metaTitle: String(parsed.metaTitle || '').substring(0, 60),
+    metaDescription: String(parsed.metaDescription || '').substring(0, 160),
+    answerCapsule: String(parsed.answerCapsule || ''),
+  }
 ```
 
-**STOP HERE AND REPORT THE LIST OF IDS TO GRAHAM.** Do not execute the reset without confirmation.
+Replace with:
 
-### Gate B3: Ghost Completions Resolved
+```typescript
+  const metaTitle = String(parsed.metaTitle || '').trim()
+  const metaDescription = String(parsed.metaDescription || '').trim()
+  const answerCapsule = String(parsed.answerCapsule || '').trim()
 
-```
-PASS criteria:
-1. Ghost completion IDs listed with evidence
-2. After Graham's approval and reset: SELECT count(*) FROM content_projects WHERE processing_status = 'completed' AND body IS NULL AND sections IS NULL returns 0 (excluding projects that legitimately don't need body/sections, like those at 'research' stage whose 'completed' refers to research completion)
+  if (!metaTitle) throw new Error('Destination page draft has empty metaTitle')
+  if (!metaDescription) throw new Error('Destination page draft has empty metaDescription')
+  if (!answerCapsule) throw new Error('Destination page draft has empty answerCapsule')
 
-IMPORTANT NUANCE: Projects at 'research' stage with processing_status='completed' are NOT ghost completions IF they have synthesis data. Only flag projects where the stage implies content should exist (draft, review) but it doesn't.
-```
-
----
-
-## Task 4: Re-Draft Articles
-
-After ghost completions are reset, trigger drafting for projects that are at `draft` stage with `processingStatus = 'idle'` and no body content.
-
-```sql
--- Find projects that need drafting
-SELECT id, title, content_type, stage, processing_status
-FROM content_projects
-WHERE stage = 'draft'
-  AND processing_status = 'idle'
-  AND body IS NULL
-  AND content_type IN ('itinerary_cluster', 'authority', 'designer_insight');
+  return {
+    metaTitle: metaTitle.substring(0, 60),
+    metaDescription: metaDescription.substring(0, 160),
+    answerCapsule,
+  }
 ```
 
-For each project found, trigger the draft API:
+### 2d: Same file — strict FAQ item validation
+
+Find this code inside the FAQ section handling in `draftDestinationPage` (inside the `if (sectionKey === 'faq')` block):
+
+```typescript
+      if (sectionKey === 'faq') {
+        // Parse FAQ section into structured items
+        const parsed = parseFaqFromText(sectionContent)
+        for (const item of parsed) {
+          faqItems.push(item)
+        }
+```
+
+Replace with:
+
+```typescript
+      if (sectionKey === 'faq') {
+        // Parse FAQ section into structured items
+        const parsed = parseFaqFromText(sectionContent)
+        for (let i = 0; i < parsed.length; i++) {
+          if (!parsed[i].question.trim()) throw new Error(`Destination FAQ item ${i} has empty question`)
+          if (!parsed[i].answer.trim()) throw new Error(`Destination FAQ item ${i} has empty answer`)
+          faqItems.push(parsed[i])
+        }
+```
+
+### 2e: `content-system/drafting/property-page-drafter.ts` — strict meta validation
+
+Find these three lines in the final write block (step 10):
+
+```typescript
+        metaTitle: String(meta.metaTitle || '').substring(0, 60),
+        metaDescription: String(meta.metaDescription || '').substring(0, 160),
+        answerCapsule: String(meta.answerCapsule || ''),
+```
+
+Replace with:
+
+```typescript
+        metaTitle: (() => { const v = String(meta.metaTitle || '').trim(); if (!v) throw new Error('Property page draft has empty metaTitle'); return v.substring(0, 60) })(),
+        metaDescription: (() => { const v = String(meta.metaDescription || '').trim(); if (!v) throw new Error('Property page draft has empty metaDescription'); return v.substring(0, 160) })(),
+        answerCapsule: (() => { const v = String(meta.answerCapsule || '').trim(); if (!v) throw new Error('Property page draft has empty answerCapsule'); return v })(),
+```
+
+### 2f: Same file — strict FAQ item validation
+
+Find this code inside the FAQ parsing block:
+
+```typescript
+            for (const f of parsed) {
+              faqItems.push({
+                question: String(f.question || ''),
+                answer: String(f.answer || ''),
+              })
+            }
+```
+
+Replace with:
+
+```typescript
+            for (let i = 0; i < parsed.length; i++) {
+              const question = String(parsed[i].question || '').trim()
+              const answer = String(parsed[i].answer || '').trim()
+              if (!question) throw new Error(`Property FAQ item ${i} has empty question`)
+              if (!answer) throw new Error(`Property FAQ item ${i} has empty answer`)
+              faqItems.push({ question, answer })
+            }
+```
+
+### 2g: Build check
 
 ```bash
-curl -X POST https://kiuli.com/api/content/draft \
+npm run build 2>&1 | tail -20
+echo "EXIT: $?"
+```
+
+### Gate 2: BUG-2 Fix Compiles
+
+```
+PASS criteria: Build exit code 0.
+FAIL action: Record full error output and STOP.
+```
+
+---
+
+## Task 3: Commit, Push, Verify Deployment
+
+### 3a: Commit and push
+
+```bash
+git add src/app/\(payload\)/api/content/dashboard/batch/route.ts
+git add content-system/conversation/handler.ts
+git add content-system/drafting/article-drafter.ts
+git add content-system/drafting/destination-page-drafter.ts
+git add content-system/drafting/property-page-drafter.ts
+git commit -m "fix: reset processingStatus on stage advance, strict draft output validation"
+git push
+```
+
+### 3b: Verify Vercel deployment
+
+After push, Vercel will auto-deploy. Wait for deployment to complete:
+
+```bash
+# Check deployment status — repeat until status is "READY"
+npx vercel inspect --token="$VERCEL_TOKEN" 2>&1 | head -20
+```
+
+If you cannot check Vercel status programmatically, wait 90 seconds after push, then verify the production site responds:
+
+```bash
+sleep 90
+curl -s -o /dev/null -w "%{http_code}" https://kiuli.com/api/content/draft
+```
+
+Expected: 401 (route exists but unauthenticated). Any response other than 404 confirms the deployment included the route.
+
+### Gate 3: Code Deployed
+
+```
+PASS criteria: Code pushed to main. kiuli.com/api/content/draft returns non-404.
+FAIL action: Record output and STOP.
+```
+
+---
+
+## Task 4: Reset Ghost Completions and Failed Projects
+
+All 5 projects need `processingStatus` reset to `idle` before re-drafting. The drafter will overwrite this when it starts, but resetting ensures clean state.
+
+### 4a: Read CONTENT_SYSTEM_SECRET from local env
+
+```bash
+# Extract the bearer token for API calls in Task 5
+export CONTENT_SECRET=$(grep CONTENT_SYSTEM_SECRET .env.local | cut -d= -f2- | tr -d "'\"")
+echo "Token length: ${#CONTENT_SECRET}"
+```
+
+If the token is empty or `.env.local` doesn't contain `CONTENT_SYSTEM_SECRET`, check `.env` instead. Record which file the token came from.
+
+If no token is found in any env file, STOP and report. Task 5 cannot proceed without it.
+
+### 4b: Execute ghost resets
+
+Create and run a script:
+
+```bash
+cat > /tmp/reset-projects.ts << 'EOF'
+import { query, end } from './content-system/db'
+
+async function main() {
+  const ids = [27, 53, 79, 87, 89]
+  
+  // Show before state
+  const before = await query(
+    `SELECT id, stage, processing_status, processing_error,
+       body IS NOT NULL AS has_body, meta_title IS NOT NULL AND meta_title != '' AS has_meta
+     FROM content_projects WHERE id = ANY($1) ORDER BY id`,
+    [ids]
+  )
+  console.log('BEFORE RESET:')
+  console.table(before.rows)
+
+  // Reset all 5
+  const result = await query(
+    `UPDATE content_projects 
+     SET processing_status = 'idle', processing_error = NULL, processing_started_at = NULL
+     WHERE id = ANY($1)
+     RETURNING id, processing_status`,
+    [ids]
+  )
+  console.log(`\nReset ${result.rowCount} projects:`)
+  console.table(result.rows)
+
+  // Verify
+  const after = await query(
+    `SELECT id, stage, processing_status, processing_error
+     FROM content_projects WHERE id = ANY($1) ORDER BY id`,
+    [ids]
+  )
+  console.log('\nAFTER RESET:')
+  console.table(after.rows)
+
+  await end()
+}
+
+main().catch(err => { console.error(err); process.exit(1) })
+EOF
+
+npx tsx /tmp/reset-projects.ts
+```
+
+### Gate 4: Resets Confirmed
+
+```
+PASS criteria: All 5 projects show processing_status = 'idle' and processing_error = NULL in AFTER output.
+FAIL action: Record output and STOP.
+```
+
+---
+
+## Task 5: Re-Draft All 5 Projects
+
+Call the production draft API for each project. The draft route accepts `CONTENT_SYSTEM_SECRET` as a Bearer token.
+
+### 5a: Draft each project
+
+For EACH of these project IDs — 27, 53, 79, 87, 89 — run:
+
+```bash
+echo "--- Drafting project [ID] ---"
+curl -s -w "\nHTTP_STATUS: %{http_code}\n" \
+  -X POST https://kiuli.com/api/content/draft \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $CONTENT_SYSTEM_SECRET" \
-  -d '{"projectId": PROJECT_ID}'
+  -H "Authorization: Bearer $CONTENT_SECRET" \
+  -d '{"projectId": [ID]}'
 ```
 
-After each draft completes (or fails), query the database:
+Replace `[ID]` with each project ID. Run them ONE AT A TIME. Wait for each response before starting the next.
 
-```sql
-SELECT id, title, processing_status, processing_error,
-  body IS NOT NULL as has_body,
-  meta_title IS NOT NULL as has_meta_title,
-  meta_description IS NOT NULL as has_meta_desc,
-  answer_capsule IS NOT NULL as has_capsule,
-  (SELECT COUNT(*) FROM content_projects_faq_section WHERE _parent_id = cp.id) as faq_count
-FROM content_projects cp
-WHERE id = [PROJECT_ID];
+Record the full response body and HTTP status for each.
+
+If any draft returns a non-200 status, record the error but continue to the next project. Do not stop.
+
+### 5b: Verify all drafts
+
+After all 5 have been attempted, run this verification script:
+
+```bash
+cat > /tmp/verify-drafts.ts << 'EOF'
+import { query, end } from './content-system/db'
+
+async function main() {
+  const ids = [27, 53, 79, 87, 89]
+  
+  // Check project fields
+  const projects = await query(
+    `SELECT id, title, content_type, stage, processing_status, processing_error,
+       body IS NOT NULL AS has_body,
+       CASE WHEN body IS NOT NULL THEN length(body::text) ELSE 0 END AS body_length,
+       meta_title IS NOT NULL AND meta_title != '' AS has_meta_title,
+       meta_description IS NOT NULL AND meta_description != '' AS has_meta_description,
+       answer_capsule IS NOT NULL AND answer_capsule != '' AS has_capsule
+     FROM content_projects WHERE id = ANY($1) ORDER BY id`,
+    [ids]
+  )
+  console.log('PROJECT STATE:')
+  for (const row of projects.rows) {
+    console.log(`\nProject ${row.id}: ${row.title}`)
+    console.log(`  content_type: ${row.content_type}`)
+    console.log(`  stage: ${row.stage}`)
+    console.log(`  processing_status: ${row.processing_status}`)
+    console.log(`  processing_error: ${row.processing_error || 'none'}`)
+    console.log(`  has_body: ${row.has_body}`)
+    console.log(`  body_length: ${row.body_length}`)
+    console.log(`  has_meta_title: ${row.has_meta_title}`)
+    console.log(`  has_meta_description: ${row.has_meta_description}`)
+    console.log(`  has_capsule: ${row.has_capsule}`)
+  }
+
+  // Check FAQ counts
+  const faqs = await query(
+    `SELECT cp.id, COUNT(f.id) AS faq_count
+     FROM content_projects cp
+     LEFT JOIN content_projects_faq_section f ON f._parent_id = cp.id
+     WHERE cp.id = ANY($1)
+     GROUP BY cp.id ORDER BY cp.id`,
+    [ids]
+  )
+  console.log('\nFAQ COUNTS:')
+  console.table(faqs.rows)
+
+  // Summary
+  let allPass = true
+  for (const row of projects.rows) {
+    const faq = faqs.rows.find((f: Record<string, unknown>) => f.id === row.id)
+    const faqCount = faq ? Number(faq.faq_count) : 0
+    const pass = row.processing_status === 'completed' 
+      && row.has_body === true
+      && row.has_meta_title === true
+      && row.has_meta_description === true
+      && row.has_capsule === true
+      && faqCount >= 5
+    console.log(`Project ${row.id}: ${pass ? 'PASS' : 'FAIL'}`)
+    if (!pass) allPass = false
+  }
+
+  console.log(`\nOVERALL: ${allPass ? 'ALL PASS' : 'SOME FAILED'}`)
+  await end()
+}
+
+main().catch(err => { console.error(err); process.exit(1) })
+EOF
+
+npx tsx /tmp/verify-drafts.ts
 ```
 
-### Gate B4: Drafts Produce Complete Output
+### Gate 5: All Projects Drafted
 
 ```
-PASS criteria:
-For every project re-drafted:
-- processing_status = 'completed' OR 'failed' (not stuck at 'processing')
-- If completed: has_body = true, has_meta_title = true, has_meta_desc = true, has_capsule = true, faq_count >= 5
-- If failed: processing_error contains a meaningful error message (not null, not empty)
+PASS criteria: All 5 projects show:
+  - processing_status = 'completed'
+  - has_body = true
+  - has_meta_title = true
+  - has_meta_description = true  
+  - has_capsule = true
+  - faq_count >= 5
 
-At least ONE project must have completed successfully with all fields populated.
+FAIL action: Record which projects failed and why. If a project failed with processing_error, record the error. If the API call returned non-200, record the response. STOP.
 ```
-
----
-
-## Task 5: Investigate Cascade Failures
-
-Run:
-
-```sql
-SELECT id, status, error, created_at, completed_at
-FROM content_jobs
-WHERE job_type = 'cascade'
-ORDER BY created_at DESC;
-```
-
-For each failed cascade job, record the error. If the errors share a common pattern, note it. Do not fix — just document.
-
-### Gate B5: Cascade Failures Documented
-
-```
-PASS criteria: Every failed cascade job's error is recorded in the report. If a pattern exists, it is identified.
-```
-
----
-
-## Commit and Deploy
-
-After all fixes pass local build:
-
-1. `git add -A`
-2. `git commit -m "fix: BUG-1 processingStatus reset on stage advance, BUG-2 drafter output validation"`
-3. `git push`
-4. Deploy to Vercel (either via push-triggered deploy or `vercel --prod`)
-5. Wait for deploy to complete
-6. Run Gate B4 (re-drafting) against PRODUCTION
 
 ---
 
@@ -376,58 +525,110 @@ After all fixes pass local build:
 Write to `content-engine/reports/phaseB-bug-fixes.md`:
 
 ```markdown
-# Phase B: Bug Fixes — Report
+# Phase B: Bug Fixes and Re-Draft — Report
 
 **Date:** [timestamp]
 **Executed by:** Claude CLI
 
-## BUG-1: Status Reset Fix
-### Code Changes
-[diff or description of exact changes in both files]
-### Verification Script Output
-[full output of verify-bug1-fix.ts]
-### Gate B1: [PASS/FAIL]
+## Task 1: BUG-1 Fix
 
-## BUG-2: Drafter Output Validation
-### Code Changes
-[diff or description]
-### Verification Script Output
-[full output of verify-bug2-fix.ts]
-### Gate B2: [PASS/FAIL]
+### 1a: batch/route.ts advance action
+[exact code changed]
 
-## Ghost Completions
-### Identified
-[list of IDs with evidence]
-### Reset Status
-[pending Graham approval / executed]
-### Gate B3: [PASS/FAIL]
+### 1b: batch/route.ts retry action
+[exact code changed]
 
-## Re-Drafting
-### Projects Drafted
-[table: id, title, status, has_body, has_meta, faq_count]
-### Gate B4: [PASS/FAIL]
+### 1c: handler.ts stage_change
+[exact code changed]
 
-## Cascade Failures
-### Failed Jobs
-[table: id, error, date]
-### Pattern Analysis
-[analysis or "no common pattern"]
-### Gate B5: [PASS/FAIL]
+### 1d: Build
+[raw output, exit code]
 
-## Git
-- Committed: [YES/NO]
-- Pushed: [YES/NO]
-- Deploy: [status]
+### Gate 1: [PASS/FAIL]
+
+---
+
+## Task 2: BUG-2 Fix
+
+### 2a: article-drafter.ts raw logging
+[exact code changed]
+
+### 2b: article-drafter.ts strict validation
+[exact code changed]
+
+### 2c: destination-page-drafter.ts meta validation
+[exact code changed]
+
+### 2d: destination-page-drafter.ts FAQ validation
+[exact code changed]
+
+### 2e: property-page-drafter.ts meta validation
+[exact code changed]
+
+### 2f: property-page-drafter.ts FAQ validation
+[exact code changed]
+
+### 2g: Build
+[raw output, exit code]
+
+### Gate 2: [PASS/FAIL]
+
+---
+
+## Task 3: Deploy
+
+### 3a: Commit
+[commit hash, files]
+
+### 3b: Vercel verification
+[raw output]
+
+### Gate 3: [PASS/FAIL]
+
+---
+
+## Task 4: Ghost Resets
+
+### 4a: Bearer token
+[source file, token length]
+
+### 4b: Reset execution
+[raw script output — before, reset result, after]
+
+### Gate 4: [PASS/FAIL]
+
+---
+
+## Task 5: Re-Draft
+
+### 5a: Draft responses
+[for each project: ID, HTTP status, response body]
+
+### 5b: Verification
+[raw script output]
+
+### Gate 5: [PASS/FAIL]
+
+---
 
 ## Overall: [ALL GATES PASS / BLOCKED AT GATE N]
 ```
 
 ---
 
+## DO NOT
+
+- Do not refactor code beyond the specified changes
+- Do not modify any files other than the 5 listed (batch/route.ts, handler.ts, article-drafter.ts, destination-page-drafter.ts, property-page-drafter.ts)
+- Do not run drafts before deployment is confirmed (Gate 3)
+- Do not run drafts before resets are confirmed (Gate 4)
+- Do not skip any project in Task 5 — attempt all 5
+- Do not re-attempt a failed draft automatically — record the failure and continue to next project
+- Do not create scripts in the repo — use /tmp for throwaway scripts
+- Do not summarise or paraphrase command outputs
+
+---
+
 ## STOP CONDITIONS
 
-- If BUG-1 fix causes build failure → stop, report
-- If BUG-2 verification script shows any FAIL → stop, report
-- If ghost completion reset list needs Graham approval → stop, report, wait
-- If ALL re-draft attempts fail → stop, report (this suggests an upstream issue like OpenRouter API key or model availability)
-- If any unexpected database state appears → stop, report
+If any gate fails, **stop and write the report up to that point.** Do not attempt to fix the failure. The strategist decides next steps.

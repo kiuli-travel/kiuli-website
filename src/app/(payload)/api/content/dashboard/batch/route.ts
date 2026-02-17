@@ -70,6 +70,22 @@ export async function POST(request: Request) {
         )
 
         if (nextStage) {
+          if (nextStage === 'published') {
+            const consistencyResult = (project as Record<string, unknown>).consistencyCheckResult as string
+            if (consistencyResult === 'hard_contradiction') {
+              const issues = Array.isArray((project as Record<string, unknown>).consistencyIssues)
+                ? (project as Record<string, unknown>).consistencyIssues as Record<string, unknown>[]
+                : []
+              const unresolvedHard = issues.filter(
+                (i) => i.issueType === 'hard' && i.resolution === 'pending'
+              )
+              if (unresolvedHard.length > 0) {
+                // Skip this project — do not advance
+                continue
+              }
+            }
+          }
+
           const updateData: Record<string, unknown> = {
             stage: nextStage,
             processingStatus: 'idle',

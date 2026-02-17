@@ -328,7 +328,29 @@ export async function advanceProjectStage(
       }
     }
 
-    const updateData: Record<string, unknown> = { stage: nextStage }
+    // Block publish if unresolved hard contradictions
+    if (nextStage === 'published') {
+      const consistencyResult = project.consistencyCheckResult as string
+      if (consistencyResult === 'hard_contradiction') {
+        // Check if any issues are still pending
+        const issues = Array.isArray(project.consistencyIssues) ? project.consistencyIssues : []
+        const unresolvedHard = issues.filter(
+          (i: Record<string, unknown>) => i.issueType === 'hard' && i.resolution === 'pending'
+        )
+        if (unresolvedHard.length > 0) {
+          return {
+            error: `Cannot publish: ${unresolvedHard.length} unresolved hard contradiction(s). Resolve them in the workspace first.`,
+          }
+        }
+      }
+    }
+
+    const updateData: Record<string, unknown> = {
+      stage: nextStage,
+      processingStatus: 'idle',
+      processingError: null,
+      processingStartedAt: null,
+    }
     if (nextStage === 'published') {
       updateData.publishedAt = new Date().toISOString()
     }
@@ -596,5 +618,71 @@ export async function saveFaqItems(
     return { success: true }
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+// ── Action 9: Trigger Consistency Check ──────────────────────────────────────
+
+export async function triggerConsistencyCheck(
+  projectId: number,
+): Promise<{ success: true; result: { overallResult: string; issueCount: number } } | { error: string }> {
+  const { payload, user } = await authenticate()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  try {
+    await payload.findByID({ collection: 'content-projects', id: projectId, depth: 0 })
+  } catch {
+    return { error: 'Project not found' }
+  }
+
+  try {
+    const { checkConsistency } = await import(
+      '../../../../../../../content-system/quality/consistency-checker'
+    )
+
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      data: { processingStatus: 'processing', processingError: null },
+    })
+
+    const result = await checkConsistency(projectId)
+
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      data: {
+        consistencyCheckResult: result.overallResult,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        consistencyIssues: result.issues.map((issue: any) => ({
+          issueType: issue.issueType,
+          existingContent: issue.existingContent,
+          newContent: issue.newContent,
+          sourceRecord: issue.sourceRecord,
+          resolution: issue.resolution,
+          resolutionNote: issue.resolutionNote || null,
+        })),
+        processingStatus: 'completed',
+        processingError: null,
+      },
+    })
+
+    return {
+      success: true,
+      result: { overallResult: result.overallResult, issueCount: result.issues.length },
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    try {
+      await payload.update({
+        collection: 'content-projects',
+        id: projectId,
+        data: { processingStatus: 'failed', processingError: message },
+      })
+    } catch {}
+    return { error: message }
   }
 }

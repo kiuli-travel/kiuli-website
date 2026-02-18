@@ -101,13 +101,26 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
     postId = updated.id as number
     console.log(`[article-publisher] Updated existing post ${postId} for project ${projectId}`)
   } else {
+    // Two-step create: draft first, then publish.
+    // The search plugin's afterChange hook runs in a separate transaction and
+    // needs the post to exist in DB before it can create search_rels FK entries.
+    const draftData = { ...postData, _status: 'draft' }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const created = await payload.create({
       collection: 'posts',
-      data: postData as any,
+      data: draftData as any,
+      draft: true,
     })
     postId = created.id as number
-    console.log(`[article-publisher] Created new post ${postId} for project ${projectId}`)
+    console.log(`[article-publisher] Created draft post ${postId}, now publishing`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await payload.update({
+      collection: 'posts',
+      id: postId,
+      data: { _status: 'published' } as any,
+    })
+    console.log(`[article-publisher] Published post ${postId} for project ${projectId}`)
   }
 
   return {

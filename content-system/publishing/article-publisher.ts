@@ -110,6 +110,7 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
       collection: 'posts',
       data: draftData as any,
       draft: true,
+      overrideAccess: true,
     })
     postId = created.id as number
     console.log(`[article-publisher] Created draft post ${postId}, now publishing`)
@@ -119,6 +120,7 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
       collection: 'posts',
       id: postId,
       data: { _status: 'published' } as any,
+      overrideAccess: true,
     })
     console.log(`[article-publisher] Published post ${postId} for project ${projectId}`)
   }

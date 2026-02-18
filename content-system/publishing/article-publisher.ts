@@ -57,6 +57,10 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
 
   const now = new Date().toISOString()
 
+  // answerCapsule has a 40-60 word validation on Posts; only include if valid
+  const capsuleWords = answerCapsule ? answerCapsule.trim().split(/\s+/).filter((w: string) => w.length > 0).length : 0
+  const validCapsule = capsuleWords >= 40 && capsuleWords <= 60 ? answerCapsule : undefined
+
   const postData: Record<string, unknown> = {
     title,
     content: body,
@@ -64,10 +68,10 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
     publishedAt: now,
     _status: 'published',
     faqItems: faqItems.length > 0 ? faqItems : [],
-    answerCapsule: answerCapsule || undefined,
     meta: {
       title: metaTitle || undefined,
       description: metaDescription || undefined,
+      answerCapsule: validCapsule,
     },
   }
 

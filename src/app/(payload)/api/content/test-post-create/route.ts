@@ -36,21 +36,18 @@ export async function POST(request: NextRequest) {
     if (mode === 'fix-schema') {
       const db = (payload.db as any).drizzle
       const queries = [
-        // posts_faq_items
-        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`,
-        sql`CREATE SEQUENCE IF NOT EXISTS "posts_faq_items_id_seq" OWNED BY "posts_faq_items"."id"`,
-        sql`SELECT setval('"posts_faq_items_id_seq"', COALESCE((SELECT MAX("id") FROM "posts_faq_items"), 0) + 1, false)`,
-        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" SET DEFAULT nextval('"posts_faq_items_id_seq"')`,
+        // posts_faq_items: Payload generates hex string IDs for array items
+        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" DROP DEFAULT`,
+        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" SET DATA TYPE varchar USING "id"::varchar`,
+        sql`DROP SEQUENCE IF EXISTS "posts_faq_items_id_seq"`,
         // _posts_v_version_faq_items
-        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`,
-        sql`CREATE SEQUENCE IF NOT EXISTS "_posts_v_version_faq_items_id_seq" OWNED BY "_posts_v_version_faq_items"."id"`,
-        sql`SELECT setval('"_posts_v_version_faq_items_id_seq"', COALESCE((SELECT MAX("id") FROM "_posts_v_version_faq_items"), 0) + 1, false)`,
-        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DEFAULT nextval('"_posts_v_version_faq_items_id_seq"')`,
+        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" DROP DEFAULT`,
+        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DATA TYPE varchar USING "id"::varchar`,
+        sql`DROP SEQUENCE IF EXISTS "_posts_v_version_faq_items_id_seq"`,
         // _posts_v_version_populated_authors
-        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`,
-        sql`CREATE SEQUENCE IF NOT EXISTS "_posts_v_version_populated_authors_id_seq" OWNED BY "_posts_v_version_populated_authors"."id"`,
-        sql`SELECT setval('"_posts_v_version_populated_authors_id_seq"', COALESCE((SELECT MAX("id") FROM "_posts_v_version_populated_authors"), 0) + 1, false)`,
-        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DEFAULT nextval('"_posts_v_version_populated_authors_id_seq"')`,
+        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" DROP DEFAULT`,
+        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DATA TYPE varchar USING "id"::varchar`,
+        sql`DROP SEQUENCE IF EXISTS "_posts_v_version_populated_authors_id_seq"`,
       ]
       for (const q of queries) {
         try {

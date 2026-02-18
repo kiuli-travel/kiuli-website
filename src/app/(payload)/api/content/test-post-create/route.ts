@@ -73,7 +73,20 @@ export async function POST(request: NextRequest) {
         { question: 'Test Q1?', answer: makeTextLexical('Answer one.') },
         { question: 'Test Q2?', answer: makeTextLexical('Answer two.') },
       ]
-      steps.push('added faqItems')
+      steps.push('added faqItems with answers')
+    }
+
+    if (mode === 'faq-noans') {
+      postData.faqItems = [
+        { question: 'Test Q1 no answer?' },
+        { question: 'Test Q2 no answer?' },
+      ]
+      steps.push('added faqItems without answers')
+    }
+
+    if (mode === 'faq-empty') {
+      postData.faqItems = []
+      steps.push('added empty faqItems array')
     }
 
     if (mode === 'meta' || mode === 'full') {

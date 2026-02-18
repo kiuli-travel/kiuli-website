@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { sql } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,35 +35,29 @@ export async function POST(request: NextRequest) {
     // Schema repair mode: revert posts_faq_items id columns back to serial
     if (mode === 'fix-schema') {
       const db = (payload.db as any).drizzle
-      const repairs = [
-        { table: 'posts_faq_items', seq: 'posts_faq_items_id_seq' },
-        { table: '_posts_v_version_faq_items', seq: '_posts_v_version_faq_items_id_seq' },
-        { table: '_posts_v_version_populated_authors', seq: '_posts_v_version_populated_authors_id_seq' },
+      const queries = [
+        // posts_faq_items
+        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`,
+        sql`CREATE SEQUENCE IF NOT EXISTS "posts_faq_items_id_seq" OWNED BY "posts_faq_items"."id"`,
+        sql`SELECT setval('"posts_faq_items_id_seq"', COALESCE((SELECT MAX("id") FROM "posts_faq_items"), 0) + 1, false)`,
+        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" SET DEFAULT nextval('"posts_faq_items_id_seq"')`,
+        // _posts_v_version_faq_items
+        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`,
+        sql`CREATE SEQUENCE IF NOT EXISTS "_posts_v_version_faq_items_id_seq" OWNED BY "_posts_v_version_faq_items"."id"`,
+        sql`SELECT setval('"_posts_v_version_faq_items_id_seq"', COALESCE((SELECT MAX("id") FROM "_posts_v_version_faq_items"), 0) + 1, false)`,
+        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DEFAULT nextval('"_posts_v_version_faq_items_id_seq"')`,
+        // _posts_v_version_populated_authors
+        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`,
+        sql`CREATE SEQUENCE IF NOT EXISTS "_posts_v_version_populated_authors_id_seq" OWNED BY "_posts_v_version_populated_authors"."id"`,
+        sql`SELECT setval('"_posts_v_version_populated_authors_id_seq"', COALESCE((SELECT MAX("id") FROM "_posts_v_version_populated_authors"), 0) + 1, false)`,
+        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DEFAULT nextval('"_posts_v_version_populated_authors_id_seq"')`,
       ]
-      for (const { table, seq } of repairs) {
+      for (const q of queries) {
         try {
-          await db.execute({ sql: `ALTER TABLE "${table}" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`, params: [] })
-          steps.push(`${table}: changed id to integer`)
+          await db.execute(q)
+          steps.push(`OK: ${q.queryChunks?.[0] || 'executed'}`)
         } catch (e: any) {
-          steps.push(`${table}: alter type failed: ${e.message}`)
-        }
-        try {
-          await db.execute({ sql: `CREATE SEQUENCE IF NOT EXISTS "${seq}" OWNED BY "${table}"."id"`, params: [] })
-          steps.push(`${table}: created sequence ${seq}`)
-        } catch (e: any) {
-          steps.push(`${table}: create seq failed: ${e.message}`)
-        }
-        try {
-          await db.execute({ sql: `SELECT setval('"${seq}"', COALESCE((SELECT MAX("id") FROM "${table}"), 0) + 1, false)`, params: [] })
-          steps.push(`${table}: set sequence value`)
-        } catch (e: any) {
-          steps.push(`${table}: setval failed: ${e.message}`)
-        }
-        try {
-          await db.execute({ sql: `ALTER TABLE "${table}" ALTER COLUMN "id" SET DEFAULT nextval('"${seq}"')`, params: [] })
-          steps.push(`${table}: set default to sequence`)
-        } catch (e: any) {
-          steps.push(`${table}: set default failed: ${e.message}`)
+          steps.push(`FAIL: ${e.message}`)
         }
       }
       return NextResponse.json({ success: true, steps })

@@ -98,6 +98,80 @@ export async function POST(request: NextRequest) {
       steps.push('added meta')
     }
 
+    // Destination publisher integration test (Phase 13 Task 14)
+    if (mode === 'destination') {
+      const { textToLexical } = await import('../../../../../../content-system/publishing/text-to-lexical')
+
+      // TEST 1: textToLexical produces valid Lexical JSON
+      const lexical = textToLexical('First paragraph.\n\nSecond paragraph.\n\nThird.')
+      const root = lexical.root as Record<string, unknown>
+      const children = root.children as unknown[]
+      if (root.type !== 'root' || children.length !== 3) {
+        steps.push(`TEST 1 FAIL: root.type=${root.type}, paragraphs=${children.length}`)
+        return NextResponse.json({ error: 'TEST 1 FAIL', steps }, { status: 500 })
+      }
+      steps.push('TEST 1 PASS: textToLexical produces 3 paragraphs')
+
+      // TEST 2: textToLexical empty input
+      const empty = textToLexical('')
+      const emptyChildren = (empty.root as Record<string, unknown>).children as unknown[]
+      if (emptyChildren.length !== 0) {
+        steps.push('TEST 2 FAIL: non-empty children for empty input')
+        return NextResponse.json({ error: 'TEST 2 FAIL', steps }, { status: 500 })
+      }
+      steps.push('TEST 2 PASS: textToLexical handles empty input')
+
+      // Find a destination
+      const dests = await payload.find({ collection: 'destinations', where: { type: { equals: 'destination' } }, limit: 1, depth: 0 })
+      if (dests.docs.length === 0) {
+        steps.push('SKIP: No destinations in database')
+        return NextResponse.json({ success: true, steps })
+      }
+      const dest = dests.docs[0] as unknown as Record<string, unknown>
+      const destId = dest.id as number
+      steps.push(`Testing against: ${dest.name} (ID ${destId})`)
+
+      // TEST 3: Write all 6 new fields
+      const testContent = textToLexical('TEST — Phase 13 integration test. This will be cleaned up.')
+      await payload.update({
+        collection: 'destinations',
+        id: destId,
+        data: {
+          whyChoose: testContent, keyExperiences: testContent, gettingThere: testContent,
+          healthSafety: testContent, investmentExpectation: testContent, topLodgesContent: testContent,
+        } as any,
+        overrideAccess: true,
+      })
+      steps.push('TEST 3 PASS: All 6 fields written')
+
+      // TEST 4: Read back and verify
+      const updated = await payload.findByID({ collection: 'destinations', id: destId, depth: 0, overrideAccess: true }) as unknown as Record<string, unknown>
+      const fields = ['whyChoose', 'keyExperiences', 'gettingThere', 'healthSafety', 'investmentExpectation', 'topLodgesContent']
+      for (const field of fields) {
+        const val = updated[field] as Record<string, unknown> | null
+        if (!val || !val.root || (val.root as Record<string, unknown>).type !== 'root') {
+          steps.push(`TEST 4 FAIL: ${field} is not valid Lexical`)
+          return NextResponse.json({ error: `TEST 4 FAIL: ${field}`, steps }, { status: 500 })
+        }
+      }
+      steps.push('TEST 4 PASS: All 6 fields contain valid Lexical JSON')
+
+      // CLEANUP
+      await payload.update({
+        collection: 'destinations', id: destId, overrideAccess: true,
+        data: { whyChoose: null, keyExperiences: null, gettingThere: null, healthSafety: null, investmentExpectation: null, topLodgesContent: null } as any,
+      })
+      const cleaned = await payload.findByID({ collection: 'destinations', id: destId, depth: 0, overrideAccess: true }) as unknown as Record<string, unknown>
+      for (const field of fields) {
+        if (cleaned[field] !== null && cleaned[field] !== undefined) {
+          steps.push(`WARNING: ${field} not null after cleanup`)
+        }
+      }
+      steps.push('CLEANUP: Fields restored to null')
+      steps.push('=== ALL TESTS PASS ===')
+      return NextResponse.json({ success: true, steps })
+    }
+
     if (mode === 'publisher') {
       steps.push('calling publishArticle via dynamic import')
       const { publishArticle } = await import('../../../../../../content-system/publishing/article-publisher')

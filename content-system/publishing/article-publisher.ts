@@ -64,10 +64,10 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
     publishedAt: now,
     _status: 'published',
     faqItems: faqItems.length > 0 ? faqItems : [],
+    answerCapsule: answerCapsule || undefined,
     meta: {
       title: metaTitle || undefined,
       description: metaDescription || undefined,
-      answerCapsule: answerCapsule || undefined,
     },
   }
 

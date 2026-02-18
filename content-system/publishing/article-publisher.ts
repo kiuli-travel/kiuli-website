@@ -101,15 +101,28 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
     postId = updated.id as number
     console.log(`[article-publisher] Updated existing post ${postId} for project ${projectId}`)
   } else {
+    // Two-step: create as draft (skips search plugin sync), then publish.
+    // The search plugin's syncDocAsSearchIndex skips sync when _status === 'draft'.
+    // This prevents an FK race where search_rels references uncommitted posts.
+    const draftData = { ...postData, _status: 'draft' }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const created = await payload.create({
       collection: 'posts',
-      data: postData as any,
+      data: draftData as any,
       overrideAccess: true,
-      context: { disableRevalidate: true },
     })
     postId = created.id as number
-    console.log(`[article-publisher] Created new post ${postId} for project ${projectId}`)
+    console.log(`[article-publisher] Created draft post ${postId}, now publishing`)
+
+    // Update to published — search plugin will sync now that the post is committed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await payload.update({
+      collection: 'posts',
+      id: postId,
+      data: { _status: 'published' } as any,
+      overrideAccess: true,
+    })
+    console.log(`[article-publisher] Published post ${postId} for project ${projectId}`)
   }
 
   return {

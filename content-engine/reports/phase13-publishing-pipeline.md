@@ -373,4 +373,28 @@ Migrated:  20260218_fix_posts_faq_items_id_types (170ms)
 
 ### PART E: Commit
 
-#### Gate 4: [pending]
+#### Gate 4: PASS — Commit and push
+
+```
+Commit: f6e892a
+Message: fix: Phase 13 cleanup — idempotent migration, correct optimistic locking, remove test debris
+Files: 7 changed, 860 insertions(+), 312 deletions(-)
+```
+
+Staged files:
+- `src/migrations/20260218_fix_posts_faq_items_id_types.ts` (rewritten idempotent)
+- `content-system/publishing/destination-page-publisher.ts` (optimistic lock fix)
+- `content-system/publishing/property-page-publisher.ts` (optimistic lock fix)
+- `content-engine/scripts/cleanup-test-posts.ts` (new)
+- `content-engine/prompts/phase13-cleanup.md` (new)
+- `content-engine/reports/phase13-publishing-pipeline.md` (appended)
+- `src/app/(payload)/api/content/test-post-create/route.ts` (deleted)
+
+### Phase 13 Cleanup: ALL GATES PASS
+
+| Gate | Description | Result |
+|------|-------------|--------|
+| 1 | Build passes | PASS |
+| 2 | Migration idempotent run | PASS |
+| 3 | Database integrity (6-point) | PASS |
+| 4 | Commit and push | PASS |

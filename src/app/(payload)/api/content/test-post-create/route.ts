@@ -31,6 +31,43 @@ export async function POST(request: NextRequest) {
   const ts = Date.now()
 
   try {
+    // Schema repair mode: revert posts_faq_items id columns back to serial
+    if (mode === 'fix-schema') {
+      const db = (payload.db as any).drizzle
+      const repairs = [
+        { table: 'posts_faq_items', seq: 'posts_faq_items_id_seq' },
+        { table: '_posts_v_version_faq_items', seq: '_posts_v_version_faq_items_id_seq' },
+        { table: '_posts_v_version_populated_authors', seq: '_posts_v_version_populated_authors_id_seq' },
+      ]
+      for (const { table, seq } of repairs) {
+        try {
+          await db.execute({ sql: `ALTER TABLE "${table}" ALTER COLUMN "id" SET DATA TYPE integer USING "id"::integer`, params: [] })
+          steps.push(`${table}: changed id to integer`)
+        } catch (e: any) {
+          steps.push(`${table}: alter type failed: ${e.message}`)
+        }
+        try {
+          await db.execute({ sql: `CREATE SEQUENCE IF NOT EXISTS "${seq}" OWNED BY "${table}"."id"`, params: [] })
+          steps.push(`${table}: created sequence ${seq}`)
+        } catch (e: any) {
+          steps.push(`${table}: create seq failed: ${e.message}`)
+        }
+        try {
+          await db.execute({ sql: `SELECT setval('"${seq}"', COALESCE((SELECT MAX("id") FROM "${table}"), 0) + 1, false)`, params: [] })
+          steps.push(`${table}: set sequence value`)
+        } catch (e: any) {
+          steps.push(`${table}: setval failed: ${e.message}`)
+        }
+        try {
+          await db.execute({ sql: `ALTER TABLE "${table}" ALTER COLUMN "id" SET DEFAULT nextval('"${seq}"')`, params: [] })
+          steps.push(`${table}: set default to sequence`)
+        } catch (e: any) {
+          steps.push(`${table}: set default failed: ${e.message}`)
+        }
+      }
+      return NextResponse.json({ success: true, steps })
+    }
+
     const postData: Record<string, unknown> = {
       title: `Diag ${mode} ${ts}`,
       slug: `diag-${mode}-${ts}`,

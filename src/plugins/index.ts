@@ -85,6 +85,9 @@ export const plugins: Plugin[] = [
   searchPlugin({
     collections: ['posts'],
     beforeSync: beforeSyncWithSearch,
+    // Skip search sync when creating via content engine to avoid FK race condition
+    // (search_rels references uncommitted posts within the same transaction)
+    skipSync: ({ req }) => Boolean(req.context?.skipSearchSync),
     searchOverrides: {
       fields: ({ defaultFields }) => {
         return [...defaultFields, ...searchFields]

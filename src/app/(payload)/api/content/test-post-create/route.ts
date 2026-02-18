@@ -121,8 +121,8 @@ export async function POST(request: NextRequest) {
       }
       steps.push('TEST 2 PASS: textToLexical handles empty input')
 
-      // Find a destination
-      const dests = await payload.find({ collection: 'destinations', where: { type: { equals: 'destination' } }, limit: 1, depth: 0 })
+      // Find a destination with heroImage (required field — update fails without it)
+      const dests = await payload.find({ collection: 'destinations', where: { heroImage: { exists: true } }, limit: 1, depth: 0, overrideAccess: true })
       if (dests.docs.length === 0) {
         steps.push('SKIP: No destinations in database')
         return NextResponse.json({ success: true, steps })

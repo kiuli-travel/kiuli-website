@@ -283,3 +283,94 @@ Note: Posts 14, 18, 21 are diagnostic test posts created during debugging. They 
 - Search plugin fix: `src/plugins/index.ts` (skipSync config)
 - Article publisher fix: `content-system/publishing/article-publisher.ts` (skipSearchSync context, answerCapsule validation)
 - Published post: ID 22, project 79 (authority article on Kazinga Channel hippos)
+
+---
+
+## Phase 13 Cleanup — 2026-02-18
+
+### PART A: Idempotent Migration
+
+Replaced `src/migrations/20260218_fix_posts_faq_items_id_types.ts` with idempotent version. Uses `getColumnType()` helper to check `information_schema.columns` before every ALTER. Four tables handled:
+
+| Table | Target Type | Check |
+|---|---|---|
+| `posts_faq_items` | varchar | `ensureVarchar` — skip if `character varying` |
+| `posts_populated_authors` | varchar | `ensureVarchar` — skip if `character varying` |
+| `_posts_v_version_faq_items` | serial | `ensureSerial` — skip if `integer` with default |
+| `_posts_v_version_populated_authors` | serial | `ensureSerial` — skip if `integer` with default |
+
+### PART B: Optimistic Lock Fix
+
+**Destination publisher** (`content-system/publishing/destination-page-publisher.ts`):
+- Removed `OptimisticLockError` import
+- Single `payload.update()` at bottom (line 111), not inside if/else branches
+- Retry path: reads twice, verifies baseline stable before falling through to write
+- Second conflict throws with both expected and actual `updatedAt`
+
+**Property publisher** (`content-system/publishing/property-page-publisher.ts`):
+- Removed `OptimisticLockError` import
+- Single `payload.update()` at bottom (line 90), not inside if/else branches
+- Same retry-verify-write pattern as destination publisher
+
+### PART C: Debris Removal
+
+**Test post deletion** (via Payload REST API):
+```
+Post 14: "Diagnostic Test Post" — deleted
+Post 18: "Diag faq-empty 1771413109072" — deleted
+Post 21: "Diag faq 1771413634536" — deleted
+```
+
+Verification:
+```sql
+SELECT id, title FROM posts;
+ 22 | The Kazinga Channel Phenomenon: Understanding Africa's Highest Hippo Density from Your Private Lodge
+(1 row)
+
+SELECT COUNT(*) FROM posts_faq_items WHERE _parent_id = 22;
+ 10
+
+SELECT COUNT(*) FROM posts_faq_items WHERE _parent_id IN (14, 18, 21);
+ 0
+
+SELECT id, parent_id FROM _posts_v;
+ 21 | 22
+(1 row)
+```
+
+**Test route deletion**: `src/app/(payload)/api/content/test-post-create/` — deleted, confirmed "No such file or directory".
+
+### PART D: Build + Migration Verification
+
+#### Gate 1: PASS — Build
+`npm run build` exit 0, no errors.
+
+#### Gate 2: PASS — Migration idempotent run
+```
+npx payload migrate
+Migrating: 20260218_fix_posts_faq_items_id_types
+Fixing posts array table ID types (idempotent)...
+Main tables → varchar:
+  posts_faq_items.id already varchar — skip
+  posts_populated_authors.id already varchar — skip
+Version tables → serial:
+  _posts_v_version_faq_items.id already integer with default — skip
+  _posts_v_version_populated_authors.id already integer with default — skip
+Done.
+Migrated:  20260218_fix_posts_faq_items_id_types (170ms)
+```
+
+#### Gate 3: PASS — Database integrity (6-point checklist)
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `posts_faq_items.id` = character varying, no default | PASS |
+| 2 | `_posts_v_version_faq_items.id` = integer, nextval default | PASS |
+| 3 | Post 22 has 10 FAQ items | PASS |
+| 4 | Version FAQ items exist (count = 10) | PASS |
+| 5 | Test posts deleted (count = 0) | PASS |
+| 6 | Only post 22 in posts table | PASS |
+
+### PART E: Commit
+
+#### Gate 4: [pending]

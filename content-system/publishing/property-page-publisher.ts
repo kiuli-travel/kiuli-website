@@ -1,7 +1,7 @@
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { textToLexical } from './text-to-lexical'
-import type { PublishResult, OptimisticLockError } from './types'
+import type { PublishResult } from './types'
 
 export async function publishPropertyPage(projectId: number): Promise<PublishResult> {
   const payload = await getPayload({ config: configPromise })
@@ -62,7 +62,7 @@ export async function publishPropertyPage(projectId: number): Promise<PublishRes
       }))
   }
 
-  // Optimistic lock
+  // Optimistic lock: verify baseline before write
   const freshProp = await payload.findByID({
     collection: 'properties',
     id: propertyId,
@@ -70,11 +70,28 @@ export async function publishPropertyPage(projectId: number): Promise<PublishRes
   }) as unknown as Record<string, unknown>
 
   if ((freshProp.updatedAt as string) !== baselineUpdatedAt) {
-    console.warn(`[property-publisher] Optimistic lock conflict on property ${propertyId}, retrying`)
-    await payload.update({ collection: 'properties', id: propertyId, data: updateData })
-  } else {
-    await payload.update({ collection: 'properties', id: propertyId, data: updateData })
+    console.warn(`[property-publisher] Conflict on property ${propertyId}, retrying`)
+    const retryBaseline = freshProp.updatedAt as string
+
+    const retryCheck = await payload.findByID({
+      collection: 'properties',
+      id: propertyId,
+      depth: 0,
+    }) as unknown as Record<string, unknown>
+
+    if ((retryCheck.updatedAt as string) !== retryBaseline) {
+      throw new Error(
+        `Optimistic lock failed after retry on properties/${propertyId}: ` +
+        `expected ${retryBaseline}, got ${retryCheck.updatedAt}`
+      )
+    }
   }
+
+  await payload.update({
+    collection: 'properties',
+    id: propertyId,
+    data: updateData,
+  })
 
   const now = new Date().toISOString()
   console.log(`[property-publisher] Updated property ${propertyId} for project ${projectId}`)

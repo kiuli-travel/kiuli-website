@@ -1,7 +1,7 @@
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { textToLexical } from './text-to-lexical'
-import type { PublishResult, OptimisticLockError } from './types'
+import type { PublishResult } from './types'
 
 const SECTION_TO_FIELD: Record<string, string> = {
   overview: 'description',
@@ -81,7 +81,7 @@ export async function publishDestinationPage(projectId: number): Promise<Publish
       }))
   }
 
-  // Optimistic lock: re-read before write
+  // Optimistic lock: verify baseline before write
   const freshDest = await payload.findByID({
     collection: 'destinations',
     id: destinationId,
@@ -89,37 +89,30 @@ export async function publishDestinationPage(projectId: number): Promise<Publish
   }) as unknown as Record<string, unknown>
 
   if ((freshDest.updatedAt as string) !== baselineUpdatedAt) {
-    // Conflict — retry once with fresh baseline
-    console.warn(`[destination-publisher] Optimistic lock conflict on destination ${destinationId}, retrying`)
-    const retryDest = await payload.findByID({
-      collection: 'destinations',
-      id: destinationId,
-      depth: 0,
-    }) as unknown as Record<string, unknown>
-    const retryUpdatedAt = retryDest.updatedAt as string
+    // First conflict — retry once per V4 spec
+    console.warn(`[destination-publisher] Conflict on destination ${destinationId}, retrying`)
+    const retryBaseline = freshDest.updatedAt as string
 
-    // Second attempt
-    await payload.update({ collection: 'destinations', id: destinationId, data: updateData })
-
-    const afterUpdate = await payload.findByID({
+    const retryCheck = await payload.findByID({
       collection: 'destinations',
       id: destinationId,
       depth: 0,
     }) as unknown as Record<string, unknown>
 
-    if ((afterUpdate.updatedAt as string) === retryUpdatedAt) {
-      const lockError: OptimisticLockError = {
-        targetCollection: 'destinations',
-        targetId: destinationId,
-        expectedUpdatedAt: retryUpdatedAt,
-        actualUpdatedAt: afterUpdate.updatedAt as string,
-      }
-      throw new Error(`Optimistic lock failed after retry: ${JSON.stringify(lockError)}`)
+    if ((retryCheck.updatedAt as string) !== retryBaseline) {
+      throw new Error(
+        `Optimistic lock failed after retry on destinations/${destinationId}: ` +
+        `expected ${retryBaseline}, got ${retryCheck.updatedAt}`
+      )
     }
-  } else {
-    // No conflict — write
-    await payload.update({ collection: 'destinations', id: destinationId, data: updateData })
+    // Retry baseline stable — safe to write
   }
+
+  await payload.update({
+    collection: 'destinations',
+    id: destinationId,
+    data: updateData,
+  })
 
   const now = new Date().toISOString()
   console.log(`[destination-publisher] Updated destination ${destinationId} for project ${projectId}`)

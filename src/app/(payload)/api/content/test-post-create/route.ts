@@ -36,18 +36,19 @@ export async function POST(request: NextRequest) {
     if (mode === 'fix-schema') {
       const db = (payload.db as any).drizzle
       const queries = [
-        // posts_faq_items: Payload generates hex string IDs for array items
-        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" DROP DEFAULT`,
-        sql`ALTER TABLE "posts_faq_items" ALTER COLUMN "id" SET DATA TYPE varchar USING "id"::varchar`,
-        sql`DROP SEQUENCE IF EXISTS "posts_faq_items_id_seq"`,
-        // _posts_v_version_faq_items
-        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" DROP DEFAULT`,
-        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DATA TYPE varchar USING "id"::varchar`,
-        sql`DROP SEQUENCE IF EXISTS "_posts_v_version_faq_items_id_seq"`,
-        // _posts_v_version_populated_authors
-        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" DROP DEFAULT`,
-        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DATA TYPE varchar USING "id"::varchar`,
-        sql`DROP SEQUENCE IF EXISTS "_posts_v_version_populated_authors_id_seq"`,
+        // Version tables need serial (integer + auto-increment) — Drizzle omits ID, DB provides it
+        // _posts_v_version_faq_items: revert to integer + sequence
+        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DATA TYPE integer USING 0`,
+        sql`CREATE SEQUENCE IF NOT EXISTS "_posts_v_version_faq_items_id_seq" OWNED BY "_posts_v_version_faq_items"."id"`,
+        sql`SELECT setval('"_posts_v_version_faq_items_id_seq"', COALESCE((SELECT MAX("id") FROM "_posts_v_version_faq_items"), 0) + 1, false)`,
+        sql`ALTER TABLE "_posts_v_version_faq_items" ALTER COLUMN "id" SET DEFAULT nextval('"_posts_v_version_faq_items_id_seq"')`,
+        // _posts_v_version_populated_authors: revert to integer + sequence
+        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DATA TYPE integer USING 0`,
+        sql`CREATE SEQUENCE IF NOT EXISTS "_posts_v_version_populated_authors_id_seq" OWNED BY "_posts_v_version_populated_authors"."id"`,
+        sql`SELECT setval('"_posts_v_version_populated_authors_id_seq"', COALESCE((SELECT MAX("id") FROM "_posts_v_version_populated_authors"), 0) + 1, false)`,
+        sql`ALTER TABLE "_posts_v_version_populated_authors" ALTER COLUMN "id" SET DEFAULT nextval('"_posts_v_version_populated_authors_id_seq"')`,
+        // Main tables stay varchar (Payload provides hex string IDs) — verify current state
+        sql`SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name = 'posts_faq_items' AND column_name = 'id'`,
       ]
       for (const q of queries) {
         try {

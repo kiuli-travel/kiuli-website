@@ -1,0 +1,5 @@
+=== Deploy check ===
+kiuli.com: 200
+admin.kiuli.com: 308
+DONE
+admin.kiuli.com (following redirects): 200

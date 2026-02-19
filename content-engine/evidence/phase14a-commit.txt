@@ -1,0 +1,44 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   content-engine/evidence/phase14a-dedup.txt
+	new file:   content-engine/evidence/phase14a-final-build.txt
+	new file:   content-engine/evidence/phase14a-gate1.txt
+	new file:   content-engine/evidence/phase14a-gate2.txt
+	new file:   content-engine/evidence/phase14a-gate3.txt
+	new file:   content-engine/evidence/phase14a-gate4.txt
+	new file:   content-engine/evidence/phase14a-gate5.txt
+	new file:   content-engine/evidence/phase14a-gate6.txt
+	new file:   content-engine/evidence/phase14a-gate7.txt
+	new file:   content-engine/evidence/phase14a-gate8.txt
+	new file:   content-engine/evidence/phase14a-gate9.txt
+	new file:   content-engine/evidence/phase14a-investigation.txt
+	new file:   content-engine/prompts/phase14a-final.md
+	new file:   content-engine/prompts/phase14a-image-polish.md
+	modified:   content-engine/scripts/test-prompt-generator.ts
+	modified:   content-system/images/image-generator.ts
+	modified:   content-system/images/library-search.ts
+	modified:   content-system/images/prompt-generator.ts
+	modified:   content-system/images/types.ts
+	modified:   content-system/images/upload-pipeline.ts
+	modified:   content-system/publishing/article-publisher.ts
+	modified:   src/app/(payload)/admin/content-engine/project/[id]/actions.ts
+	modified:   src/app/(payload)/admin/content-engine/project/[id]/page.tsx
+	modified:   src/app/(payload)/admin/image-library/page.tsx
+	modified:   src/collections/ContentProjects/index.ts
+	modified:   src/collections/Media.ts
+	modified:   src/components/content-system/workspace-types.ts
+	modified:   src/components/content-system/workspace/ContentTabs.tsx
+	modified:   src/components/content-system/workspace/ImageLibraryPicker.tsx
+	new file:   src/lib/transform-project.ts
+	new file:   src/migrations/20260219_add_image_generation_fields.ts
+	modified:   src/migrations/index.ts
+	modified:   src/payload-types.ts
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	content-engine/evidence/phase14a-commit.txt
+
+DONE

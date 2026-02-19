@@ -70,6 +70,15 @@ export async function uploadGeneratedImage(
   const imgixUrl = createdDoc.imgixUrl ||
     `https://kiuli.imgix.net/${createdDoc.filename}?auto=format,compress&q=80`
 
+  // Write imgixUrl back to Media record if it wasn't set by the storage plugin
+  if (!createdDoc.imgixUrl && createdDoc.filename) {
+    await payload.update({
+      collection: 'media',
+      id: mediaId,
+      data: { imgixUrl } as any,
+    })
+  }
+
   // Trigger labeling in background (don't block the upload response)
   labelMediaRecord(mediaId, {
     country: metadata.country,

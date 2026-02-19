@@ -1,0 +1,11 @@
+=== Version table fix ===
+Migration created: src/migrations/20260219_fix_version_table_columns.ts
+Registered in: src/migrations/index.ts
+
+=== imgixUrl fix ===
+upload-pipeline.ts: added payload.update() to write imgixUrl back to Media record
+Backfill SQL included in migration
+
+=== Build ===
+EXIT: 0
+

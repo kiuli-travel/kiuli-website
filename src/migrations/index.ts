@@ -51,6 +51,7 @@ import * as migration_20260216_add_brand_voice_global from './20260216_add_brand
 import * as migration_20260217_add_destination_content_fields from './20260217_add_destination_content_fields';
 import * as migration_20260218_fix_posts_faq_items_id_types from './20260218_fix_posts_faq_items_id_types';
 import * as migration_20260219_add_image_generation_fields from './20260219_add_image_generation_fields';
+import * as migration_20260219_fix_version_table_columns from './20260219_fix_version_table_columns';
 
 export const migrations = [
   {
@@ -317,5 +318,10 @@ export const migrations = [
     up: migration_20260219_add_image_generation_fields.up,
     down: migration_20260219_add_image_generation_fields.down,
     name: '20260219_add_image_generation_fields',
+  },
+  {
+    up: migration_20260219_fix_version_table_columns.up,
+    down: migration_20260219_fix_version_table_columns.down,
+    name: '20260219_fix_version_table_columns',
   },
 ];

@@ -505,6 +505,18 @@ export interface Media {
    */
   sourceDayIndex?: number | null;
   /**
+   * Prompt used to generate this image
+   */
+  generationPrompt?: string | null;
+  /**
+   * AI model that generated this image
+   */
+  generationModel?: string | null;
+  /**
+   * When this image was generated
+   */
+  generatedAt?: string | null;
+  /**
    * Scene description (e.g., "infinity pool overlooking savanna at sunset")
    */
   scene?: string | null;
@@ -3516,6 +3528,18 @@ export interface ContentProject {
     | boolean
     | null;
   /**
+   * Inline image placements: [{ position, mediaId, caption }]
+   */
+  articleImages?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * AI-generated image candidates
    */
   generatedCandidates?:
@@ -4494,6 +4518,9 @@ export interface MediaSelect<T extends boolean = true> {
   sourceSegmentType?: T;
   sourceSegmentTitle?: T;
   sourceDayIndex?: T;
+  generationPrompt?: T;
+  generationModel?: T;
+  generatedAt?: T;
   scene?: T;
   mood?: T;
   timeOfDay?: T;
@@ -5250,6 +5277,7 @@ export interface ContentProjectsSelect<T extends boolean = true> {
   answerCapsule?: T;
   heroImage?: T;
   libraryMatches?: T;
+  articleImages?: T;
   generatedCandidates?:
     | T
     | {

@@ -26,6 +26,10 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
   const body = project.body
   if (!body) throw new Error('Cannot publish: body is empty')
 
+  // Insert article images into body at specified positions
+  const articleImages = parseArticleImages(project.articleImages)
+  const finalBody = articleImages.length > 0 ? insertImagesIntoBody(body, articleImages) : body
+
   const metaTitle = project.metaTitle as string
   const metaDescription = project.metaDescription as string
   const answerCapsule = project.answerCapsule as string
@@ -66,7 +70,7 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
 
   const postData: Record<string, unknown> = {
     title,
-    content: body,
+    content: finalBody,
     slug,
     publishedAt: now,
     _status: 'published',
@@ -122,5 +126,87 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
     targetCollection: 'posts',
     targetId: postId,
     publishedAt: now,
+  }
+}
+
+// ── Article Image Insertion ─────────────────────────────────────────────────
+
+interface ArticleImagePlacement {
+  position: number
+  mediaId: number
+  caption?: string
+}
+
+function parseArticleImages(value: unknown): ArticleImagePlacement[] {
+  if (!value) return []
+  const arr = typeof value === 'string' ? JSON.parse(value) : value
+  if (!Array.isArray(arr)) return []
+  return arr
+    .filter((item: Record<string, unknown>) => item && typeof item.mediaId === 'number')
+    .map((item: Record<string, unknown>) => ({
+      position: Number(item.position) || 0,
+      mediaId: item.mediaId as number,
+      caption: (item.caption as string) || undefined,
+    }))
+}
+
+function createMediaBlockNode(mediaId: number): Record<string, unknown> {
+  const id = Math.random().toString(36).slice(2, 14)
+  return {
+    type: 'block',
+    version: 1,
+    format: '',
+    fields: {
+      id,
+      blockType: 'mediaBlock',
+      blockName: '',
+      media: mediaId,
+    },
+  }
+}
+
+function insertImagesIntoBody(
+  body: unknown,
+  images: ArticleImagePlacement[],
+): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lexical = body as any
+  if (!lexical?.root?.children || !Array.isArray(lexical.root.children)) {
+    return body
+  }
+
+  const children = [...lexical.root.children]
+
+  // Find heading positions
+  const headingIndices: number[] = []
+  for (let i = 0; i < children.length; i++) {
+    if (children[i].type === 'heading') {
+      headingIndices.push(i)
+    }
+  }
+
+  // Sort images by position descending so insertion doesn't shift earlier indices
+  const sorted = [...images].sort((a, b) => b.position - a.position)
+
+  for (const img of sorted) {
+    // Find the heading at this position
+    if (img.position < headingIndices.length) {
+      const headingIndex = headingIndices[img.position]
+      // Insert after the next paragraph (or right after the heading if no paragraph follows)
+      let insertAt = headingIndex + 1
+      // Skip past the first paragraph after this heading
+      if (insertAt < children.length && children[insertAt].type === 'paragraph') {
+        insertAt++
+      }
+      children.splice(insertAt, 0, createMediaBlockNode(img.mediaId))
+    }
+  }
+
+  return {
+    ...lexical,
+    root: {
+      ...lexical.root,
+      children,
+    },
   }
 }

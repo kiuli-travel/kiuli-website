@@ -3,10 +3,12 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import {
+  isArticleType,
   isCompoundType,
   sectionLabels,
   type WorkspaceProject,
   type ConsistencyIssueDisplay,
+  type ArticleImage,
 } from '../workspace-types'
 import {
   saveProjectFields,
@@ -15,6 +17,7 @@ import {
   saveFaqItems,
   triggerConsistencyCheck,
   resolveConsistencyIssue,
+  saveArticleImages,
 } from '@/app/(payload)/admin/content-engine/project/[id]/actions'
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -630,16 +633,298 @@ interface ImagesTabProps {
 
 export function ImagesTab({ project, projectId, onDataChanged }: ImagesTabProps) {
   return (
-    <ImageLibraryPicker
-      projectId={projectId}
-      selectedId={project.heroImageId}
-      selectedImgixUrl={project.heroImageImgixUrl}
-      selectedAlt={project.heroImageAlt}
-      defaultCountry={project.destinations?.[0]}
-      defaultSpecies={project.species}
-      defaultDestinations={project.destinations}
-      onHeroChanged={onDataChanged}
-    />
+    <div className="flex flex-col gap-6">
+      <ImageLibraryPicker
+        projectId={projectId}
+        selectedId={project.heroImageId}
+        selectedImgixUrl={project.heroImageImgixUrl}
+        selectedAlt={project.heroImageAlt}
+        defaultCountry={project.destinations?.[0]}
+        defaultSpecies={project.species}
+        defaultDestinations={project.destinations}
+        onHeroChanged={onDataChanged}
+      />
+      {isArticleType(project.contentType) && (
+        <ArticleImagesSection
+          project={project}
+          projectId={projectId}
+          onDataChanged={onDataChanged}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Article Images Section ───────────────────────────────────────────────────
+
+function extractHeadings(draftBody?: string): string[] {
+  if (!draftBody) return []
+  const lines = draftBody.split('\n')
+  const headings: string[] = []
+  for (const line of lines) {
+    const match = line.match(/^#{1,3}\s+(.+)$/)
+    if (match) headings.push(match[1])
+  }
+  // If no markdown headings found, try splitting by paragraph breaks
+  if (headings.length === 0) {
+    const paras = draftBody.split(/\n{2,}/).filter((p) => p.trim().length > 0)
+    // Use first N paragraphs as positional labels
+    for (let i = 0; i < Math.min(paras.length, 8); i++) {
+      headings.push(`Section ${i + 1}`)
+    }
+  }
+  return headings
+}
+
+interface ArticleImagesSectionProps {
+  project: WorkspaceProject
+  projectId: number
+  onDataChanged?: () => void
+}
+
+function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImagesSectionProps) {
+  const [images, setImages] = useState<ArticleImage[]>(project.articleImages || [])
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const [pickingForPosition, setPickingForPosition] = useState<number | null>(null)
+
+  const headings = extractHeadings(project.draftBody)
+
+  // Sync from props when project data refreshes
+  useEffect(() => {
+    setImages(project.articleImages || [])
+  }, [project.articleImages])
+
+  const handleSave = useCallback(async (updated: ArticleImage[]) => {
+    setSaving(true)
+    const result = await saveArticleImages(projectId, updated)
+    setSaving(false)
+    if ('success' in result) {
+      setToast('Article images saved')
+      setTimeout(() => setToast(null), 2500)
+      onDataChanged?.()
+    } else {
+      alert(result.error)
+    }
+  }, [projectId, onDataChanged])
+
+  const handleAssign = useCallback((position: number, match: { mediaId: number; imgixUrl: string | null; alt: string }) => {
+    const updated = images.filter((img) => img.position !== position)
+    updated.push({
+      position,
+      mediaId: match.mediaId,
+      imgixUrl: match.imgixUrl || undefined,
+      alt: match.alt || undefined,
+    })
+    updated.sort((a, b) => a.position - b.position)
+    setImages(updated)
+    setPickingForPosition(null)
+    handleSave(updated)
+  }, [images, handleSave])
+
+  const handleRemove = useCallback((position: number) => {
+    const updated = images.filter((img) => img.position !== position)
+    setImages(updated)
+    handleSave(updated)
+  }, [images, handleSave])
+
+  const handleCaptionChange = useCallback((position: number, caption: string) => {
+    const updated = images.map((img) =>
+      img.position === position ? { ...img, caption } : img,
+    )
+    setImages(updated)
+  }, [images])
+
+  const handleCaptionBlur = useCallback((position: number) => {
+    const img = images.find((i) => i.position === position)
+    if (img) handleSave(images)
+  }, [images, handleSave])
+
+  if (!project.draftBody) {
+    return (
+      <div className="mx-5 rounded border border-kiuli-gray/30 bg-kiuli-gray/5 p-4">
+        <p className="text-xs text-kiuli-charcoal/50">Generate a draft first to add inline images.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-5 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-kiuli-charcoal">Article Images</h3>
+        {saving && <Loader2 className="h-3 w-3 animate-spin text-kiuli-teal" />}
+      </div>
+
+      {toast && (
+        <div className="rounded bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-medium text-emerald-700">
+          {toast}
+        </div>
+      )}
+
+      <p className="text-[10px] text-kiuli-charcoal/50">
+        Assign images to positions in the article. They will be inserted after each heading when published.
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {headings.map((heading, i) => {
+          const assigned = images.find((img) => img.position === i)
+          return (
+            <div key={i} className="rounded border border-kiuli-gray/30 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-kiuli-charcoal">
+                  After: <span className="text-kiuli-teal">{heading}</span>
+                </span>
+                <span className="text-[10px] text-kiuli-charcoal/40">Position {i}</span>
+              </div>
+
+              {assigned ? (
+                <div className="flex gap-3">
+                  {assigned.imgixUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`${assigned.imgixUrl.split('?')[0]}?w=120&h=80&fit=crop&auto=format`}
+                      alt={assigned.alt || ''}
+                      className="h-16 w-24 rounded object-cover"
+                    />
+                  )}
+                  <div className="flex flex-1 flex-col gap-1">
+                    <input
+                      className={`${inputClass} text-[11px]`}
+                      placeholder="Caption (optional)"
+                      value={assigned.caption || ''}
+                      onChange={(e) => handleCaptionChange(i, e.target.value)}
+                      onBlur={() => handleCaptionBlur(i)}
+                    />
+                    <button
+                      onClick={() => handleRemove(i)}
+                      className="self-start text-[10px] text-red-500 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setPickingForPosition(i)}
+                  className="rounded border border-dashed border-kiuli-gray/50 px-3 py-2 text-xs text-kiuli-charcoal/50 hover:border-kiuli-teal hover:text-kiuli-teal"
+                >
+                  + Choose image
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {headings.length === 0 && (
+        <p className="text-[10px] text-kiuli-charcoal/40">No headings found in draft. Images require section headings to determine placement.</p>
+      )}
+
+      {/* Inline picker modal for choosing article images */}
+      {pickingForPosition !== null && (
+        <ArticleImagePickerModal
+          position={pickingForPosition}
+          defaultCountry={project.destinations?.[0]}
+          defaultSpecies={project.species}
+          onSelect={handleAssign}
+          onClose={() => setPickingForPosition(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Article Image Picker Modal ───────────────────────────────────────────────
+
+import { searchImages } from '@/app/(payload)/admin/image-library/actions'
+import type { LibraryMatch } from '../../../../content-system/images/types'
+
+function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, onSelect, onClose }: {
+  position: number
+  defaultCountry?: string
+  defaultSpecies?: string[]
+  onSelect: (position: number, match: { mediaId: number; imgixUrl: string | null; alt: string }) => void
+  onClose: () => void
+}) {
+  const [matches, setMatches] = useState<LibraryMatch[]>([])
+  const [loading, setLoading] = useState(false)
+  const [query, setQuery] = useState('')
+
+  const doSearch = useCallback(async () => {
+    setLoading(true)
+    const result = await searchImages({
+      country: defaultCountry || undefined,
+      query: query || undefined,
+      species: defaultSpecies?.length ? defaultSpecies : undefined,
+      limit: 24,
+    })
+    setLoading(false)
+    if ('result' in result) {
+      setMatches(result.result.matches)
+    }
+  }, [defaultCountry, defaultSpecies, query])
+
+  useEffect(() => {
+    doSearch()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className="max-h-[80vh] w-[600px] overflow-y-auto rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-kiuli-charcoal">Choose Image for Position {position}</h3>
+          <button onClick={onClose} className="text-xs text-kiuli-charcoal/50 hover:text-kiuli-charcoal">Close</button>
+        </div>
+
+        <div className="mb-3 flex gap-2">
+          <input
+            className={`${inputClass} flex-1`}
+            placeholder="Search images..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && doSearch()}
+          />
+          <button onClick={doSearch} className="rounded bg-kiuli-teal px-3 py-1.5 text-xs font-medium text-white hover:bg-kiuli-teal/90">
+            Search
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-kiuli-teal" />
+          </div>
+        ) : matches.length === 0 ? (
+          <p className="py-8 text-center text-xs text-kiuli-charcoal/40">No images found.</p>
+        ) : (
+          <div className="grid grid-cols-4 gap-2">
+            {matches.map((match) => (
+              <button
+                key={match.mediaId}
+                onClick={() => onSelect(position, { mediaId: match.mediaId, imgixUrl: match.imgixUrl, alt: match.alt })}
+                className="group relative overflow-hidden rounded border border-kiuli-gray/40 hover:border-kiuli-teal/50"
+              >
+                {match.imgixUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`${match.imgixUrl.split('?')[0]}?w=150&h=100&fit=crop&auto=format`}
+                    alt={match.alt}
+                    className="aspect-[3/2] w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex aspect-[3/2] items-center justify-center bg-kiuli-gray/20 text-[9px] text-kiuli-charcoal/30">
+                    No preview
+                  </div>
+                )}
+                <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/50 to-transparent p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="line-clamp-1 text-[9px] text-white">{match.alt}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

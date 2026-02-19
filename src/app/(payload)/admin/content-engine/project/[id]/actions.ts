@@ -4,23 +4,17 @@ import { headers } from 'next/headers'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { handleMessage } from '../../../../../../../content-system/conversation/handler'
-import { extractTextFromLexical } from '../../../../../../../content-system/embeddings/lexical-text'
 import { compileResearch } from '../../../../../../../content-system/research/research-compiler'
 import { markdownToLexical } from '../../../../../../../content-system/conversation/lexical-utils'
 import { dispatchDraft } from '../../../../../../../content-system/drafting'
+import { transformProject, parseJsonArray } from '@/lib/transform-project'
 
 import {
   isArticleType,
   isCompoundType,
   type WorkspaceProject,
-  type WorkspaceStage,
-  type WorkspaceContentType,
-  type WorkspaceProcessingStatus,
-  type ResearchSource,
-  type UncertaintyItem,
   type FAQItem,
-  type ConversationMessage,
-  type ConsistencyIssueDisplay,
+  type ArticleImage,
 } from '@/components/content-system/workspace-types'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -30,19 +24,6 @@ async function authenticate() {
   const headersList = await headers()
   const { user } = await payload.auth({ headers: headersList })
   return { payload, user }
-}
-
-function parseJsonArray(value: unknown): string[] {
-  if (Array.isArray(value)) return value.filter((v) => typeof v === 'string')
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value)
-      if (Array.isArray(parsed)) return parsed.filter((v: unknown) => typeof v === 'string')
-    } catch {
-      // not JSON
-    }
-  }
-  return []
 }
 
 // Stage transition maps (must match batch/route.ts)
@@ -76,162 +57,6 @@ function getNextStage(currentStage: string, contentType: string): string | null 
   if (contentType === 'itinerary_enhancement') return ENHANCEMENT_ADVANCE[currentStage] || null
   if (contentType === 'page_update') return PAGE_UPDATE_ADVANCE[currentStage] || null
   return null
-}
-
-// ── Transform project to WorkspaceProject ────────────────────────────────────
-
-function transformProject(raw: Record<string, unknown>): WorkspaceProject {
-  const synthesisText = raw.synthesis ? extractTextFromLexical(raw.synthesis) : undefined
-  const editorialNotesText = raw.editorialNotes
-    ? extractTextFromLexical(raw.editorialNotes)
-    : undefined
-  const draftText = raw.body ? extractTextFromLexical(raw.body) : undefined
-  const existingSiteText = raw.existingSiteContent
-    ? extractTextFromLexical(raw.existingSiteContent)
-    : undefined
-  const targetCurrentText = raw.targetCurrentContent
-    ? (typeof raw.targetCurrentContent === 'string'
-        ? raw.targetCurrentContent
-        : extractTextFromLexical(raw.targetCurrentContent))
-    : undefined
-
-  // Parse sections for compound types
-  let sections: Record<string, string> | undefined
-  if (raw.sections && typeof raw.sections === 'object') {
-    sections = {}
-    const rawSections =
-      typeof raw.sections === 'string' ? JSON.parse(raw.sections as string) : raw.sections
-    for (const [key, value] of Object.entries(rawSections as Record<string, unknown>)) {
-      sections[key] = typeof value === 'string' ? value : extractTextFromLexical(value)
-    }
-  }
-
-  // Parse FAQ
-  const rawFaq = Array.isArray(raw.faqSection) ? raw.faqSection : []
-  const faq: FAQItem[] = rawFaq.map((f: Record<string, unknown>) => ({
-    question: (f.question as string) || '',
-    answer: (f.answer as string) || '',
-  }))
-
-  // Parse sources
-  const rawSources = Array.isArray(raw.sources) ? raw.sources : []
-  const sources: ResearchSource[] = rawSources.map((s: Record<string, unknown>) => ({
-    title: (s.title as string) || '',
-    url: (s.url as string) || '',
-    credibility: (s.credibility as ResearchSource['credibility']) || 'other',
-    notes: (s.notes as string) || '',
-  }))
-
-  // Parse uncertainty map
-  const rawUncertainty = Array.isArray(raw.uncertaintyMap) ? raw.uncertaintyMap : []
-  const uncertaintyMap: UncertaintyItem[] = rawUncertainty.map(
-    (u: Record<string, unknown>) => ({
-      claim: (u.claim as string) || '',
-      confidence: (u.confidence as UncertaintyItem['confidence']) || 'uncertain',
-      notes: (u.notes as string) || '',
-    }),
-  )
-
-  // Parse messages
-  const rawMessages = Array.isArray(raw.messages) ? raw.messages : []
-  const messages: ConversationMessage[] = rawMessages.map(
-    (m: Record<string, unknown>) => ({
-      role: m.role as 'designer' | 'kiuli',
-      content: (m.content as string) || '',
-      timestamp: (m.timestamp as string) || '',
-      actions: m.actions
-        ? typeof m.actions === 'string'
-          ? JSON.parse(m.actions as string)
-          : m.actions
-        : undefined,
-      suggestedNextStep: (m.suggestedNextStep as string) || undefined,
-    }),
-  )
-
-  // Parse targetAudience
-  const targetAudience = parseJsonArray(raw.targetAudience)
-
-  // Parse consistency issues
-  const rawConsistencyIssues = Array.isArray(raw.consistencyIssues) ? raw.consistencyIssues : []
-  const consistencyIssues: ConsistencyIssueDisplay[] = rawConsistencyIssues.map(
-    (ci: Record<string, unknown>) => ({
-      id: (ci.id as string) || '',
-      issueType: (ci.issueType as ConsistencyIssueDisplay['issueType']) || 'soft',
-      existingContent: (ci.existingContent as string) || '',
-      newContent: (ci.newContent as string) || '',
-      sourceRecord: (ci.sourceRecord as string) || '',
-      resolution: (ci.resolution as ConsistencyIssueDisplay['resolution']) || 'pending',
-      resolutionNote: (ci.resolutionNote as string) || undefined,
-    }),
-  )
-
-  return {
-    id: raw.id as number,
-    title: (raw.title as string) || '',
-    contentType: (raw.contentType as WorkspaceContentType) || 'itinerary_cluster',
-    stage: (raw.stage as WorkspaceStage) || 'idea',
-    processingStatus: (raw.processingStatus as WorkspaceProcessingStatus) || 'idle',
-    errorMessage: (raw.processingError as string) || undefined,
-    destinations: parseJsonArray(raw.destinations),
-    properties: parseJsonArray(raw.properties),
-    species: parseJsonArray(raw.species),
-    freshnessCategory: (raw.freshnessCategory as string) || undefined,
-    publishedAt: (raw.publishedAt as string) || undefined,
-    lastReviewedAt: (raw.lastReviewedAt as string) || undefined,
-    originPathway: (raw.originPathway as string) || undefined,
-    originSource: (raw.originSource as string) || undefined,
-
-    // Brief
-    briefSummary: (raw.briefSummary as string) || undefined,
-    targetAngle: (raw.targetAngle as string) || undefined,
-    targetAudience: targetAudience.length > 0 ? targetAudience : undefined,
-    competitiveNotes: (raw.competitiveNotes as string) || undefined,
-
-    // Research
-    researchSynthesis: synthesisText || undefined,
-    researchSources: sources.length > 0 ? sources : undefined,
-    uncertaintyMap: uncertaintyMap.length > 0 ? uncertaintyMap : undefined,
-    editorialNotes: editorialNotesText || undefined,
-    existingSiteContent: existingSiteText || undefined,
-
-    // Draft
-    draftBody: draftText || undefined,
-    sections,
-    metaTitle: (raw.metaTitle as string) || undefined,
-    metaDescription: (raw.metaDescription as string) || undefined,
-    answerCapsule: (raw.answerCapsule as string) || undefined,
-
-    // Page update
-    targetCurrentContent: targetCurrentText || undefined,
-    targetCollection: (raw.targetCollection as string) || undefined,
-    targetField: (raw.targetField as string) || undefined,
-    targetRecordId: (raw.targetRecordId as number) || undefined,
-
-    // FAQ
-    faq: faq.length > 0 ? faq : undefined,
-
-    // Consistency
-    consistencyCheckResult: (raw.consistencyCheckResult as WorkspaceProject['consistencyCheckResult']) || undefined,
-    consistencyIssues: consistencyIssues.length > 0 ? consistencyIssues : undefined,
-
-    // Hero image
-    heroImageId: (raw.heroImage as number) || (raw.heroImageId as number) || undefined,
-
-    // Distribution
-    distribution:
-      raw.linkedinSummary || raw.facebookSummary
-        ? {
-            linkedinSummary: (raw.linkedinSummary as string) || '',
-            facebookSummary: (raw.facebookSummary as string) || '',
-            facebookPinnedComment: (raw.facebookPinnedComment as string) || '',
-            linkedinPosted: (raw.linkedinPosted as boolean) || false,
-            facebookPosted: (raw.facebookPosted as boolean) || false,
-          }
-        : undefined,
-
-    // Conversation
-    messages,
-  }
 }
 
 // ── Action 1: Send Conversation Message ──────────────────────────────────────
@@ -316,7 +141,39 @@ export async function fetchProjectData(
       depth: 0,
     })) as unknown as Record<string, unknown>
 
-    return { project: transformProject(raw) }
+    const project = transformProject(raw)
+
+    // Resolve hero image media record (mirrors page.tsx server logic)
+    if (project.heroImageId) {
+      try {
+        const heroMedia = await payload.findByID({
+          collection: 'media',
+          id: project.heroImageId,
+          depth: 0,
+        }) as unknown as Record<string, unknown>
+        project.heroImageImgixUrl = (heroMedia.imgixUrl as string) || null
+        project.heroImageAlt = (heroMedia.alt as string) || (heroMedia.altText as string) || null
+      } catch {
+        project.heroImageId = null
+      }
+    }
+
+    // Resolve article image media records
+    if (project.articleImages && project.articleImages.length > 0) {
+      for (const img of project.articleImages) {
+        try {
+          const media = await payload.findByID({
+            collection: 'media', id: img.mediaId, depth: 0,
+          }) as unknown as Record<string, unknown>
+          img.imgixUrl = (media.imgixUrl as string) || undefined
+          img.alt = (media.alt as string) || (media.altText as string) || undefined
+        } catch {
+          // Image may have been deleted
+        }
+      }
+    }
+
+    return { project }
   } catch {
     return { error: `Project ${projectId} not found` }
   }
@@ -502,6 +359,7 @@ export async function saveProjectFields(
     'linkedinSummary',
     'facebookSummary',
     'facebookPinnedComment',
+    'articleImages',
   ])
 
   const safeData: Record<string, unknown> = {}
@@ -935,5 +793,39 @@ export async function triggerPublish(
       })
     } catch {}
     return { error: message }
+  }
+}
+
+// ── Action 12: Save Article Images ────────────────────────────────────────────
+
+export async function saveArticleImages(
+  projectId: number,
+  images: ArticleImage[],
+): Promise<{ success: true } | { error: string }> {
+  const { payload, user } = await authenticate()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  // Validate and sanitize
+  const sanitized = images
+    .filter((img) => img.mediaId && typeof img.mediaId === 'number')
+    .map((img) => ({
+      position: Number(img.position) || 0,
+      mediaId: img.mediaId,
+      caption: img.caption || undefined,
+    }))
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      data: { articleImages: sanitized } as any,
+    })
+    return { success: true }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) }
   }
 }

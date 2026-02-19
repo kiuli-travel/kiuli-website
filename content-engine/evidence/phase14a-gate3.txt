@@ -1,0 +1,21 @@
+=== PhotographicSubject.description ===
+74:  description?: string
+
+=== Prompt generator uses description ===
+7:const SYSTEM_PROMPT = `You are an expert wildlife and nature photographer who has spent 20 years shooting across East and Southern Africa. You think in terms of camera behaviour — lenses, apertures, shutter speeds, lighting physics, and film stocks — not scene descriptions.
+9:When given a subject, you produce photographic prompts that tell an AI diffusion model exactly HOW a real photographer would capture the image. Each prompt must read like a technical shot description from a professional photographer's field notebook.
+28:- Generic descriptions without camera specifics
+102:  if (subject.description) {
+103:    parts.push(`\nThe user wants: ${subject.description}`)
+
+=== UI textarea for description ===
+554:  const [description, setDescription] = useState('')
+572:      description: description || undefined,
+580:  }, [genType, species, destination, country, mood, timeOfDay, description])
+677:            <label className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Scene Description (optional)</label>
+680:              value={description}
+248:  const [description, setDescription] = useState('')
+258:      description: description || undefined,
+263:  }, [genType, species, country, description])
+314:            value={description}
+316:            placeholder="Scene description (optional)"

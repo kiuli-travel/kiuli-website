@@ -174,6 +174,9 @@ export async function searchLibrary(options: LibrarySearchOptions): Promise<Libr
     height: doc.height || null,
     source: doc.sourceS3Key?.startsWith('generated:') ? 'generated' : 'scraped',
     score,
+    generationPrompt: doc.generationPrompt || null,
+    generationModel: doc.generationModel || null,
+    generatedAt: doc.generatedAt || null,
   }))
 
   return { matches, total, facets }

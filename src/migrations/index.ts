@@ -50,6 +50,7 @@ import * as migration_20260213_133845 from './20260213_133845';
 import * as migration_20260216_add_brand_voice_global from './20260216_add_brand_voice_global';
 import * as migration_20260217_add_destination_content_fields from './20260217_add_destination_content_fields';
 import * as migration_20260218_fix_posts_faq_items_id_types from './20260218_fix_posts_faq_items_id_types';
+import * as migration_20260219_add_image_generation_fields from './20260219_add_image_generation_fields';
 
 export const migrations = [
   {
@@ -311,5 +312,10 @@ export const migrations = [
     up: migration_20260218_fix_posts_faq_items_id_types.up,
     down: migration_20260218_fix_posts_faq_items_id_types.down,
     name: '20260218_fix_posts_faq_items_id_types',
+  },
+  {
+    up: migration_20260219_add_image_generation_fields.up,
+    down: migration_20260219_add_image_generation_fields.down,
+    name: '20260219_add_image_generation_fields',
   },
 ];

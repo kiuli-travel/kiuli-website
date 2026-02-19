@@ -1,0 +1,5 @@
+=== Admin back link ===
+5:import { Loader2, Search, X, Camera, Sparkles, ChevronDown, ChevronRight, Copy, ArrowLeft, ZoomIn, ZoomOut, Maximize2, ExternalLink } from 'lucide-react'
+98:        <Link href="/admin" className="flex items-center gap-1 text-xs text-kiuli-clay hover:underline">
+99:          <ArrowLeft className="h-3 w-3" /> Back to Admin
+375:      if (e.key === 'ArrowLeft' && onPrev) onPrev()

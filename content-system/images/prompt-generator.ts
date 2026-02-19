@@ -99,6 +99,11 @@ function buildUserPrompt(subject: PhotographicSubject, count: number): string {
   if (subject.mood) parts.push(`Mood: ${subject.mood}`)
   if (subject.timeOfDay) parts.push(`Time of day: ${subject.timeOfDay}`)
 
+  if (subject.description) {
+    parts.push(`\nThe user wants: ${subject.description}`)
+    parts.push('Incorporate this specific scene into your photographic prompts while adding camera specifications, lighting, and technical details.')
+  }
+
   if (subject.type === 'wildlife' && subject.species) {
     parts.push(`\nConsider the natural behaviour and habitat of ${subject.species} in ${subject.country || 'Africa'}. Vary the prompts across different behaviours, lighting conditions, and compositions.`)
   }

@@ -1,0 +1,22 @@
+=== Hero resolution in fetchProjectData ===
+343:        const heroMedia = await payload.findByID({
+348:        project.heroImageImgixUrl = (heroMedia.imgixUrl as string) || null
+349:        project.heroImageAlt = (heroMedia.alt as string) || (heroMedia.altText as string) || null
+
+=== Local state update in ImageLibraryPicker ===
+48:  // Local hero state for immediate feedback
+49:  const [currentHeroId, setCurrentHeroId] = useState<number | null>(selectedId ?? null)
+50:  const [currentHeroUrl, setCurrentHeroUrl] = useState<string | null>(selectedImgixUrl ?? null)
+51:  const [currentHeroAlt, setCurrentHeroAlt] = useState<string | null>(selectedAlt ?? null)
+52:  const [toast, setToast] = useState<string | null>(null)
+77:      setCurrentHeroId(match.mediaId)
+78:      setCurrentHeroUrl(match.imgixUrl)
+79:      setCurrentHeroAlt(match.alt)
+80:      setToast('Hero image saved')
+91:      setCurrentHeroId(null)
+92:      setCurrentHeroUrl(null)
+93:      setCurrentHeroAlt(null)
+105:      {toast && (
+107:          {toast}
+112:      {currentHeroId && (
+188:                match.mediaId === currentHeroId

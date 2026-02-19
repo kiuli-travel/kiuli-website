@@ -61,6 +61,7 @@ export async function generateAndSave(
     destination: metadata.destination,
     prompt,
     aspectRatio: metadata.aspectRatio,
+    model: result.model,
   })
 
   return {

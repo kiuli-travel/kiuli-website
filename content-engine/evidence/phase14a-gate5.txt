@@ -1,0 +1,15 @@
+=== Modal/zoom in library page ===
+329:      {/* Hover overlay */}
+362:  const [zoom, setZoom] = useState(1)
+391:    <div className="fixed inset-0 z-50 flex flex-col bg-black/80" onClick={onClose}>
+400:            <button onClick={() => setZoom(Math.max(0.5, zoom - 0.25))} className="rounded bg-white/10 p-1.5 text-white/70 hover:bg-white/20">
+403:            <span className="text-xs text-white/60">{Math.round(zoom * 100)}%</span>
+404:            <button onClick={() => setZoom(Math.min(3, zoom + 0.25))} className="rounded bg-white/10 p-1.5 text-white/70 hover:bg-white/20">
+423:              style={{ transform: `scale(${zoom})`, transformOrigin: 'center', transition: 'transform 0.2s' }}
+603:    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
+
+=== Generation details shown ===
+516:                    {imageMatch.generationModel && (
+517:                      <p className="mt-1 text-[11px] text-amber-800">Model: {imageMatch.generationModel}</p>
+519:                    {imageMatch.generationPrompt && (
+520:                      <p className="mt-1 line-clamp-3 text-[11px] text-amber-800">Prompt: {imageMatch.generationPrompt}</p>

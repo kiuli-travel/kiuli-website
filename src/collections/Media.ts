@@ -308,6 +308,32 @@ export const Media: CollectionConfig = {
       },
     },
 
+    // === GENERATION PROVENANCE ===
+    {
+      name: 'generationPrompt',
+      type: 'textarea',
+      admin: {
+        readOnly: true,
+        description: 'Prompt used to generate this image',
+      },
+    },
+    {
+      name: 'generationModel',
+      type: 'text',
+      admin: {
+        readOnly: true,
+        description: 'AI model that generated this image',
+      },
+    },
+    {
+      name: 'generatedAt',
+      type: 'date',
+      admin: {
+        readOnly: true,
+        description: 'When this image was generated',
+      },
+    },
+
     // === ENRICHMENT (AI-generated, searchable) ===
     {
       name: 'scene',

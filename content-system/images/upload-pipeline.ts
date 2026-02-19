@@ -55,6 +55,9 @@ export async function uploadGeneratedImage(
       country: metadata.country || undefined,
       imageType: metadata.type === 'wildlife' ? 'wildlife' : 'landscape',
       animals: metadata.species || [],
+      generationPrompt: metadata.prompt || undefined,
+      generationModel: metadata.model || undefined,
+      generatedAt: new Date().toISOString(),
     } as any,
     file,
   })

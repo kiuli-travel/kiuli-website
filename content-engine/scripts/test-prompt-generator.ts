@@ -106,6 +106,33 @@ async function main() {
     errors.push(`Only ${cameraSpecCount}/${totalPrompts} prompts have camera specs (expected 80%+)`)
   }
 
+  // Test 6: Wildlife with custom description
+  console.log('\n--- Test 6: Wildlife with description (hippos in Kazinga channel) ---')
+  const subject6: PhotographicSubject = {
+    type: 'wildlife',
+    species: 'hippopotamus',
+    country: 'Uganda',
+    description: 'aerial photo of pods of hippos in the Kazinga channel',
+  }
+  const prompts6 = await generatePhotographicPrompts(subject6, 3)
+  console.log(`Generated ${prompts6.length} prompts`)
+  for (const p of prompts6) {
+    console.log(`  [${p.aspectRatio}] ${p.intent}`)
+    console.log(`    Prompt: ${p.prompt.slice(0, 150)}...`)
+    totalPrompts++
+  }
+  if (prompts6.length !== 3) errors.push(`Expected 3 description prompts, got ${prompts6.length}`)
+  // Check that description concepts appear in prompts
+  const descPromptText = prompts6.map((p) => p.prompt.toLowerCase()).join(' ')
+  const hasHippo = descPromptText.includes('hippo')
+  const hasAerial = descPromptText.includes('aerial') || descPromptText.includes('above') || descPromptText.includes('overhead') || descPromptText.includes('bird')
+  const hasCameraInDesc = prompts6.some((p) => cameraTerms.some((t) => (p.prompt + ' ' + p.cameraSpec).toLowerCase().includes(t)))
+  console.log(`  Hippo reference: ${hasHippo ? 'YES' : 'NO'}`)
+  console.log(`  Aerial concept: ${hasAerial ? 'YES' : 'NO'}`)
+  console.log(`  Camera specs: ${hasCameraInDesc ? 'YES' : 'NO'}`)
+  if (!hasHippo) errors.push('Description test: prompts do not reference hippo')
+  if (!hasCameraInDesc) errors.push('Description test: prompts lack camera specs')
+
   // Summary
   console.log('\n=== Results ===')
   if (errors.length === 0) {

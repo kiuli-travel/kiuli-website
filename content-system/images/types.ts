@@ -44,6 +44,9 @@ export interface LibraryMatch {
   height: number | null
   source: 'scraped' | 'generated'
   score: number
+  generationPrompt?: string | null
+  generationModel?: string | null
+  generatedAt?: string | null
 }
 
 export interface LibrarySearchResult {
@@ -68,6 +71,7 @@ export interface PhotographicSubject {
   country?: string
   mood?: string
   timeOfDay?: string
+  description?: string
 }
 
 export interface PhotographicPrompt {
@@ -100,6 +104,7 @@ export interface UploadMetadata {
   destination?: string
   prompt: string
   aspectRatio?: string
+  model?: string
 }
 
 export interface UploadResult {

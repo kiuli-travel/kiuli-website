@@ -70,6 +70,14 @@ export interface FAQItem {
   answer: string
 }
 
+export interface ArticleImage {
+  position: number
+  mediaId: number
+  caption?: string
+  imgixUrl?: string
+  alt?: string
+}
+
 export interface DistributionData {
   linkedinSummary: string
   facebookSummary: string
@@ -141,6 +149,9 @@ export interface WorkspaceProject {
   heroImageId?: number | null
   heroImageImgixUrl?: string | null
   heroImageAlt?: string | null
+
+  // Article images (inline image placement)
+  articleImages?: ArticleImage[]
 
   // Distribution (articles)
   distribution?: DistributionData

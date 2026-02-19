@@ -45,6 +45,12 @@ export function ImageLibraryPicker({
   const [heroOnly, setHeroOnly] = useState(false)
   const [showGenModal, setShowGenModal] = useState(false)
 
+  // Local hero state for immediate feedback
+  const [currentHeroId, setCurrentHeroId] = useState<number | null>(selectedId ?? null)
+  const [currentHeroUrl, setCurrentHeroUrl] = useState<string | null>(selectedImgixUrl ?? null)
+  const [currentHeroAlt, setCurrentHeroAlt] = useState<string | null>(selectedAlt ?? null)
+  const [toast, setToast] = useState<string | null>(null)
+
   const doSearch = useCallback(async () => {
     setLoading(true)
     const result = await searchImages({
@@ -65,9 +71,14 @@ export function ImageLibraryPicker({
     doSearch()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelect = useCallback(async (mediaId: number) => {
-    const result = await selectHeroImage(projectId, mediaId)
+  const handleSelect = useCallback(async (match: LibraryMatch) => {
+    const result = await selectHeroImage(projectId, match.mediaId)
     if ('success' in result) {
+      setCurrentHeroId(match.mediaId)
+      setCurrentHeroUrl(match.imgixUrl)
+      setCurrentHeroAlt(match.alt)
+      setToast('Hero image saved')
+      setTimeout(() => setToast(null), 2500)
       onHeroChanged?.()
     } else {
       alert(result.error)
@@ -77,6 +88,11 @@ export function ImageLibraryPicker({
   const handleRemoveHero = useCallback(async () => {
     const result = await removeHeroImage(projectId)
     if ('success' in result) {
+      setCurrentHeroId(null)
+      setCurrentHeroUrl(null)
+      setCurrentHeroAlt(null)
+      setToast('Hero image removed')
+      setTimeout(() => setToast(null), 2500)
       onHeroChanged?.()
     } else {
       alert(result.error)
@@ -85,22 +101,29 @@ export function ImageLibraryPicker({
 
   return (
     <div className="flex flex-col gap-4 p-5">
+      {/* Toast */}
+      {toast && (
+        <div className="rounded bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-medium text-emerald-700">
+          {toast}
+        </div>
+      )}
+
       {/* Current hero image */}
-      {selectedId && (
+      {currentHeroId && (
         <div className="rounded border border-kiuli-teal/30 bg-kiuli-teal/5 p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-teal">Current Hero Image</span>
             <button onClick={handleRemoveHero} className="text-[10px] text-red-500 hover:underline">Remove</button>
           </div>
-          {selectedImgixUrl && (
+          {currentHeroUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`${selectedImgixUrl.split('?')[0]}?w=600&h=300&fit=crop&auto=format`}
-              alt={selectedAlt || 'Hero image'}
+              src={`${currentHeroUrl.split('?')[0]}?w=600&h=300&fit=crop&auto=format`}
+              alt={currentHeroAlt || 'Hero image'}
               className="w-full rounded"
             />
           )}
-          {selectedAlt && <p className="mt-1.5 text-xs text-kiuli-charcoal/60">{selectedAlt}</p>}
+          {currentHeroAlt && <p className="mt-1.5 text-xs text-kiuli-charcoal/60">{currentHeroAlt}</p>}
         </div>
       )}
 
@@ -160,9 +183,9 @@ export function ImageLibraryPicker({
           {matches.map((match) => (
             <button
               key={match.mediaId}
-              onClick={() => handleSelect(match.mediaId)}
+              onClick={() => handleSelect(match)}
               className={`group relative overflow-hidden rounded border transition-all ${
-                match.mediaId === selectedId
+                match.mediaId === currentHeroId
                   ? 'border-kiuli-teal ring-2 ring-kiuli-teal/30'
                   : 'border-kiuli-gray/40 hover:border-kiuli-teal/50'
               }`}
@@ -222,6 +245,7 @@ function CompactGenerationModal({ defaultCountry, defaultSpecies, onClose, onGen
   const [genType, setGenType] = useState<GeneratableImageType>('wildlife')
   const [species, setSpecies] = useState(defaultSpecies?.[0] || '')
   const [country, setCountry] = useState(defaultCountry || '')
+  const [description, setDescription] = useState('')
   const [generating, setGenerating] = useState(false)
   const [prompts, setPrompts] = useState<PhotographicPrompt[]>([])
 
@@ -231,11 +255,12 @@ function CompactGenerationModal({ defaultCountry, defaultSpecies, onClose, onGen
       type: genType,
       species: species || undefined,
       country: country || undefined,
+      description: description || undefined,
     }, 3)
     setGenerating(false)
     if ('prompts' in result) setPrompts(result.prompts)
     else alert(result.error)
-  }, [genType, species, country])
+  }, [genType, species, country, description])
 
   const handleGenImage = useCallback(async (prompt: PhotographicPrompt) => {
     setGenerating(true)
@@ -283,6 +308,14 @@ function CompactGenerationModal({ defaultCountry, defaultSpecies, onClose, onGen
             <option value="">Country</option>
             {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+
+          <textarea
+            className={`${inputClass} min-h-[50px]`}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Scene description (optional)"
+            rows={2}
+          />
 
           <button onClick={handleGenPrompts} disabled={generating} className="rounded bg-kiuli-teal px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40">
             {generating ? <Loader2 className="inline h-3 w-3 animate-spin" /> : 'Generate Prompts'}

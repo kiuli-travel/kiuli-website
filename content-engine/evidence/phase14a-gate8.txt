@@ -1,0 +1,60 @@
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Photographic Prompt Generator ===
+
+--- Test 1: Wildlife (Leopard, Tanzania) ---
+[12:40:31] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+(node:96516) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Generated 3 prompts
+  [3:2] A leopard gracefully descending a baobab tree during golden hour, showcasing its natural arboreal behavior and muscular elegance.
+    Camera: 600mm telephoto, f/4, 1/1600s
+    Prompt: 600mm telephoto lens at f/4, 1/1600s, capturing a leopard descending from a massive baobab tree in Tanzania's Ruaha Nati...
+  [4:5] A leopard drinking peacefully at a waterhole during blue hour, capturing an intimate moment of vulnerability and the perfect reflection in still water.
+    Camera: 400mm telephoto, f/5.6, 1/500s
+    Prompt: 400mm telephoto lens at f/5.6, 1/500s, photographing a leopard drinking at a seasonal waterhole in the Serengeti's kopje...
+  [16:9] A leopard captured mid-leap between rocky outcrops, freezing the explosive power and athletic grace of its hunting movement.
+    Camera: 800mm super-telephoto, f/6.3, 1/2500s
+    Prompt: 800mm super-telephoto lens at f/6.3, 1/2500s, freezing a leopard mid-leap between granite boulders in Tanzania's Serenge...
+
+--- Test 2: Landscape (Okavango Delta, Botswana) ---
+Generated 3 prompts
+  [16:9] Aerial view showcasing the intricate channel system and island patterns of the Okavango Delta during golden hour.
+    Prompt: Aerial perspective captured with 24-70mm lens at 35mm, f/8 for optimal sharpness across the frame. Shot from 500 feet du...
+  [3:2] Water-level intimate view capturing the serene morning atmosphere and scale of the delta waterways.
+    Prompt: Ground level perspective from traditional mokoro using 14-24mm ultra-wide lens at 18mm, f/11 for front-to-back sharpness...
+  [16:9] Elevated panoramic view during storm season showing the dramatic weather and seasonal flooding patterns.
+    Prompt: Elevated position from termite mound using 70-200mm telephoto at 135mm, f/5.6 for moderate depth compression. Late after...
+
+--- Test 3: Destination (Masai Mara, Kenya) ---
+Generated 3 prompts
+  [16:9] Capture the iconic sweeping savanna landscape that defines Masai Mara's visual identity during golden hour.
+    Prompt: Golden hour light bathes the endless savanna plains of Masai Mara, captured with a 24-70mm lens at 35mm, f/11 for maximu...
+  [3:2] Document the famous Mara River crossing point showing the drama and danger of the Great Migration route.
+    Prompt: Pre-dawn blue hour light captures the dramatic crossing point at Mara River, shot with 70-200mm telephoto lens at 135mm,...
+  [3:2] Show the traditional Maasai culture that gives the Masai Mara its name and cultural significance.
+    Prompt: Traditional Maasai boma village photographed with 50mm standard lens at f/5.6, creating natural perspective without dist...
+
+--- Test 4: Accommodation (should be REJECTED) ---
+  PASS: Rejected with: "Property images cannot be generated. Only scraped property images are used to ensure accuracy. Generate wildlife, landscape, destination, or country images instead."
+
+--- Test 5: Camera spec verification ---
+  9/9 prompts contain camera-specific language
+
+--- Test 6: Wildlife with description (hippos in Kazinga channel) ---
+Generated 3 prompts
+  [16:9] Aerial overview of multiple hippo pods in their natural channel habitat during optimal morning light.
+    Prompt: Aerial perspective from 300 feet above the Kazinga Channel captured with 70-200mm telephoto at f/8, 1/1000s shutter speed to freeze any water movement...
+  [3:2] Wide aerial establishing shot showing the full scope of hippo distribution across the Kazinga Channel ecosystem.
+    Prompt: High aerial perspective from 500 feet using 24-70mm wide-angle lens at f/11, 1/500s for maximum depth of field across the Kazinga Channel landscape. M...
+  [4:5] Intimate aerial portrait of a single hippo family pod showing natural social structure and behaviour.
+    Prompt: Lower aerial angle from 200 feet using 300mm telephoto at f/5.6, 1/1250s to isolate single large pod against the Kazinga Channel waters. Late afternoo...
+  Hippo reference: YES
+  Aerial concept: YES
+  Camera specs: YES
+
+=== Results ===
+PASS: All assertions passed
+  - Generated 12 prompts across 3 subject types
+  - All prompts > 100 characters
+  - 9/12 contain camera specs
+  - Accommodation prompts correctly rejected

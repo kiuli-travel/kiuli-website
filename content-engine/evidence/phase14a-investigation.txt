@@ -1,0 +1,75 @@
+=== Phase 14a Investigation Summary ===
+
+1. image-library/page.tsx (613 lines)
+   - Full client component with filters sidebar, search, image grid, detail panel (sidebar), generation panel (slide-over)
+   - Uses COUNTRIES, IMAGE_TYPES, MOODS, COMPOSITIONS, TIME_OF_DAY, _SUITABLE_FOR constants
+   - _SUITABLE_FOR is defined but unused (prefixed with _)
+   - ImageDetailPanel is a sidebar (w-96), not a modal - no zoom, no generation provenance
+   - GenerationPanel has structured fields only - no free-text description
+   - No back link to /admin
+   - No pagination (limit: 60, no "load more")
+   - Filter changes require clicking "Apply Filters" - no auto-trigger
+
+2. ImageLibraryPicker.tsx (312 lines)
+   - Workspace-embedded picker for hero image selection
+   - Props: projectId, selectedId, selectedImgixUrl, selectedAlt, defaultCountry, defaultSpecies, defaultDestinations, onHeroChanged
+   - handleSelect calls selectHeroImage(projectId, mediaId), then onHeroChanged()
+   - Grid highlights selectedId via prop comparison (line 165: match.mediaId === selectedId)
+   - BUT: selectedId comes from props, not local state - won't update until parent re-fetches
+   - No toast/confirmation after selection
+   - CompactGenerationModal: structured fields only, no free-text description
+
+3. image-library/actions.ts (176 lines)
+   - All actions authenticated via Payload auth
+   - selectHeroImage: updates content-projects.heroImage to mediaId
+   - removeHeroImage: sets heroImage to null
+   - generateImagePrompts: passes subject to generatePhotographicPrompts
+   - generateAndSaveImage: calls generateAndSave, returns { mediaId, imgixUrl, model }
+   - updateImageMetadata: allowlisted field updates
+   - relabelImage: calls labelMediaRecord
+
+4. upload-pipeline.ts (83 lines)
+   - uploadGeneratedImage(imageBase64, metadata: UploadMetadata) -> UploadResult
+   - Creates Media with: alt, sourceS3Key (generated:timestamp), processingStatus, labelingStatus, country, imageType, animals
+   - Does NOT save: generationPrompt, generationModel, generatedAt
+   - Triggers labeling in background (fire-and-forget)
+   - UploadMetadata has: type, species, country, destination, prompt, aspectRatio
+
+5. types.ts (129 lines)
+   - PhotographicSubject: type, species, destination, country, mood, timeOfDay
+   - NO description field
+   - UploadMetadata: type, species, country, destination, prompt, aspectRatio
+   - LibraryMatch: mediaId, url, imgixUrl, thumbnailUrl, alt, altText, country, imageType, composition, animals, tags, scene, sourceProperty, isHero, quality, mood, timeOfDay, suitableFor, setting, width, height, source, score
+
+6. project/[id]/page.tsx (206 lines)
+   - Server component with transformProject() and hero image resolution
+   - Lines 188-202: If heroImageId set, fetches media record, populates heroImageImgixUrl and heroImageAlt
+   - This resolution only happens on initial server render
+
+7. project/[id]/actions.ts (940 lines)
+   - fetchProjectData (line 303): Returns transformProject(raw) but does NOT resolve hero image
+   - This is the bug: after client-side hero selection, re-fetch via fetchProjectData returns heroImageId but NOT heroImageImgixUrl/heroImageAlt
+   - transformProject: heroImageId from raw.heroImage || raw.heroImageId (line 218)
+   - saveProjectFields: allowlist does NOT include heroImage or articleImages
+
+8. article-publisher.ts (127 lines)
+   - publishArticle: creates/updates post in 'posts' collection
+   - heroImageId passthrough: sets postData.heroImage and meta.image (lines 65-80)
+   - No article image insertion into body
+   - Body is passed as raw Lexical content from project.body
+
+9. Media.ts (449 lines)
+   - Has fields: sourceS3Key, mediaType, processingStatus, labelingStatus, alt, caption, country, imageType, animals, tags, altText, isHero, quality, sourceProperty, scene, mood, timeOfDay, setting, composition, suitableFor, imgixUrl, url, sourceItinerary, s3Key, sourceUrl, originalS3Key
+   - NO generationPrompt, generationModel, or generatedAt fields
+   - Has imageSizes: thumbnail(300), square(500x500), small(600), medium(900), large(1400), xlarge(1920), og(1200x630)
+
+=== Key Gaps Identified ===
+- fetchProjectData doesn't resolve hero media record (Task 1)
+- ImageLibraryPicker uses prop-based selectedId, no local state update (Task 1)
+- PhotographicSubject missing description field (Task 2)
+- Media collection missing generation provenance fields (Task 3)
+- upload-pipeline doesn't save generation metadata (Task 3)
+- Detail panel is sidebar, not modal, no zoom (Task 4)
+- No back link to admin (Task 5)
+- No article image insertion system (Task 6)
+- Missing filters (time of day, suitable-for), no auto-search, no pagination (Task 7)

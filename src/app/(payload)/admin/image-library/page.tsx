@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Loader2, Search, X, Camera, Sparkles, ChevronDown, ChevronRight, Copy } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, Search, X, Camera, Sparkles, ChevronDown, ChevronRight, Copy, ArrowLeft, ZoomIn, ZoomOut, Maximize2, ExternalLink } from 'lucide-react'
 import { searchImages, generateImagePrompts, generateAndSaveImage } from './actions'
 import type { LibraryMatch, LibrarySearchResult, PhotographicPrompt, GeneratableImageType } from '../../../../../content-system/images/types'
 
@@ -11,7 +12,7 @@ const COUNTRIES = ['Tanzania', 'Kenya', 'Botswana', 'Rwanda', 'South Africa', 'Z
 const IMAGE_TYPES = ['wildlife', 'landscape', 'accommodation', 'activity', 'people', 'food', 'aerial', 'detail']
 const MOODS = ['serene', 'adventurous', 'romantic', 'dramatic', 'intimate', 'luxurious', 'wild', 'peaceful']
 const COMPOSITIONS = ['hero', 'establishing', 'detail', 'portrait', 'action', 'panoramic']
-const _SUITABLE_FOR = ['hero-banner', 'article-feature', 'gallery', 'thumbnail', 'social', 'print']
+const SUITABLE_FOR = ['hero-banner', 'article-feature', 'gallery', 'thumbnail', 'social', 'print']
 const TIME_OF_DAY = ['dawn', 'morning', 'midday', 'afternoon', 'golden-hour', 'dusk', 'night']
 
 // ── Styles ───────────────────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ export default function ImageLibraryPage() {
   const [total, setTotal] = useState(0)
   const [_facets, setFacets] = useState<LibrarySearchResult['facets'] | null>(null)
   const [loading, setLoading] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<LibraryMatch | null>(null)
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [showGenPanel, setShowGenPanel] = useState(false)
   const [query, setQuery] = useState('')
 
@@ -36,8 +37,11 @@ export default function ImageLibraryPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedMoods, setSelectedMoods] = useState<string[]>([])
   const [selectedCompositions, setSelectedCompositions] = useState<string[]>([])
+  const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<string[]>([])
+  const [selectedSuitableFor, setSelectedSuitableFor] = useState<string[]>([])
   const [heroOnly, setHeroOnly] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<'all' | 'scraped' | 'generated'>('all')
+  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const doSearch = useCallback(async () => {
     setLoading(true)
@@ -46,6 +50,8 @@ export default function ImageLibraryPage() {
       imageType: selectedTypes.length > 0 ? selectedTypes : undefined,
       mood: selectedMoods.length > 0 ? selectedMoods : undefined,
       composition: selectedCompositions.length > 0 ? selectedCompositions : undefined,
+      timeOfDay: selectedTimeOfDay.length > 0 ? selectedTimeOfDay : undefined,
+      suitableFor: selectedSuitableFor.length > 0 ? selectedSuitableFor : undefined,
       isHero: heroOnly || undefined,
       source: sourceFilter !== 'all' ? sourceFilter : undefined,
       query: query || undefined,
@@ -57,26 +63,48 @@ export default function ImageLibraryPage() {
       setTotal(result.result.total)
       setFacets(result.result.facets)
     }
-  }, [selectedCountries, selectedTypes, selectedMoods, selectedCompositions, heroOnly, sourceFilter, query])
+  }, [selectedCountries, selectedTypes, selectedMoods, selectedCompositions, selectedTimeOfDay, selectedSuitableFor, heroOnly, sourceFilter, query])
 
   useEffect(() => {
     doSearch()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-search on filter change with 500ms debounce
+  useEffect(() => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    const timer = setTimeout(() => doSearch(), 500)
+    setDebounceTimer(timer)
+    return () => clearTimeout(timer)
+  }, [selectedCountries, selectedTypes, selectedMoods, selectedCompositions, selectedTimeOfDay, selectedSuitableFor, heroOnly, sourceFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearFilters = useCallback(() => {
     setSelectedCountries([])
     setSelectedTypes([])
     setSelectedMoods([])
     setSelectedCompositions([])
+    setSelectedTimeOfDay([])
+    setSelectedSuitableFor([])
     setHeroOnly(false)
     setSourceFilter('all')
     setQuery('')
   }, [])
 
-  const activeFilterCount = selectedCountries.length + selectedTypes.length + selectedMoods.length + selectedCompositions.length + (heroOnly ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (query ? 1 : 0)
+  const activeFilterCount = selectedCountries.length + selectedTypes.length + selectedMoods.length + selectedCompositions.length + selectedTimeOfDay.length + selectedSuitableFor.length + (heroOnly ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (query ? 1 : 0)
 
   return (
-    <div className="kiuli-view flex h-screen bg-white">
+    <div className="kiuli-view flex h-screen flex-col bg-white">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-3 border-b border-kiuli-gray/60 bg-kiuli-ivory/30 px-4 py-2">
+        <Link href="/admin" className="flex items-center gap-1 text-xs text-kiuli-clay hover:underline">
+          <ArrowLeft className="h-3 w-3" /> Back to Admin
+        </Link>
+        <span className="text-kiuli-gray">|</span>
+        <span className="text-xs font-semibold text-kiuli-charcoal">Image Library</span>
+        <span className="text-kiuli-gray">|</span>
+        <span className="text-xs text-kiuli-charcoal/50">{total} images</span>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
       {/* Left Sidebar — Filters */}
       <div className="flex w-72 shrink-0 flex-col overflow-y-auto border-r border-kiuli-gray/60 bg-kiuli-ivory/30">
         <div className="flex items-center justify-between border-b border-kiuli-gray/60 px-4 py-3">
@@ -92,6 +120,8 @@ export default function ImageLibraryPage() {
         <FilterSection title="Image Type" options={IMAGE_TYPES} selected={selectedTypes} onChange={setSelectedTypes} />
         <FilterSection title="Mood" options={MOODS} selected={selectedMoods} onChange={setSelectedMoods} />
         <FilterSection title="Composition" options={COMPOSITIONS} selected={selectedCompositions} onChange={setSelectedCompositions} />
+        <FilterSection title="Time of Day" options={TIME_OF_DAY} selected={selectedTimeOfDay} onChange={setSelectedTimeOfDay} />
+        <FilterSection title="Suitable For" options={SUITABLE_FOR} selected={selectedSuitableFor} onChange={setSelectedSuitableFor} />
 
         {/* Hero toggle */}
         <div className="border-b border-kiuli-gray/30 px-4 py-3">
@@ -152,6 +182,12 @@ export default function ImageLibraryPage() {
             {selectedMoods.map((m) => (
               <FilterPill key={m} label={m} onRemove={() => setSelectedMoods((prev) => prev.filter((x) => x !== m))} />
             ))}
+            {selectedTimeOfDay.map((t) => (
+              <FilterPill key={t} label={t} onRemove={() => setSelectedTimeOfDay((prev) => prev.filter((x) => x !== t))} />
+            ))}
+            {selectedSuitableFor.map((s) => (
+              <FilterPill key={s} label={s} onRemove={() => setSelectedSuitableFor((prev) => prev.filter((x) => x !== s))} />
+            ))}
             {heroOnly && <FilterPill label="Hero Only" onRemove={() => setHeroOnly(false)} />}
             {sourceFilter !== 'all' && <FilterPill label={sourceFilter} onRemove={() => setSourceFilter('all')} />}
             {query && <FilterPill label={`"${query}"`} onRemove={() => setQuery('')} />}
@@ -170,18 +206,34 @@ export default function ImageLibraryPage() {
               <p className="mt-1 text-xs">Adjust filters or generate new images.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {matches.map((match) => (
-                <ImageCard key={match.mediaId} match={match} onClick={() => setSelectedImage(match)} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {matches.map((match, index) => (
+                  <ImageCard key={match.mediaId} match={match} onClick={() => setSelectedImageIndex(index)} />
+                ))}
+              </div>
+              {matches.length >= 60 && (
+                <div className="mt-4 flex justify-center">
+                  <button onClick={doSearch} className="rounded bg-kiuli-gray/20 px-4 py-2 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30">
+                    Load more
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* Right Detail Panel */}
-      {selectedImage && (
-        <ImageDetailPanel image={selectedImage} onClose={() => setSelectedImage(null)} />
+      </div>{/* end flex-1 overflow-hidden */}
+
+      {/* Image Detail Modal */}
+      {selectedImageIndex !== null && matches[selectedImageIndex] && (
+        <ImageDetailModal
+          image={matches[selectedImageIndex]}
+          onClose={() => setSelectedImageIndex(null)}
+          onPrev={selectedImageIndex > 0 ? () => setSelectedImageIndex(selectedImageIndex - 1) : undefined}
+          onNext={selectedImageIndex < matches.length - 1 ? () => setSelectedImageIndex(selectedImageIndex + 1) : undefined}
+        />
       )}
 
       {/* Generation Panel */}
@@ -299,109 +351,182 @@ function ImageCard({ match, onClick }: { match: LibraryMatch; onClick: () => voi
   )
 }
 
-// ── Image Detail Panel ───────────────────────────────────────────────────────
+// ── Image Detail Modal ───────────────────────────────────────────────────────
 
-function ImageDetailPanel({ image, onClose }: { image: LibraryMatch; onClose: () => void }) {
-  const previewUrl = image.imgixUrl
-    ? `${image.imgixUrl.split('?')[0]}?w=800&auto=format`
+function ImageDetailModal({ image, onClose, onPrev, onNext }: {
+  image: LibraryMatch
+  onClose: () => void
+  onPrev?: () => void
+  onNext?: () => void
+}) {
+  const [zoom, setZoom] = useState(1)
+  const [copied, setCopied] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const imageMatch = image as any
+
+  const fullUrl = image.imgixUrl
+    ? `${image.imgixUrl.split('?')[0]}?w=1920&auto=format`
     : image.url
 
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowLeft' && onPrev) onPrev()
+      if (e.key === 'ArrowRight' && onNext) onNext()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [onClose, onPrev, onNext])
+
+  const handleCopy = useCallback(() => {
+    if (image.imgixUrl) {
+      navigator.clipboard.writeText(image.imgixUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }, [image.imgixUrl])
+
   return (
-    <div className="flex w-96 shrink-0 flex-col overflow-y-auto border-l border-kiuli-gray/60 bg-white">
-      <div className="flex items-center justify-between border-b border-kiuli-gray/60 px-4 py-3">
-        <h3 className="text-sm font-semibold text-kiuli-charcoal">Image Detail</h3>
-        <button onClick={onClose} className="text-kiuli-charcoal/50 hover:text-kiuli-charcoal">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Preview */}
-      {previewUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={previewUrl} alt={image.alt} className="w-full border-b border-kiuli-gray/30" />
-      )}
-
-      <div className="flex flex-col gap-3 p-4">
-        {/* Alt text */}
-        <div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Alt Text</span>
-          <p className="mt-0.5 text-sm text-kiuli-charcoal">{image.altText || image.alt}</p>
-        </div>
-
-        {/* Metadata grid */}
-        <div className="grid grid-cols-2 gap-2">
-          {image.country && <MetaField label="Country" value={image.country} />}
-          {image.imageType && <MetaField label="Type" value={image.imageType} />}
-          {image.composition && <MetaField label="Composition" value={image.composition} />}
-          {image.quality && <MetaField label="Quality" value={image.quality} />}
-          {image.timeOfDay && <MetaField label="Time" value={image.timeOfDay.replace(/-/g, ' ')} />}
-          <MetaField label="Source" value={image.source} />
-          {image.width && image.height && <MetaField label="Size" value={`${image.width}×${image.height}`} />}
-          <MetaField label="Hero" value={image.isHero ? 'Yes' : 'No'} />
-        </div>
-
-        {/* Scene */}
-        {image.scene && (
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Scene</span>
-            <p className="mt-0.5 text-sm text-kiuli-charcoal">{image.scene}</p>
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/80" onClick={onClose}>
+      <div className="flex max-h-screen flex-1 flex-col overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Top bar */}
+        <div className="flex shrink-0 items-center justify-between bg-black/90 px-4 py-3">
+          <div className="flex items-center gap-3">
+            {onPrev && <button onClick={onPrev} className="text-white/60 hover:text-white">&larr;</button>}
+            {onNext && <button onClick={onNext} className="text-white/60 hover:text-white">&rarr;</button>}
           </div>
-        )}
-
-        {/* Animals */}
-        {image.animals.length > 0 && (
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Animals</span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {image.animals.map((a, i) => (
-                <span key={i} className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium capitalize text-emerald-700">{a}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Mood */}
-        {image.mood.length > 0 && (
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Mood</span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {image.mood.map((m, i) => (
-                <span key={i} className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-medium capitalize text-purple-700">{m}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tags */}
-        {image.tags.length > 0 && (
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Tags</span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {image.tags.map((t, i) => (
-                <span key={i} className="rounded-full bg-kiuli-gray/30 px-2 py-0.5 text-[10px] text-kiuli-charcoal/70">{t}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Property */}
-        {image.sourceProperty && (
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Property</span>
-            <p className="mt-0.5 text-sm text-kiuli-teal">{image.sourceProperty}</p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-col gap-2 border-t border-kiuli-gray/30 pt-3">
-          {image.imgixUrl && (
-            <button
-              onClick={() => navigator.clipboard.writeText(image.imgixUrl!)}
-              className="flex items-center gap-2 rounded bg-kiuli-gray/20 px-3 py-1.5 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30"
-            >
-              <Copy className="h-3 w-3" /> Copy imgix URL
+          <div className="flex items-center gap-2">
+            <button onClick={() => setZoom(Math.max(0.5, zoom - 0.25))} className="rounded bg-white/10 p-1.5 text-white/70 hover:bg-white/20">
+              <ZoomOut className="h-4 w-4" />
             </button>
+            <span className="text-xs text-white/60">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(Math.min(3, zoom + 0.25))} className="rounded bg-white/10 p-1.5 text-white/70 hover:bg-white/20">
+              <ZoomIn className="h-4 w-4" />
+            </button>
+            <button onClick={() => setZoom(1)} className="rounded bg-white/10 p-1.5 text-white/70 hover:bg-white/20">
+              <Maximize2 className="h-4 w-4" />
+            </button>
+            <button onClick={onClose} className="ml-4 rounded bg-white/10 p-1.5 text-white/70 hover:bg-white/20">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Image */}
+        <div className="flex flex-1 items-center justify-center overflow-auto bg-black/60 p-4">
+          {fullUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={fullUrl}
+              alt={image.alt}
+              style={{ transform: `scale(${zoom})`, transformOrigin: 'center', transition: 'transform 0.2s' }}
+              className="max-h-[70vh] max-w-full rounded object-contain"
+              onWheel={(e) => {
+                e.preventDefault()
+                setZoom((z) => Math.min(3, Math.max(0.5, z + (e.deltaY > 0 ? -0.1 : 0.1))))
+              }}
+            />
           )}
+        </div>
+
+        {/* Metadata */}
+        <div className="shrink-0 bg-white p-6">
+          <div className="mx-auto max-w-5xl">
+            {/* Actions bar */}
+            <div className="mb-4 flex items-center gap-3">
+              {image.imgixUrl && (
+                <button onClick={handleCopy} className="flex items-center gap-1.5 rounded bg-kiuli-gray/20 px-3 py-1.5 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30">
+                  <Copy className="h-3 w-3" /> {copied ? 'Copied!' : 'Copy imgix URL'}
+                </button>
+              )}
+              {fullUrl && (
+                <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded bg-kiuli-gray/20 px-3 py-1.5 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30">
+                  <ExternalLink className="h-3 w-3" /> Open full resolution
+                </a>
+              )}
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {/* Core */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Core</p>
+                <p className="text-sm text-kiuli-charcoal">{image.altText || image.alt}</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {image.country && <MetaField label="Country" value={image.country} />}
+                  {image.imageType && <MetaField label="Type" value={image.imageType} />}
+                  {image.composition && <MetaField label="Composition" value={image.composition} />}
+                  {image.quality && <MetaField label="Quality" value={image.quality} />}
+                  {image.width && image.height && <MetaField label="Dimensions" value={`${image.width}×${image.height}`} />}
+                  <MetaField label="Source" value={image.source} />
+                </div>
+              </div>
+
+              {/* Scene & Mood */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Scene & Mood</p>
+                {image.scene && <p className="text-sm text-kiuli-charcoal">{image.scene}</p>}
+                {image.mood.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {image.mood.map((m, i) => (
+                      <span key={i} className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-medium capitalize text-purple-700">{m}</span>
+                    ))}
+                  </div>
+                )}
+                {image.timeOfDay && <MetaField label="Time" value={image.timeOfDay.replace(/-/g, ' ')} />}
+                {image.setting.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {image.setting.map((s, i) => (
+                      <span key={i} className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium capitalize text-blue-700">{s.replace(/-/g, ' ')}</span>
+                    ))}
+                  </div>
+                )}
+                {image.animals.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {image.animals.map((a, i) => (
+                      <span key={i} className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium capitalize text-emerald-700">{a}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Tags & Provenance */}
+              <div className="flex flex-col gap-2">
+                {image.tags.length > 0 && (
+                  <>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Tags</p>
+                    <div className="flex flex-wrap gap-1">
+                      {image.tags.map((t, i) => (
+                        <span key={i} className="rounded-full bg-kiuli-gray/30 px-2 py-0.5 text-[10px] text-kiuli-charcoal/70">{t}</span>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {image.sourceProperty && (
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Property</span>
+                    <p className="mt-0.5 text-sm text-kiuli-teal">{image.sourceProperty}</p>
+                  </div>
+                )}
+                <MetaField label="Hero" value={image.isHero ? 'Yes' : 'No'} />
+                {/* Generation provenance (only for generated images) */}
+                {image.source === 'generated' && (
+                  <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Generated Image</p>
+                    {imageMatch.generationModel && (
+                      <p className="mt-1 text-[11px] text-amber-800">Model: {imageMatch.generationModel}</p>
+                    )}
+                    {imageMatch.generationPrompt && (
+                      <p className="mt-1 line-clamp-3 text-[11px] text-amber-800">Prompt: {imageMatch.generationPrompt}</p>
+                    )}
+                    {imageMatch.generatedAt && (
+                      <p className="mt-1 text-[11px] text-amber-800">Generated: {new Date(imageMatch.generatedAt).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -426,6 +551,7 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
   const [country, setCountry] = useState('')
   const [mood, setMood] = useState('')
   const [timeOfDay, setTimeOfDay] = useState('')
+  const [description, setDescription] = useState('')
 
   const [prompts, setPrompts] = useState<PhotographicPrompt[]>([])
   const [generatingPrompts, setGeneratingPrompts] = useState(false)
@@ -443,6 +569,7 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
       country: country || undefined,
       mood: mood || undefined,
       timeOfDay: timeOfDay || undefined,
+      description: description || undefined,
     }, 3)
     setGeneratingPrompts(false)
     if ('prompts' in result) {
@@ -450,7 +577,7 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
     } else {
       alert(result.error)
     }
-  }, [genType, species, destination, country, mood, timeOfDay])
+  }, [genType, species, destination, country, mood, timeOfDay, description])
 
   const handleGenerateImage = useCallback(async (index: number) => {
     const prompt = prompts[index]
@@ -546,6 +673,17 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
             </div>
           </div>
 
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-kiuli-charcoal/50">Scene Description (optional)</label>
+            <textarea
+              className={`${inputClass} mt-1 min-h-[60px]`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the scene you want, e.g. aerial hippos in the Kazinga channel"
+              rows={2}
+            />
+          </div>
+
           <button onClick={handleGeneratePrompts} disabled={generatingPrompts} className={btnSecondary}>
             {generatingPrompts ? (
               <><Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" /> Generating Prompts...</>
@@ -553,6 +691,7 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
               'Generate Prompts'
             )}
           </button>
+          <p className="text-center text-[10px] text-kiuli-charcoal/40">(~$0.08 per image)</p>
         </div>
 
         {/* Prompts */}

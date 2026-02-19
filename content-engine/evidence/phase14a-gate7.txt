@@ -1,0 +1,22 @@
+=== articleImages on types ===
+154:  articleImages?: ArticleImage[]
+
+=== Article images UI ===
+658:// ── Article Images Section ───────────────────────────────────────────────────
+686:  const [images, setImages] = useState<ArticleImage[]>(project.articleImages || [])
+695:    setImages(project.articleImages || [])
+696:  }, [project.articleImages])
+754:        <h3 className="text-xs font-semibold uppercase tracking-wider text-kiuli-charcoal">Article Images</h3>
+
+=== Publisher inserts images ===
+30:  const articleImages = parseArticleImages(project.articleImages)
+31:  const finalBody = articleImages.length > 0 ? insertImagesIntoBody(body, articleImages) : body
+168:function insertImagesIntoBody(
+
+=== Server action ===
+237:    articleImages: parseArticleImages(raw.articleImages),
+356:    if (project.articleImages && project.articleImages.length > 0) {
+357:      for (const img of project.articleImages) {
+556:    'articleImages',
+995:export async function saveArticleImages(
+1019:      data: { articleImages: sanitized } as any,

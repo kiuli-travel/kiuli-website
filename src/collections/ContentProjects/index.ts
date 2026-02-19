@@ -489,6 +489,13 @@ export const ContentProjects: CollectionConfig = {
               },
             },
             {
+              name: 'articleImages',
+              type: 'json',
+              admin: {
+                description: 'Inline image placements: [{ position, mediaId, caption }]',
+              },
+            },
+            {
               name: 'generatedCandidates',
               type: 'array',
               admin: {

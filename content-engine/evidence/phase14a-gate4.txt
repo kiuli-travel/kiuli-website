@@ -1,0 +1,9 @@
+=== Media collection fields ===
+313:      name: 'generationPrompt',
+321:      name: 'generationModel',
+329:      name: 'generatedAt',
+
+=== Upload pipeline saves metadata ===
+58:      generationPrompt: metadata.prompt || undefined,
+59:      generationModel: metadata.model || undefined,
+60:      generatedAt: new Date().toISOString(),

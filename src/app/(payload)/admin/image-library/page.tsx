@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Loader2, Search, X, Camera, Sparkles, ChevronDown, ChevronRight, Copy, ArrowLeft, ZoomIn, ZoomOut, Maximize2, ExternalLink } from 'lucide-react'
 import { searchImages, generateImagePrompts, generateAndSaveImage } from './actions'
@@ -42,9 +42,12 @@ export default function ImageLibraryPage() {
   const [heroOnly, setHeroOnly] = useState(false)
   const [sourceFilter, setSourceFilter] = useState<'all' | 'scraped' | 'generated'>('all')
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const offsetRef = useRef(0)
 
-  const doSearch = useCallback(async () => {
+  const doSearch = useCallback(async (appendMode = false) => {
     setLoading(true)
+    const searchOffset = appendMode ? offsetRef.current : 0
     const result = await searchImages({
       country: selectedCountries.length > 0 ? selectedCountries : undefined,
       imageType: selectedTypes.length > 0 ? selectedTypes : undefined,
@@ -55,13 +58,20 @@ export default function ImageLibraryPage() {
       isHero: heroOnly || undefined,
       source: sourceFilter !== 'all' ? sourceFilter : undefined,
       query: query || undefined,
+      offset: searchOffset,
       limit: 60,
     })
     setLoading(false)
     if ('result' in result) {
-      setMatches(result.result.matches)
+      if (appendMode) {
+        setMatches((prev) => [...prev, ...result.result.matches])
+      } else {
+        setMatches(result.result.matches)
+      }
       setTotal(result.result.total)
       setFacets(result.result.facets)
+      offsetRef.current = searchOffset + result.result.matches.length
+      setHasMore(result.result.matches.length >= 60)
     }
   }, [selectedCountries, selectedTypes, selectedMoods, selectedCompositions, selectedTimeOfDay, selectedSuitableFor, heroOnly, sourceFilter, query])
 
@@ -69,9 +79,10 @@ export default function ImageLibraryPage() {
     doSearch()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-search on filter change with 500ms debounce
+  // Auto-search on filter change with 500ms debounce (resets offset)
   useEffect(() => {
     if (debounceTimer) clearTimeout(debounceTimer)
+    offsetRef.current = 0
     const timer = setTimeout(() => doSearch(), 500)
     setDebounceTimer(timer)
     return () => clearTimeout(timer)
@@ -87,6 +98,7 @@ export default function ImageLibraryPage() {
     setHeroOnly(false)
     setSourceFilter('all')
     setQuery('')
+    offsetRef.current = 0
   }, [])
 
   const activeFilterCount = selectedCountries.length + selectedTypes.length + selectedMoods.length + selectedCompositions.length + selectedTimeOfDay.length + selectedSuitableFor.length + (heroOnly ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (query ? 1 : 0)
@@ -143,7 +155,7 @@ export default function ImageLibraryPage() {
         </div>
 
         <div className="p-4">
-          <button onClick={doSearch} className={`${btnSecondary} w-full`}>
+          <button onClick={() => doSearch()} className={`${btnSecondary} w-full`}>
             Apply Filters
           </button>
         </div>
@@ -212,9 +224,9 @@ export default function ImageLibraryPage() {
                   <ImageCard key={match.mediaId} match={match} onClick={() => setSelectedImageIndex(index)} />
                 ))}
               </div>
-              {matches.length >= 60 && (
+              {hasMore && (
                 <div className="mt-4 flex justify-center">
-                  <button onClick={doSearch} className="rounded bg-kiuli-gray/20 px-4 py-2 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30">
+                  <button onClick={() => doSearch(true)} className="rounded bg-kiuli-gray/20 px-4 py-2 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30">
                     Load more
                   </button>
                 </div>

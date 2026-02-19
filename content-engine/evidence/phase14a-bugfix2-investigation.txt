@@ -1,0 +1,25 @@
+=== Phase 14a Bugfix 2 — Investigation ===
+
+1. extractTextFromLexical (content-system/embeddings/lexical-text.ts)
+   - Line 37: headings are treated as inline containers — children joined without separator
+   - NO heading markers (# prefixes) are ever emitted
+   - A heading "Introduction" becomes plain text "Introduction" — indistinguishable from paragraph text
+   - This is correct for its purpose (plain text extraction) but means downstream heading detection fails
+
+2. extractHeadings (src/components/content-system/workspace/ContentTabs.tsx:660)
+   - Line 665: regex /^#{1,3}\s+(.+)$/ looks for markdown heading markers
+   - These markers NEVER exist in Lexical-extracted text (see finding 1)
+   - Fallback (line 669-675): splits by paragraph breaks, returns "Section N" labels
+   - Result: every article draft shows "Section 1", "Section 2" etc. instead of real heading text
+   - Position numbers are arbitrary (based on paragraph count) and don't match publisher positions
+
+3. insertImagesIntoBody (content-system/publishing/article-publisher.ts:168)
+   - Line 183: walks Lexical AST directly, finds nodes with type === 'heading'
+   - Position 0 = first heading node, Position 1 = second heading node, etc.
+   - This is the correct reference system — positions are AST heading indices
+
+CONCLUSION:
+- The UI positions (paragraph-based "Section N") do NOT match the publisher positions (AST heading indices)
+- Fix: extract headings from the raw Lexical JSON (same AST the publisher uses)
+- Need a new function extractHeadingsFromLexical that walks root.children looking for type === 'heading'
+- Need to pass the raw Lexical body to the UI (currently only extracted plain text is available)

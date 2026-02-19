@@ -156,6 +156,7 @@ export function transformProject(raw: Record<string, unknown>): WorkspaceProject
 
     // Draft
     draftBody: draftText || undefined,
+    draftBodyRaw: raw.body || undefined,
     sections,
     metaTitle: (raw.metaTitle as string) || undefined,
     metaDescription: (raw.metaDescription as string) || undefined,

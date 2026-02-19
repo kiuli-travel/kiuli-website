@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import {
   isArticleType,
   isCompoundType,
@@ -657,24 +657,7 @@ export function ImagesTab({ project, projectId, onDataChanged }: ImagesTabProps)
 
 // ── Article Images Section ───────────────────────────────────────────────────
 
-function extractHeadings(draftBody?: string): string[] {
-  if (!draftBody) return []
-  const lines = draftBody.split('\n')
-  const headings: string[] = []
-  for (const line of lines) {
-    const match = line.match(/^#{1,3}\s+(.+)$/)
-    if (match) headings.push(match[1])
-  }
-  // If no markdown headings found, try splitting by paragraph breaks
-  if (headings.length === 0) {
-    const paras = draftBody.split(/\n{2,}/).filter((p) => p.trim().length > 0)
-    // Use first N paragraphs as positional labels
-    for (let i = 0; i < Math.min(paras.length, 8); i++) {
-      headings.push(`Section ${i + 1}`)
-    }
-  }
-  return headings
-}
+import { extractHeadingsFromLexical } from '../../../../content-system/embeddings/lexical-text'
 
 interface ArticleImagesSectionProps {
   project: WorkspaceProject
@@ -688,7 +671,14 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
   const [toast, setToast] = useState<string | null>(null)
   const [pickingForPosition, setPickingForPosition] = useState<number | null>(null)
 
-  const headings = extractHeadings(project.draftBody)
+  // Extract headings from raw Lexical AST (matches publisher's heading indices)
+  const lexicalHeadings = extractHeadingsFromLexical(project.draftBodyRaw)
+  // Fallback to section labels if no Lexical headings found
+  const headings = lexicalHeadings.length > 0
+    ? lexicalHeadings
+    : (project.draftBody
+      ? project.draftBody.split(/\n{2,}/).filter((p) => p.trim().length > 0).slice(0, 8).map((_, i) => `Section ${i + 1}`)
+      : [])
 
   // Sync from props when project data refreshes
   useEffect(() => {
@@ -709,36 +699,42 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
   }, [projectId, onDataChanged])
 
   const handleAssign = useCallback((position: number, match: { mediaId: number; imgixUrl: string | null; alt: string }) => {
-    const updated = images.filter((img) => img.position !== position)
-    updated.push({
-      position,
-      mediaId: match.mediaId,
-      imgixUrl: match.imgixUrl || undefined,
-      alt: match.alt || undefined,
+    setImages((prev) => {
+      const updated = prev.filter((img) => img.position !== position)
+      updated.push({
+        position,
+        mediaId: match.mediaId,
+        imgixUrl: match.imgixUrl || undefined,
+        alt: match.alt || undefined,
+      })
+      updated.sort((a, b) => a.position - b.position)
+      handleSave(updated)
+      return updated
     })
-    updated.sort((a, b) => a.position - b.position)
-    setImages(updated)
     setPickingForPosition(null)
-    handleSave(updated)
-  }, [images, handleSave])
+  }, [handleSave])
 
   const handleRemove = useCallback((position: number) => {
-    const updated = images.filter((img) => img.position !== position)
-    setImages(updated)
-    handleSave(updated)
-  }, [images, handleSave])
+    setImages((prev) => {
+      const updated = prev.filter((img) => img.position !== position)
+      handleSave(updated)
+      return updated
+    })
+  }, [handleSave])
 
   const handleCaptionChange = useCallback((position: number, caption: string) => {
-    const updated = images.map((img) =>
-      img.position === position ? { ...img, caption } : img,
+    setImages((prev) =>
+      prev.map((img) => img.position === position ? { ...img, caption } : img),
     )
-    setImages(updated)
-  }, [images])
+  }, [])
 
-  const handleCaptionBlur = useCallback((position: number) => {
-    const img = images.find((i) => i.position === position)
-    if (img) handleSave(images)
-  }, [images, handleSave])
+  // Bug 2 fix: use functional setState to get fresh images, not stale closure
+  const handleCaptionBlur = useCallback(() => {
+    setImages((current) => {
+      handleSave(current)
+      return current
+    })
+  }, [handleSave])
 
   if (!project.draftBody) {
     return (
@@ -793,7 +789,7 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
                       placeholder="Caption (optional)"
                       value={assigned.caption || ''}
                       onChange={(e) => handleCaptionChange(i, e.target.value)}
-                      onBlur={() => handleCaptionBlur(i)}
+                      onBlur={handleCaptionBlur}
                     />
                     <button
                       onClick={() => handleRemove(i)}
@@ -826,6 +822,7 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
           position={pickingForPosition}
           defaultCountry={project.destinations?.[0]}
           defaultSpecies={project.species}
+          excludeIds={images.map((img) => img.mediaId)}
           onSelect={handleAssign}
           onClose={() => setPickingForPosition(null)}
         />
@@ -836,19 +833,20 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
 
 // ── Article Image Picker Modal ───────────────────────────────────────────────
 
-import { searchImages } from '@/app/(payload)/admin/image-library/actions'
-import type { LibraryMatch } from '../../../../content-system/images/types'
-
-function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, onSelect, onClose }: {
+import { searchImages, generateImagePrompts, generateAndSaveImage } from '@/app/(payload)/admin/image-library/actions'
+import type { LibraryMatch, GeneratableImageType, PhotographicPrompt } from '../../../../content-system/images/types'
+function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, excludeIds, onSelect, onClose }: {
   position: number
   defaultCountry?: string
   defaultSpecies?: string[]
+  excludeIds?: number[]
   onSelect: (position: number, match: { mediaId: number; imgixUrl: string | null; alt: string }) => void
   onClose: () => void
 }) {
   const [matches, setMatches] = useState<LibraryMatch[]>([])
   const [loading, setLoading] = useState(false)
   const [query, setQuery] = useState('')
+  const [showGenModal, setShowGenModal] = useState(false)
 
   const doSearch = useCallback(async () => {
     setLoading(true)
@@ -856,13 +854,14 @@ function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, onS
       country: defaultCountry || undefined,
       query: query || undefined,
       species: defaultSpecies?.length ? defaultSpecies : undefined,
+      excludeIds: excludeIds?.length ? excludeIds : undefined,
       limit: 24,
     })
     setLoading(false)
     if ('result' in result) {
       setMatches(result.result.matches)
     }
-  }, [defaultCountry, defaultSpecies, query])
+  }, [defaultCountry, defaultSpecies, excludeIds, query])
 
   useEffect(() => {
     doSearch()
@@ -886,6 +885,12 @@ function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, onS
           />
           <button onClick={doSearch} className="rounded bg-kiuli-teal px-3 py-1.5 text-xs font-medium text-white hover:bg-kiuli-teal/90">
             Search
+          </button>
+          <button
+            onClick={() => setShowGenModal(true)}
+            className="flex items-center gap-1 rounded bg-kiuli-clay px-3 py-1.5 text-xs font-medium text-white hover:bg-kiuli-clay/90"
+          >
+            <Sparkles className="h-3 w-3" /> Generate
           </button>
         </div>
 
@@ -920,6 +925,130 @@ function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, onS
                   <span className="line-clamp-1 text-[9px] text-white">{match.alt}</span>
                 </div>
               </button>
+            ))}
+          </div>
+        )}
+
+        {showGenModal && (
+          <ArticleImageGenModal
+            defaultCountry={defaultCountry}
+            defaultSpecies={defaultSpecies}
+            onClose={() => setShowGenModal(false)}
+            onGenerated={() => {
+              setShowGenModal(false)
+              doSearch()
+            }}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Article Image Generation Modal ──────────────────────────────────────────
+
+const COUNTRIES_COMPACT = ['Tanzania', 'Kenya', 'Botswana', 'Rwanda', 'South Africa', 'Zimbabwe', 'Zambia', 'Namibia', 'Uganda', 'Mozambique']
+
+function ArticleImageGenModal({ defaultCountry, defaultSpecies, onClose, onGenerated }: {
+  defaultCountry?: string
+  defaultSpecies?: string[]
+  onClose: () => void
+  onGenerated: () => void
+}) {
+  const [genType, setGenType] = useState<GeneratableImageType>('wildlife')
+  const [species, setSpecies] = useState(defaultSpecies?.[0] || '')
+  const [country, setCountry] = useState(defaultCountry || '')
+  const [description, setDescription] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [prompts, setPrompts] = useState<PhotographicPrompt[]>([])
+
+  const handleGenPrompts = useCallback(async () => {
+    setGenerating(true)
+    const result = await generateImagePrompts({
+      type: genType,
+      species: species || undefined,
+      country: country || undefined,
+      description: description || undefined,
+    }, 3)
+    setGenerating(false)
+    if ('prompts' in result) setPrompts(result.prompts)
+    else alert(result.error)
+  }, [genType, species, country, description])
+
+  const handleGenImage = useCallback(async (prompt: PhotographicPrompt) => {
+    setGenerating(true)
+    const result = await generateAndSaveImage(prompt.prompt, {
+      type: genType,
+      species: species ? [species] : undefined,
+      country: country || undefined,
+      aspectRatio: prompt.aspectRatio,
+    })
+    setGenerating(false)
+    if ('mediaId' in result) {
+      onGenerated()
+    } else {
+      alert(result.error)
+    }
+  }, [genType, species, country, onGenerated])
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className="max-h-[80vh] w-[500px] overflow-y-auto rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-kiuli-charcoal">Generate Image</h3>
+          <button onClick={onClose} className="text-xs text-kiuli-charcoal/50 hover:text-kiuli-charcoal">Close</button>
+        </div>
+
+        <div className="mb-3 rounded border border-amber-200 bg-amber-50 p-2 text-[10px] text-amber-800">
+          Only wildlife, landscapes, destinations, and country images can be generated.
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-1.5">
+            {(['wildlife', 'landscape', 'destination', 'country'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setGenType(t)}
+                className={`rounded px-2.5 py-1 text-[11px] font-medium capitalize ${genType === t ? 'bg-kiuli-teal text-white' : 'bg-kiuli-gray/20 text-kiuli-charcoal'}`}
+              >{t}</button>
+            ))}
+          </div>
+
+          {genType === 'wildlife' && (
+            <input className={inputClass} value={species} onChange={(e) => setSpecies(e.target.value)} placeholder="Species" />
+          )}
+          <select className={inputClass} value={country} onChange={(e) => setCountry(e.target.value)}>
+            <option value="">Country</option>
+            {COUNTRIES_COMPACT.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+
+          <textarea
+            className={`${inputClass} min-h-[50px]`}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Scene description (optional)"
+            rows={2}
+          />
+
+          <button onClick={handleGenPrompts} disabled={generating} className="rounded bg-kiuli-teal px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40">
+            {generating ? <Loader2 className="inline h-3 w-3 animate-spin" /> : 'Generate Prompts'}
+          </button>
+        </div>
+
+        {prompts.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2">
+            {prompts.map((p, i) => (
+              <div key={i} className="rounded border border-kiuli-gray/60 p-3">
+                <p className="line-clamp-3 text-[11px] text-kiuli-charcoal">{p.prompt}</p>
+                <p className="mt-1 text-[10px] text-kiuli-charcoal/50">{p.cameraSpec} | {p.aspectRatio}</p>
+                <button
+                  onClick={() => handleGenImage(p)}
+                  disabled={generating}
+                  className="mt-2 rounded bg-kiuli-clay px-3 py-1 text-[11px] font-medium text-white disabled:opacity-40"
+                >
+                  {generating ? <Loader2 className="inline h-3 w-3 animate-spin" /> : 'Generate & Save'}
+                </button>
+              </div>
             ))}
           </div>
         )}

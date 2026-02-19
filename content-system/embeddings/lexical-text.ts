@@ -15,6 +15,29 @@ export function extractTextFromLexical(lexicalJson: unknown): string {
   }
 }
 
+/**
+ * Extract heading text from Lexical JSON by walking the AST.
+ * Returns an array of heading strings in document order.
+ * Position 0 = first heading, Position 1 = second heading, etc.
+ * This matches the publisher's heading index system.
+ */
+export function extractHeadingsFromLexical(lexicalJson: unknown): string[] {
+  if (!lexicalJson || typeof lexicalJson !== 'object') return []
+  const root = (lexicalJson as Record<string, unknown>).root
+  if (!root || typeof root !== 'object') return []
+  const children = (root as Record<string, unknown>).children
+  if (!Array.isArray(children)) return []
+
+  const headings: string[] = []
+  for (const child of children) {
+    if (child && typeof child === 'object' && (child as Record<string, unknown>).type === 'heading') {
+      const text = extractNode(child)
+      if (text.trim()) headings.push(text.trim())
+    }
+  }
+  return headings
+}
+
 function extractNode(node: unknown): string {
   if (!node || typeof node !== 'object') return ''
 

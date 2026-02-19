@@ -127,6 +127,7 @@ export interface WorkspaceProject {
 
   // Draft
   draftBody?: string
+  draftBodyRaw?: unknown
   sections?: Record<string, string>
   metaTitle?: string
   metaDescription?: string

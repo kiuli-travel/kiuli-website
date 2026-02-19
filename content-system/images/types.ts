@@ -17,6 +17,7 @@ export interface LibrarySearchOptions {
   query?: string
   source?: 'scraped' | 'generated' | 'all'
   excludeIds?: number[]
+  offset?: number
   limit?: number
 }
 

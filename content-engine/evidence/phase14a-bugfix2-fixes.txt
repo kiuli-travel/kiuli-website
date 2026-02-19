@@ -1,0 +1,34 @@
+=== Pagination ===
+page.tsx:46:  const offsetRef = useRef(0)
+page.tsx:50:    const searchOffset = appendMode ? offsetRef.current : 0
+page.tsx:61:      offset: searchOffset,
+page.tsx:73:      offsetRef.current = searchOffset + result.result.matches.length
+page.tsx:82:  // Auto-search on filter change with 500ms debounce (resets offset)
+page.tsx:85:    offsetRef.current = 0
+page.tsx:101:    offsetRef.current = 0
+library-search.ts:150:  const offset = options.offset ?? 0
+library-search.ts:151:  const page = scored.slice(offset, offset + limit)
+types.ts:20:  offset?: number
+actions.ts: offset flows through LibrarySearchOptions type (line 23: options: LibrarySearchOptions) — passed implicitly to searchLibrary(options)
+
+=== Caption fix ===
+ContentTabs.tsx:725:  const handleCaptionChange = useCallback((position: number, caption: string) => {
+ContentTabs.tsx:732:  const handleCaptionBlur = useCallback(() => {
+Both use functional setState: setImages((prev) => ...) / setImages((current) => ...) to avoid stale closure
+
+=== Heading extraction ===
+lexical-text.ts:24:export function extractHeadingsFromLexical(lexicalJson: unknown): string[]
+ContentTabs.tsx:660:import { extractHeadingsFromLexical } from '../../../../content-system/embeddings/lexical-text'
+ContentTabs.tsx:675:  const lexicalHeadings = extractHeadingsFromLexical(project.draftBodyRaw)
+transform-project.ts:159:    draftBodyRaw: raw.body || undefined,
+
+=== Article picker fixes ===
+ContentTabs.tsx:825:          excludeIds={images.map((img) => img.mediaId)}
+ContentTabs.tsx:838:function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, excludeIds, onSelect, onClose }: {
+ContentTabs.tsx:842:  excludeIds?: number[]
+ContentTabs.tsx:857:      excludeIds: excludeIds?.length ? excludeIds : undefined,
+ContentTabs.tsx:849:  const [showGenModal, setShowGenModal] = useState(false)
+ContentTabs.tsx:893:            <Sparkles className="h-3 w-3" /> Generate
+ContentTabs.tsx:932:        {showGenModal && (
+ContentTabs.tsx:933:          <ArticleImageGenModal
+ContentTabs.tsx:952:function ArticleImageGenModal({ defaultCountry, defaultSpecies, onClose, onGenerated }: {

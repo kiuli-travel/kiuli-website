@@ -147,7 +147,8 @@ export async function searchLibrary(options: LibrarySearchOptions): Promise<Libr
 
   // Paginate
   const total = scored.length
-  const page = scored.slice(0, limit)
+  const offset = options.offset ?? 0
+  const page = scored.slice(offset, offset + limit)
 
   // Transform to LibraryMatch
   const matches: LibraryMatch[] = page.map(({ doc, score }) => ({

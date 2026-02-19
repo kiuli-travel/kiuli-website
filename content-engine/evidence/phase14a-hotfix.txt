@@ -9,3 +9,31 @@ Backfill SQL included in migration
 === Build ===
 EXIT: 0
 
+=== Post-deploy verification ===
+
+--- HTTP checks ---
+kiuli.com: 200
+admin.kiuli.com (follow redirects): 200
+
+=== Post-migration SQL verification ===
+
+--- Check 1: version_article_images column exists ---
+PASS: _content_projects_v.version_article_images exists (1 row)
+
+--- Check 2: _media_v not needed (Media has no versioning) ---
+PASS: No _media_v table exists — Media collection does not use versions
+
+--- Check 3: Generated images have imgixUrl ---
+id   | has_url
+1274 | t
+1275 | t
+1276 | t
+1277 | t
+1278 | t
+1279 | t
+PASS: All 6 generated images have imgixUrl
+
+--- Check 4: Build ---
+EXIT: 0
+
+DONE

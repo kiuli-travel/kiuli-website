@@ -1,11 +1,13 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-vercel-postgres'
 
 /**
- * Fix version table columns missing from 20260219_add_image_generation_fields.
+ * Fix version table column missing from 20260219_add_image_generation_fields.
  *
- * The original migration added columns to `media` and `content_projects` but
- * not to their version tables (`_media_v` and `_content_projects_v`).
- * Any update that triggers a version insert crashes with missing column errors.
+ * The original migration added `article_images` to `content_projects` but
+ * not to its version table `_content_projects_v`. Any update that triggers
+ * a version insert would crash with a missing column error.
+ *
+ * Media does NOT have versioning (`_media_v` does not exist), so no fix needed there.
  *
  * Also backfills imgixUrl for generated images that have null imgix_url.
  *
@@ -30,21 +32,6 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
     await db.execute(sql`ALTER TABLE "_content_projects_v" ADD COLUMN "version_article_images" jsonb`)
   }
 
-  // _media_v: version_generation_prompt
-  if (!(await columnExists(db, '_media_v', 'version_generation_prompt'))) {
-    await db.execute(sql`ALTER TABLE "_media_v" ADD COLUMN "version_generation_prompt" text`)
-  }
-
-  // _media_v: version_generation_model
-  if (!(await columnExists(db, '_media_v', 'version_generation_model'))) {
-    await db.execute(sql`ALTER TABLE "_media_v" ADD COLUMN "version_generation_model" varchar`)
-  }
-
-  // _media_v: version_generated_at
-  if (!(await columnExists(db, '_media_v', 'version_generated_at'))) {
-    await db.execute(sql`ALTER TABLE "_media_v" ADD COLUMN "version_generated_at" timestamp(3) with time zone`)
-  }
-
   // Backfill imgixUrl for generated images with null imgix_url
   await db.execute(sql`
     UPDATE media
@@ -56,14 +43,5 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
 export async function down({ db }: MigrateDownArgs): Promise<void> {
   if (await columnExists(db, '_content_projects_v', 'version_article_images')) {
     await db.execute(sql`ALTER TABLE "_content_projects_v" DROP COLUMN "version_article_images"`)
-  }
-  if (await columnExists(db, '_media_v', 'version_generation_prompt')) {
-    await db.execute(sql`ALTER TABLE "_media_v" DROP COLUMN "version_generation_prompt"`)
-  }
-  if (await columnExists(db, '_media_v', 'version_generation_model')) {
-    await db.execute(sql`ALTER TABLE "_media_v" DROP COLUMN "version_generation_model"`)
-  }
-  if (await columnExists(db, '_media_v', 'version_generated_at')) {
-    await db.execute(sql`ALTER TABLE "_media_v" DROP COLUMN "version_generated_at"`)
   }
 }

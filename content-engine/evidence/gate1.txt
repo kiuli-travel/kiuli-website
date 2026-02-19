@@ -1,0 +1,5 @@
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+Connecting with: postgresql://neondb_owner:npg_6jZvKNcqO7...
+BEFORE image_model: anthropic/claude-sonnet-4
+UPDATE: SET image_model = black-forest-labs/flux.2-max
+VERIFIED image_model: black-forest-labs/flux.2-max

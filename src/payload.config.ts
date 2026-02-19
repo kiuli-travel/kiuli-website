@@ -48,6 +48,7 @@ export default buildConfig({
       afterNavLinks: [
         '@/components/admin/ImportItineraryLink#ImportItineraryLink',
         '@/components/admin/ContentEngineLink#ContentEngineLink',
+        '@/components/admin/ImageLibraryLink#ImageLibraryLink',
         '@/components/admin/NotificationBell#NotificationBell',
       ],
     },

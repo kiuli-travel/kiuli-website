@@ -620,11 +620,26 @@ export function FAQTab({ project, projectId }: FAQTabProps) {
 
 // ── Images Tab ───────────────────────────────────────────────────────────────
 
-export function ImagesTab() {
+import { ImageLibraryPicker } from './ImageLibraryPicker'
+
+interface ImagesTabProps {
+  project: WorkspaceProject
+  projectId: number
+  onDataChanged?: () => void
+}
+
+export function ImagesTab({ project, projectId, onDataChanged }: ImagesTabProps) {
   return (
-    <div className="flex items-center justify-center py-16 text-sm text-kiuli-charcoal/40">
-      Image management coming in a future phase.
-    </div>
+    <ImageLibraryPicker
+      projectId={projectId}
+      selectedId={project.heroImageId}
+      selectedImgixUrl={project.heroImageImgixUrl}
+      selectedAlt={project.heroImageAlt}
+      defaultCountry={project.destinations?.[0]}
+      defaultSpecies={project.species}
+      defaultDestinations={project.destinations}
+      onHeroChanged={onDataChanged}
+    />
   )
 }
 

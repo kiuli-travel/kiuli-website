@@ -61,6 +61,9 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
   const capsuleWords = answerCapsule ? answerCapsule.trim().split(/\s+/).filter((w: string) => w.length > 0).length : 0
   const validCapsule = capsuleWords >= 40 && capsuleWords <= 60 ? answerCapsule : undefined
 
+  // Hero image passthrough
+  const heroImageId = project.heroImage as number | null | undefined
+
   const postData: Record<string, unknown> = {
     title,
     content: body,
@@ -72,7 +75,9 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
       title: metaTitle || undefined,
       description: metaDescription || undefined,
       answerCapsule: validCapsule,
+      image: heroImageId || undefined,
     },
+    heroImage: heroImageId || undefined,
   }
 
   let postId: number

@@ -1,0 +1,15 @@
+=== Placeholder check ===
+EXIT: 1
+
+=== hero_image column ===
+column_name  | data_type
+---------------+-----------
+ hero_image_id | integer
+(1 row)
+
+=== ImageLibraryPicker import ===
+src/components/content-system/workspace//ImageLibraryPicker.tsx:19:interface ImageLibraryPickerProps {
+src/components/content-system/workspace//ImageLibraryPicker.tsx:30:export function ImageLibraryPicker({
+src/components/content-system/workspace//ImageLibraryPicker.tsx:39:}: ImageLibraryPickerProps) {
+src/components/content-system/workspace//ContentTabs.tsx:623:import { ImageLibraryPicker } from './ImageLibraryPicker'
+src/components/content-system/workspace//ContentTabs.tsx:633:    <ImageLibraryPicker

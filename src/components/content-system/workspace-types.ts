@@ -137,6 +137,11 @@ export interface WorkspaceProject {
   consistencyCheckResult?: 'pass' | 'hard_contradiction' | 'soft_contradiction' | 'not_checked'
   consistencyIssues?: ConsistencyIssueDisplay[]
 
+  // Hero image
+  heroImageId?: number | null
+  heroImageImgixUrl?: string | null
+  heroImageAlt?: string | null
+
   // Distribution (articles)
   distribution?: DistributionData
 

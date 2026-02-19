@@ -48,6 +48,7 @@
   "exclude": [
     "node_modules",
     "design-references",
-    "content-engine/v0-reference"
+    "content-engine/v0-reference",
+    "content-engine/scripts"
   ],
 }

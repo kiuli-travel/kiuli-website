@@ -130,7 +130,13 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
           />
         )
       case 'Images':
-        return <ImagesTab />
+        return (
+          <ImagesTab
+            project={currentProject}
+            projectId={projectId}
+            onDataChanged={refreshProject}
+          />
+        )
       case 'Distribution':
         return <DistributionTab project={currentProject} projectId={projectId} />
       case 'Metadata':

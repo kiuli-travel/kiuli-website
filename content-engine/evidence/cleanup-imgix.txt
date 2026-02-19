@@ -1,0 +1,7 @@
+=== imgix re-verification ===
+File: kiuli-gen-1771464730808-wildlife.png
+  URL: https://kiuli.imgix.net/kiuli-gen-1771464730808-wildlife.png?auto=format,compress&q=80
+  HTTP status: 200
+File: kiuli-gen-1771464967885-wildlife.png
+  URL: https://kiuli.imgix.net/kiuli-gen-1771464967885-wildlife.png?auto=format,compress&q=80
+  HTTP status: 200

@@ -1,0 +1,47 @@
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Image Generation via OpenRouter ===
+
+Prompt: A leopard resting on a weathered acacia branch in the Serengeti at golden hour. Shot with a Canon EF...
+Calling callImageGeneration...
+
+[01:09:28] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+Test failed with error: Error: OpenRouter returned no images. Response structure: {
+  "role": "assistant",
+  "content": "",
+  "refusal": null,
+  "reasoning": null,
+  "images": [
+    {
+      "index": 0,
+      "type": "image_url",
+      "image_url": {
+        "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAIAAADwf7zUAAHbCWNhQlgAAdsJanVtYgAAAB5qdW1kYzJwYQARABCAAACqADibcQNjMnBhAAAB2uNqdW1iAAAAR2p1bWRjMm1hABEAEIAAAKoAOJtxA3VybjpjMnBhOjM3NzJjNzZlLTg1ZTMtNGZmNy1iYTUyLTU3MzE0ZjZkYjk1OQAAAZ6XanVtYgAAAClqdW1kYzJhcwARABCAAACqADibcQNjMnBhLmFzc2VydGlvbnMAAAGbeWp1bWIAAABGan
+    at callImageGeneration (/Users/grahamwallington/Projects/kiuli-website/content-system/openrouter-client.ts:203:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async main (/Users/grahamwallington/Projects/kiuli-website/content-engine/scripts/test-image-generation.ts:34:18)
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Image Generation via OpenRouter ===
+
+Prompt: A leopard resting on a weathered acacia branch in the Serengeti at golden hour. Shot with a Canon EF...
+Calling callImageGeneration...
+
+[01:10:10] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+Generation completed in 44.1s
+Model used: black-forest-labs/flux.2-max
+Base64 data length: 2541500 chars
+Prompt used: A leopard resting on a weathered acacia branch in the Serengeti at golden hour. ...
+
+Decoded buffer size: 1861.4 KB
+Image format: png
+Dimensions: 1024 x 1024
+Channels: 3
+
+Saved to: /Users/grahamwallington/Projects/kiuli-website/content-engine/scripts/tmp/test-generated-image.png
+
+=== Results ===
+PASS: All assertions passed
+  - Image is valid (png, 1024x1024)
+  - File size: 1861.4 KB (> 100KB)
+  - Model: black-forest-labs/flux.2-max
+  - Generation time: 44.1s
+-rw-r--r--@ 1 grahamwallington  staff  1906124 19 Feb 01:10 content-engine/scripts/tmp/test-generated-image.png

@@ -85,7 +85,8 @@ const TAB_CONTEXT: Record<string, string> = {
     'The Distribution tab shows: linkedinSummary, facebookSummary, facebookPinnedComment. These are not in the ALLOWED_FIELDS for edit_field — respond conversationally about distribution content.',
   Metadata:
     'The Metadata tab shows read-only project metadata. No editable fields here.',
-  Images: 'The Images tab is a placeholder. No actions available for images yet.',
+  Images:
+    'The Images tab shows the Image Library picker. The designer can browse, filter, and select hero images for this project. They can also generate new wildlife, landscape, destination, or country images using AI. Property/accommodation images cannot be generated — only scraped property images are used to ensure accuracy. When the designer asks about images, help them find relevant images or suggest generating new ones based on the project context.',
 }
 
 async function buildSystemPrompt(ctx: ConversationContext, activeTab?: string): Promise<string> {

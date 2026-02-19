@@ -8,6 +8,7 @@ import { extractTextFromLexical } from '../../../../../../../content-system/embe
 import { compileResearch } from '../../../../../../../content-system/research/research-compiler'
 import { markdownToLexical } from '../../../../../../../content-system/conversation/lexical-utils'
 import { dispatchDraft } from '../../../../../../../content-system/drafting'
+
 import {
   isArticleType,
   isCompoundType,
@@ -212,6 +213,9 @@ function transformProject(raw: Record<string, unknown>): WorkspaceProject {
     // Consistency
     consistencyCheckResult: (raw.consistencyCheckResult as WorkspaceProject['consistencyCheckResult']) || undefined,
     consistencyIssues: consistencyIssues.length > 0 ? consistencyIssues : undefined,
+
+    // Hero image
+    heroImageId: (raw.heroImage as number) || (raw.heroImageId as number) || undefined,
 
     // Distribution
     distribution:

@@ -143,6 +143,7 @@ function transformProject(raw: Record<string, unknown>): WorkspaceProject {
     faq: faq.length > 0 ? faq : undefined,
     consistencyCheckResult: (raw.consistencyCheckResult as WorkspaceProject['consistencyCheckResult']) || undefined,
     consistencyIssues: consistencyIssues.length > 0 ? consistencyIssues : undefined,
+    heroImageId: (raw.heroImage as number) || (raw.heroImageId as number) || undefined,
     distribution:
       raw.linkedinSummary || raw.facebookSummary
         ? {
@@ -183,6 +184,22 @@ export default async function WorkspacePage({
   }
 
   const project = transformProject(raw)
+
+  // Resolve hero image media record if set
+  if (project.heroImageId) {
+    try {
+      const heroMedia = await payload.findByID({
+        collection: 'media',
+        id: project.heroImageId,
+        depth: 0,
+      }) as unknown as Record<string, unknown>
+      project.heroImageImgixUrl = (heroMedia.imgixUrl as string) || null
+      project.heroImageAlt = (heroMedia.alt as string) || (heroMedia.altText as string) || null
+    } catch {
+      // Hero image may have been deleted
+      project.heroImageId = null
+    }
+  }
 
   return <ProjectWorkspace project={project} projectId={projectId} />
 }

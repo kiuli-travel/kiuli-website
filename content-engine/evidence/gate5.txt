@@ -1,0 +1,50 @@
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Library Search ===
+
+--- Test 1: Uganda wildlife ---
+[01:24:14] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+(node:36784) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Results: 23
+  All country=Uganda: true
+
+--- Test 2: Hippo species ---
+  Results: 0
+  Retry with "hippopotamus": 0
+  WARN: No hippo/hippopotamus results (may not exist in library)
+
+--- Test 3: Hero-only Kenya ---
+  Results: 6
+  All isHero=true: true
+
+--- Test 4: Accommodation ---
+  Results: 200
+
+--- Test 5: Free text "sunset savanna" ---
+  Results: 12
+
+--- Test 6: Penguin (expect 0) ---
+  Results: 0
+  PASS: No penguins in library
+
+--- Test 7: Combined (Kenya + wildlife + elephant) ---
+  Results: 2
+  Found 2 matching images
+
+--- Test 8: Facets returned ---
+  Total images: 200
+  Facet keys: countries, imageTypes, species, properties
+  Countries: Botswana(92), Namibia(66), Tanzania(23), South Africa(18), Rwanda(1)
+  Image types: accommodation(115), activity(30), wildlife(28), landscape(16), food(6), aerial(3), people(2)
+
+--- Test 9: Source filter "generated" ---
+  Generated images: 0
+  (May be 0 if no images have been generated yet)
+  Scraped images: 200
+
+=== Results ===
+PASS: All critical assertions passed
+  - 9 test cases executed
+  - Total library size: 200
+  - Facets populated
+  - Filters working

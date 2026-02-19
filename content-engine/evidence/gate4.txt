@@ -1,0 +1,103 @@
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Upload Pipeline ===
+
+[01:28:24] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+Step 1: Generating test image...
+(node:37238) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test failed with error: TypeError [ERR_INVALID_ARG_TYPE]: The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received undefined
+    at Buffer.from (node:buffer:326:9)
+    at main (/Users/grahamwallington/Projects/kiuli-website/content-engine/scripts/test-upload-pipeline.ts:35:39)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Upload Pipeline ===
+
+[01:30:32] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+Step 1: Generating test image...
+(node:37666) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Generated: 1552 KB
+
+Step 2: Uploading to Payload via pipeline...
+Test failed with error: TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at isPropertyType (/Users/grahamwallington/Projects/kiuli-website/content-system/images/types.ts:124:34)
+    at uploadGeneratedImage (/Users/grahamwallington/Projects/kiuli-website/content-system/images/upload-pipeline.ts:16:7)
+    at main (/Users/grahamwallington/Projects/kiuli-website/content-engine/scripts/test-upload-pipeline.ts:48:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Upload Pipeline ===
+
+[01:31:47] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+Step 1: Generating test image...
+(node:37837) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Generated: 1534 KB
+
+Step 2: Uploading to Payload via pipeline...
+  Media ID: 1274
+  imgix URL: https://kiuli.imgix.net/kiuli-gen-1771464730808-wildlife.png?auto=format,compress&q=80
+
+Step 3: Verifying Media record...
+  alt: giraffe — Tanzania — wildlife
+  imageType: wildlife
+  country: Tanzania
+  sourceS3Key: generated:1771464730808
+
+Step 4: Verifying imgix URL...
+  imgix HTTP status: 402
+
+Step 5: Running labelMediaRecord...
+Test failed with error: TypeError: Cannot read properties of undefined (reading 'success')
+    at main (/Users/grahamwallington/Projects/kiuli-website/content-engine/scripts/test-upload-pipeline.ts:97:50)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Upload Pipeline ===
+
+[01:35:41] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+Step 1: Generating test image...
+(node:38262) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Generated: 1474 KB
+
+Step 2: Uploading to Payload via pipeline...
+  Media ID: 1275
+  imgix URL: https://kiuli.imgix.net/kiuli-gen-1771464967885-wildlife.png?auto=format,compress&q=80
+
+Step 3: Verifying Media record...
+  alt: giraffe — Tanzania — wildlife
+  imageType: wildlife
+  country: Tanzania
+  sourceS3Key: generated:1771464967885
+  S3 key pattern: PASS (generated:1771464967885)
+
+Step 4: Verifying imgix URL...
+  imgix HTTP status: 402
+
+Step 5: Running labelMediaRecord...
+  Labeling completed (no error thrown)
+
+Step 6: Re-reading Media record for enrichment fields...
+  labelingStatus: complete
+  scene: Giraffe silhouette at sunrise on the savanna
+  isHero: true
+  quality: high
+  tags: ["Tanzania","giraffe","sunrise","savanna","wildlife","silhouette","landscape","nature","Africa","serene"]
+
+=== Results ===
+WARNINGS:
+  ⚠ imgix URL returned HTTP 402 (may be billing/config issue)
+PASS: All critical assertions passed
+  - Image generated and uploaded (Media ID: 1275)
+  - S3 key follows generated: pattern
+  - Media record has correct imageType and country
+  - Labeling produced enrichment fields
+  - labelingStatus = complete
+
+=== DB verification ===
+ id  |                                     alt                                     | image_type | country  | labeling_status |                      scene                       |      source_s3_key      
+------+-----------------------------------------------------------------------------+------------+----------+-----------------+--------------------------------------------------+-------------------------
+ 1275 | Silhouette of a giraffe on the Tanzanian savanna during a golden sunrise.   | wildlife   | Tanzania | complete        | Giraffe silhouette at sunrise on the savanna     | generated:1771464967885
+ 1274 | A giraffe standing on the savanna with a dramatic sunset in the background. | wildlife   | Tanzania | complete        | Giraffe standing on savanna with sunset backdrop | generated:1771464730808
+(2 rows)

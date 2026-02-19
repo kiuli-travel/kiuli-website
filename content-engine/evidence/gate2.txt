@@ -1,0 +1,48 @@
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+=== Test: Photographic Prompt Generator ===
+
+[01:07:03] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+--- Test 1: Wildlife (Leopard, Tanzania) ---
+(node:34404) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Generated 3 prompts
+  [3:2] Leopard descending from acacia tree during golden hour, showing natural climbing behavior in Serengeti habitat.
+    Camera: 600mm telephoto, f/4, 1/1250s
+    Prompt: 600mm telephoto lens at f/4, 1/1250s shutter speed capturing a leopard descending from an acacia tree in the Serengeti a...
+  [16:9] Leopard drinking at water source during blue hour, demonstrating cautious behavior and evening habitat use.
+    Camera: 400mm telephoto, f/5.6, 1/500s
+    Prompt: 400mm telephoto lens at f/5.6, 1/500s capturing a leopard drinking at rocky water source in Ruaha National Park during b...
+  [3:2] Leopard captured mid-leap between rocks showing explosive athletic ability in harsh midday lighting.
+    Camera: 800mm telephoto, f/5.6, 1/2000s
+    Prompt: 800mm super telephoto lens at f/5.6, 1/2000s freezing a leopard mid-leap between rocky outcrops in Tarangire's granite k...
+
+--- Test 2: Landscape (Okavango Delta, Botswana) ---
+Generated 3 prompts
+  [16:9] Aerial view showcasing the Okavango Delta's iconic maze of channels and islands during golden hour
+    Prompt: Aerial perspective captured with 24-70mm lens at 35mm, f/8 for maximum depth of field, 1/500s to freeze the helicopter's...
+  [3:2] Night landscape showing the delta's vast scale under pristine Kalahari stars with traditional mokoro
+    Prompt: Ground-level perspective using 14mm ultra-wide lens, f/11 for sharp foreground to infinity focus, 30-second exposure on ...
+  [16:9] Dramatic storm light over seasonal floodplains showing the delta's dynamic weather patterns
+    Prompt: 85mm short telephoto lens, f/5.6 for moderate depth compression, 1/250s handheld from elevated mokoro platform. Storm li...
+
+--- Test 3: Destination (Masai Mara, Kenya) ---
+Generated 3 prompts
+  [16:9] Establish the iconic sweeping grassland landscape that defines Masai Mara's visual identity
+    Prompt: Wide-angle establishing shot at 24mm capturing the endless golden grasslands of Masai Mara at f/11 for maximum depth of ...
+  [3:2] Showcase the indigenous Maasai culture that gives this destination its name and cultural significance
+    Prompt: Medium telephoto shot at 200mm capturing a traditional Maasai warrior in authentic red shuka against the Mara landscape ...
+  [16:9] Reveal the life-giving Mara River system that supports the ecosystem and Great Migration
+    Prompt: Ultra-wide aerial perspective at 14mm capturing the dramatic meander of Mara River during dry season at f/8 for sharp fo...
+
+--- Test 4: Accommodation (should be REJECTED) ---
+  PASS: Rejected with: "Property images cannot be generated. Only scraped property images are used to ensure accuracy. Generate wildlife, landscape, destination, or country images instead."
+
+--- Test 5: Camera spec verification ---
+  9/9 prompts contain camera-specific language
+
+=== Results ===
+PASS: All assertions passed
+  - Generated 9 prompts across 3 subject types
+  - All prompts > 100 characters
+  - 9/9 contain camera specs
+  - Accommodation prompts correctly rejected

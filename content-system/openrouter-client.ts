@@ -107,6 +107,136 @@ export async function callModel(
   throw lastError ?? new Error('OpenRouter API request failed after retry')
 }
 
+// ── Image Generation ─────────────────────────────────────────────────────────
+
+export interface ImageGenerationResponse {
+  imageBase64: string
+  model: string
+  prompt: string
+}
+
+export async function callImageGeneration(
+  prompt: string,
+  options?: {
+    model?: string
+    aspectRatio?: string
+    imageSize?: string
+  },
+): Promise<ImageGenerationResponse> {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY environment variable is not set')
+  }
+
+  const model = options?.model ?? await getModel('image')
+
+  const body: Record<string, unknown> = {
+    model,
+    modalities: ['image'],
+    messages: [{ role: 'user', content: prompt }],
+  }
+
+  if (options?.aspectRatio || options?.imageSize) {
+    const imageConfig: Record<string, string> = {}
+    if (options.aspectRatio) imageConfig.aspect_ratio = options.aspectRatio
+    if (options.imageSize) imageConfig.image_size = options.imageSize
+    body.image_config = imageConfig
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+    'HTTP-Referer': 'https://kiuli.com',
+    'X-Title': 'Kiuli Content Engine',
+  }
+
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+
+      // OpenRouter image generation can return images in multiple formats:
+      // 1. message.images array (data URLs or raw base64 strings)
+      // 2. message.content as array with image_url type objects
+      // 3. message.content as a data URL string
+      let base64: string | undefined
+
+      const message = data.choices?.[0]?.message
+
+      // Try message.images first (OpenRouter returns objects with image_url.url)
+      if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
+        const img = message.images[0]
+        if (typeof img === 'string') {
+          base64 = img
+        } else if (typeof img === 'object' && img !== null) {
+          base64 = img.image_url?.url || img.b64_json || img.url || img.data
+        }
+      }
+
+      // Try message.content as array (multimodal content blocks)
+      if (!base64 && Array.isArray(message?.content)) {
+        for (const block of message.content) {
+          if (block.type === 'image_url' && block.image_url?.url) {
+            base64 = block.image_url.url
+            break
+          }
+          if (block.type === 'image' && (block.data || block.url)) {
+            base64 = block.data || block.url
+            break
+          }
+        }
+      }
+
+      // Try message.content as plain data URL string
+      if (!base64 && typeof message?.content === 'string' && message.content.startsWith('data:image/')) {
+        base64 = message.content
+      }
+
+      if (!base64) {
+        throw new Error(`OpenRouter returned no images. Response structure: ${JSON.stringify(data.choices?.[0]?.message, null, 2).slice(0, 500)}`)
+      }
+
+      // Strip data URL prefix (e.g. "data:image/png;base64,") to get raw base64
+      const dataUrlMatch = base64.match(/^data:[^;]+;base64,(.+)$/)
+      if (dataUrlMatch) {
+        base64 = dataUrlMatch[1]
+      }
+
+      return {
+        imageBase64: base64,
+        model: data.model || model,
+        prompt,
+      }
+    }
+
+    const status = response.status
+    const errorBody = await response.text()
+
+    if (status === 400 || status === 401 || status === 403 || status === 404) {
+      throw new Error(`OpenRouter image API error ${status}: ${errorBody}`)
+    }
+
+    if (status === 429 || status >= 500) {
+      lastError = new Error(`OpenRouter image API error ${status}: ${errorBody}`)
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 5000))
+        continue
+      }
+    }
+
+    throw new Error(`OpenRouter image API unexpected status ${status}: ${errorBody}`)
+  }
+
+  throw lastError ?? new Error('OpenRouter image API request failed after retry')
+}
+
 // Legacy export for type compatibility
 export async function callOpenRouter(request: OpenRouterRequest): Promise<OpenRouterResponse> {
   return callModel('ideation', request.messages, {

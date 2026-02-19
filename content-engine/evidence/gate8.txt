@@ -1,0 +1,24 @@
+=== Property guard in prompt-generator ===
+3:import { PROPERTY_GUARD_MESSAGE } from './types'
+5:const ALLOWED_TYPES: Set<string> = new Set<string>(['wildlife', 'landscape', 'destination', 'country'])
+51:  if (!ALLOWED_TYPES.has(subject.type)) {
+52:    throw new Error(PROPERTY_GUARD_MESSAGE)
+
+=== Property guard in upload-pipeline ===
+5:import { isPropertyType, PROPERTY_GUARD_MESSAGE } from './types'
+16:  if (isPropertyType(metadata.type)) {
+17:    throw new Error(PROPERTY_GUARD_MESSAGE)
+
+=== Property guard in image-generator ===
+5:import { isPropertyType, PROPERTY_GUARD_MESSAGE } from './types'
+14:  if (isPropertyType(subject.type)) {
+15:    throw new Error(PROPERTY_GUARD_MESSAGE)
+47:  if (isPropertyType(metadata.type)) {
+48:    throw new Error(PROPERTY_GUARD_MESSAGE)
+
+=== Property guard in server actions ===
+11:import { isPropertyType, PROPERTY_GUARD_MESSAGE } from '../../../../../content-system/images/types'
+89:  if (isPropertyType(subject.type)) {
+90:    return { error: PROPERTY_GUARD_MESSAGE }
+116:  if (isPropertyType(metadata.type)) {
+117:    return { error: PROPERTY_GUARD_MESSAGE }

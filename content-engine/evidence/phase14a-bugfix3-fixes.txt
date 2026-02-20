@@ -1,0 +1,31 @@
+=== Pagination ===
+page.tsx:46:  const [isLoadingMore, setIsLoadingMore] = useState(false)
+page.tsx:51:    if (appendMode) { setIsLoadingMore(true) } else { setLoading(true) }
+page.tsx:67:    if (appendMode) { setIsLoadingMore(false) } else { setLoading(false) }
+page.tsx:251:                    disabled={isLoadingMore}
+page.tsx:254:                    {isLoadingMore ? (spinner) : 'Load more'}
+
+=== Save Architecture ===
+ContentTabs.tsx:671:  const imagesRef = useRef<ArticleImage[]>(project.articleImages || [])
+ContentTabs.tsx:675:  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+ContentTabs.tsx:727:  const scheduleSave = useCallback(() => {
+ContentTabs.tsx:729:    saveTimerRef.current = setTimeout(() => doSave(), 800)
+ContentTabs.tsx:711:  const doSave = useCallback(async () => {
+ContentTabs.tsx:687:  const isDirty = JSON.stringify(images) !== JSON.stringify(lastSavedImages)
+ContentTabs.tsx:674:  const [lastSavedImages, setLastSavedImages] = useState<ArticleImage[]>(...)
+ContentTabs.tsx:672:  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+ContentTabs.tsx:696:    window.addEventListener('beforeunload', handleBeforeUnload)
+
+=== No side effects in setState ===
+NONE FOUND (correct)
+
+=== No onBlur save ===
+NONE FOUND (correct)
+
+=== Search Error Handling ===
+page.tsx:47:  const [searchError, setSearchError] = useState<string | null>(null)
+page.tsx:223:        {searchError && (
+page.tsx:225:            Search failed: {searchError}
+ContentTabs.tsx:911:  const [searchError, setSearchError] = useState<string | null>(null)
+ContentTabs.tsx:962:        {searchError && (
+ContentTabs.tsx:964:            {searchError}

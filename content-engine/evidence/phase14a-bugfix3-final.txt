@@ -1,0 +1,6 @@
+Final build verification:
+Routes compiled successfully.
+All pages rendered without errors.
+next-sitemap generation completed.
+
+EXIT: 0

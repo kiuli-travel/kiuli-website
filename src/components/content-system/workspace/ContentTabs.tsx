@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import {
   isArticleType,
@@ -666,40 +666,89 @@ interface ArticleImagesSectionProps {
 }
 
 function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImagesSectionProps) {
+  // ── State ──────────────────────────────────────────────────────────────
   const [images, setImages] = useState<ArticleImage[]>(project.articleImages || [])
-  const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
+  const imagesRef = useRef<ArticleImage[]>(project.articleImages || [])
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [lastSavedImages, setLastSavedImages] = useState<ArticleImage[]>(project.articleImages || [])
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pickingForPosition, setPickingForPosition] = useState<number | null>(null)
 
-  // Extract headings from raw Lexical AST (matches publisher's heading indices)
+  // ── Heading extraction (same as bugfix2) ───────────────────────────────
   const lexicalHeadings = extractHeadingsFromLexical(project.draftBodyRaw)
-  // Fallback to section labels if no Lexical headings found
   const headings = lexicalHeadings.length > 0
     ? lexicalHeadings
     : (project.draftBody
       ? project.draftBody.split(/\n{2,}/).filter((p) => p.trim().length > 0).slice(0, 8).map((_, i) => `Section ${i + 1}`)
       : [])
 
-  // Sync from props when project data refreshes
+  // ── Dirty tracking ────────────────────────────────────────────────────
+  const isDirty = JSON.stringify(images) !== JSON.stringify(lastSavedImages)
+
+  // ── Navigation guard ──────────────────────────────────────────────────
   useEffect(() => {
-    setImages(project.articleImages || [])
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (isDirty) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty])
+
+  // ── Sync from props when project data refreshes externally ────────────
+  useEffect(() => {
+    const incoming = project.articleImages || []
+    setImages(incoming)
+    imagesRef.current = incoming
+    setLastSavedImages(incoming)
+    setSaveStatus('idle')
+    setSaveError(null)
   }, [project.articleImages])
 
-  const handleSave = useCallback(async (updated: ArticleImage[]) => {
-    setSaving(true)
-    const result = await saveArticleImages(projectId, updated)
-    setSaving(false)
+  // ── Debounced save ────────────────────────────────────────────────────
+  const doSave = useCallback(async () => {
+    const current = imagesRef.current
+    setSaveStatus('saving')
+    setSaveError(null)
+    const result = await saveArticleImages(projectId, current)
     if ('success' in result) {
-      setToast('Article images saved')
-      setTimeout(() => setToast(null), 2500)
+      setLastSavedImages(current)
+      setSaveStatus('saved')
       onDataChanged?.()
+      setTimeout(() => setSaveStatus((s) => s === 'saved' ? 'idle' : s), 2000)
     } else {
-      alert(result.error)
+      setSaveStatus('error')
+      setSaveError(result.error)
     }
   }, [projectId, onDataChanged])
 
-  const handleAssign = useCallback((position: number, match: { mediaId: number; imgixUrl: string | null; alt: string }) => {
+  const scheduleSave = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => doSave(), 800)
+  }, [doSave])
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  }, [])
+
+  // ── Mutation helpers (local-only, then schedule save) ──────────────────
+
+  const updateImages = useCallback((fn: (prev: ArticleImage[]) => ArticleImage[]) => {
     setImages((prev) => {
+      const next = fn(prev)
+      imagesRef.current = next
+      return next
+    })
+    scheduleSave()
+  }, [scheduleSave])
+
+  const handleAssign = useCallback((position: number, match: { mediaId: number; imgixUrl: string | null; alt: string }) => {
+    updateImages((prev) => {
       const updated = prev.filter((img) => img.position !== position)
       updated.push({
         position,
@@ -708,33 +757,26 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
         alt: match.alt || undefined,
       })
       updated.sort((a, b) => a.position - b.position)
-      handleSave(updated)
       return updated
     })
     setPickingForPosition(null)
-  }, [handleSave])
+  }, [updateImages])
 
   const handleRemove = useCallback((position: number) => {
-    setImages((prev) => {
-      const updated = prev.filter((img) => img.position !== position)
-      handleSave(updated)
-      return updated
-    })
-  }, [handleSave])
+    updateImages((prev) => prev.filter((img) => img.position !== position))
+  }, [updateImages])
 
   const handleCaptionChange = useCallback((position: number, caption: string) => {
-    setImages((prev) =>
+    updateImages((prev) =>
       prev.map((img) => img.position === position ? { ...img, caption } : img),
     )
-  }, [])
+  }, [updateImages])
 
-  // Bug 2 fix: use functional setState to get fresh images, not stale closure
-  const handleCaptionBlur = useCallback(() => {
-    setImages((current) => {
-      handleSave(current)
-      return current
-    })
-  }, [handleSave])
+  const handleRetry = useCallback(() => {
+    doSave()
+  }, [doSave])
+
+  // ── Render ────────────────────────────────────────────────────────────
 
   if (!project.draftBody) {
     return (
@@ -746,14 +788,33 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
 
   return (
     <div className="mx-5 flex flex-col gap-3">
+      {/* Header with save status */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-kiuli-charcoal">Article Images</h3>
-        {saving && <Loader2 className="h-3 w-3 animate-spin text-kiuli-teal" />}
+        <div className="flex items-center gap-2">
+          {saveStatus === 'saving' && (
+            <span className="flex items-center gap-1 text-[10px] text-kiuli-charcoal/50">
+              <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-[10px] text-emerald-600">Saved</span>
+          )}
+          {saveStatus === 'error' && (
+            <button onClick={handleRetry} className="text-[10px] font-medium text-red-600 hover:underline">
+              Save failed — Retry
+            </button>
+          )}
+          {isDirty && saveStatus === 'idle' && (
+            <span className="text-[10px] text-amber-600">Unsaved changes</span>
+          )}
+        </div>
       </div>
 
-      {toast && (
-        <div className="rounded bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-medium text-emerald-700">
-          {toast}
+      {/* Error banner */}
+      {saveStatus === 'error' && saveError && (
+        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {saveError}
         </div>
       )}
 
@@ -761,6 +822,7 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
         Assign images to positions in the article. They will be inserted after each heading when published.
       </p>
 
+      {/* Position slots */}
       <div className="flex flex-col gap-2">
         {headings.map((heading, i) => {
           const assigned = images.find((img) => img.position === i)
@@ -789,7 +851,6 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
                       placeholder="Caption (optional)"
                       value={assigned.caption || ''}
                       onChange={(e) => handleCaptionChange(i, e.target.value)}
-                      onBlur={handleCaptionBlur}
                     />
                     <button
                       onClick={() => handleRemove(i)}
@@ -847,9 +908,11 @@ function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, exc
   const [loading, setLoading] = useState(false)
   const [query, setQuery] = useState('')
   const [showGenModal, setShowGenModal] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   const doSearch = useCallback(async () => {
     setLoading(true)
+    setSearchError(null)
     const result = await searchImages({
       country: defaultCountry || undefined,
       query: query || undefined,
@@ -860,6 +923,8 @@ function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, exc
     setLoading(false)
     if ('result' in result) {
       setMatches(result.result.matches)
+    } else {
+      setSearchError(result.error)
     }
   }, [defaultCountry, defaultSpecies, excludeIds, query])
 
@@ -893,6 +958,12 @@ function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, exc
             <Sparkles className="h-3 w-3" /> Generate
           </button>
         </div>
+
+        {searchError && (
+          <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {searchError}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-8">

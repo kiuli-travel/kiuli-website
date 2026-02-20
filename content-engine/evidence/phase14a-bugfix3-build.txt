@@ -1,0 +1,14 @@
+Build output (last 20 lines):
++ First Load JS shared by all                                101 kB
+  ├ chunks/4bd1b696-cc729d47eba2cee4.js                     54.1 kB
+  ├ chunks/5964-b14196516283122f.js                           44 kB
+  └ other shared chunks (total)                             3.28 kB
+
+ƒ Middleware                                                33.1 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+✅ [next-sitemap] Generation completed
+EXIT: 0

@@ -1,0 +1,33 @@
+=== Phase 14a Bugfix 3 — Investigation ===
+
+Problem 1 — "Load more" replaces grid with spinner
+CONFIRMED. page.tsx:48-64: doSearch sets setLoading(true) at line 49 regardless of appendMode.
+Render logic at line 211: {loading ? (spinner) : matches.length === 0 ? (empty) : (grid)}
+When doSearch(true) is called, loading=true wipes the grid and shows spinner.
+
+Problem 2 — Double-click "Load more" produces duplicates
+CONFIRMED. page.tsx:229: Load more button has no disabled prop:
+  <button onClick={() => doSearch(true)} className="...">Load more</button>
+No guard against concurrent calls. Two clicks fire two doSearch(true) with same offsetRef.current.
+
+Problem 3 — Side effects inside setState callbacks
+CONFIRMED. ContentTabs.tsx:
+  - handleAssign (line 701-713): calls handleSave(updated) inside setImages callback (line 711)
+  - handleRemove (line 717-722): calls handleSave(updated) inside setImages callback (line 720)
+  - handleCaptionBlur (line 732-736): calls handleSave(current) inside setImages callback (line 734)
+React StrictMode double-invokes updaters → handleSave fires twice in dev.
+
+Problem 4 — Race condition on rapid assignment loses data
+CONFIRMED. handleSave (line 688-698) calls saveArticleImages with full-replacement semantics.
+Three rapid handleAssign calls fire three concurrent saves with arrays of different lengths.
+Last-write-wins with no ordering guarantee → potential data loss.
+
+Problem 5 — No rollback or recovery on failed save
+CONFIRMED. handleSave (line 696-697): on error, calls alert(result.error) but local state (setImages)
+has already been updated. No dirty tracking, no retry mechanism, no navigation guard.
+
+Problem 6 — Search errors silently swallowed
+CONFIRMED in BOTH locations:
+  - page.tsx:65: if ('result' in result) { ... } — no else branch for error case
+  - ContentTabs.tsx:861-863: if ('result' in result) { setMatches(...) } — no else branch
+Both silently discard errors and show stale results or empty grid.

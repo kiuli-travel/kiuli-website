@@ -43,10 +43,17 @@ export default function ImageLibraryPage() {
   const [sourceFilter, setSourceFilter] = useState<'all' | 'scraped' | 'generated'>('all')
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [hasMore, setHasMore] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const offsetRef = useRef(0)
 
   const doSearch = useCallback(async (appendMode = false) => {
-    setLoading(true)
+    setSearchError(null)
+    if (appendMode) {
+      setIsLoadingMore(true)
+    } else {
+      setLoading(true)
+    }
     const searchOffset = appendMode ? offsetRef.current : 0
     const result = await searchImages({
       country: selectedCountries.length > 0 ? selectedCountries : undefined,
@@ -61,7 +68,11 @@ export default function ImageLibraryPage() {
       offset: searchOffset,
       limit: 60,
     })
-    setLoading(false)
+    if (appendMode) {
+      setIsLoadingMore(false)
+    } else {
+      setLoading(false)
+    }
     if ('result' in result) {
       if (appendMode) {
         setMatches((prev) => [...prev, ...result.result.matches])
@@ -72,6 +83,8 @@ export default function ImageLibraryPage() {
       setFacets(result.result.facets)
       offsetRef.current = searchOffset + result.result.matches.length
       setHasMore(result.result.matches.length >= 60)
+    } else {
+      setSearchError(result.error)
     }
   }, [selectedCountries, selectedTypes, selectedMoods, selectedCompositions, selectedTimeOfDay, selectedSuitableFor, heroOnly, sourceFilter, query])
 
@@ -206,6 +219,13 @@ export default function ImageLibraryPage() {
           </div>
         )}
 
+        {/* Search error */}
+        {searchError && (
+          <div className="mx-4 mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            Search failed: {searchError}
+          </div>
+        )}
+
         {/* Image Grid */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
@@ -226,8 +246,16 @@ export default function ImageLibraryPage() {
               </div>
               {hasMore && (
                 <div className="mt-4 flex justify-center">
-                  <button onClick={() => doSearch(true)} className="rounded bg-kiuli-gray/20 px-4 py-2 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30">
-                    Load more
+                  <button
+                    onClick={() => doSearch(true)}
+                    disabled={isLoadingMore}
+                    className="rounded bg-kiuli-gray/20 px-4 py-2 text-xs text-kiuli-charcoal hover:bg-kiuli-gray/30 disabled:opacity-40"
+                  >
+                    {isLoadingMore ? (
+                      <><Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" /> Loading...</>
+                    ) : (
+                      'Load more'
+                    )}
                   </button>
                 </div>
               )}

@@ -1,0 +1,42 @@
+=== Gate 2: Route handler ===
+route.ts:7:  export const maxDuration = 120
+route.ts:8:  export const dynamic = 'force-dynamic'
+route.ts:10: export async function POST(request: Request)
+Auth, input validation, try/catch error handling all present.
+
+=== Gate 3: Client helper ===
+generate-client.ts: generateImageViaApi function
+  - try/catch around fetch
+  - Handles non-ok responses (data.error || Server error)
+  - Handles incomplete results (missing mediaId/imgixUrl)
+  - Returns { error: string } for network/parse/unknown failures
+
+=== Gate 4: GenerationPanel (page.tsx) ===
+page.tsx:7:  import { generateImageViaApi } from './generate-client'
+page.tsx:633: const result = await generateImageViaApi(...)  ← NOT generateAndSaveImage
+page.tsx:632-651: try/catch/finally wrapping handleGenerateImage
+page.tsx:652: setGeneratingImage(null) in finally block
+page.tsx:606-625: try/catch/finally wrapping handleGeneratePrompts
+page.tsx:624: setGeneratingPrompts(false) in finally block
+page.tsx:777: "30-60 seconds" time expectation text
+
+=== Gate 5: ArticleImageGenModal (ContentTabs.tsx) ===
+ContentTabs.tsx:898: import { generateImageViaApi } from '@/app/(payload)/admin/image-library/generate-client'
+ContentTabs.tsx:1065: const result = await generateImageViaApi(...)  ← NOT generateAndSaveImage
+ContentTabs.tsx:1060-1077: try/catch/finally wrapping handleGenImage
+ContentTabs.tsx:1076: setGeneratingIndex(null) in finally block
+ContentTabs.tsx:1042-1056: try/catch/finally wrapping handleGenPrompts
+ContentTabs.tsx:1055: setGenerating(false) in finally block
+ContentTabs.tsx:1036: generatingIndex state
+ContentTabs.tsx:1037: genError state
+ContentTabs.tsx:1038: genSuccess state
+ContentTabs.tsx:1129: genError banner renders
+ContentTabs.tsx:1136: genSuccess banner renders
+ContentTabs.tsx:1167: "30-60 seconds" time expectation text
+
+=== Gate 6: Dead imports removed ===
+page.tsx: generateAndSaveImage — NOT FOUND (removed)
+ContentTabs.tsx: generateAndSaveImage — NOT FOUND (removed)
+
+=== Gate 7: Build ===
+EXIT: 0

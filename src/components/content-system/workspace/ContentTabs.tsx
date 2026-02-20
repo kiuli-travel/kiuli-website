@@ -894,7 +894,8 @@ function ArticleImagesSection({ project, projectId, onDataChanged }: ArticleImag
 
 // ── Article Image Picker Modal ───────────────────────────────────────────────
 
-import { searchImages, generateImagePrompts, generateAndSaveImage } from '@/app/(payload)/admin/image-library/actions'
+import { searchImages, generateImagePrompts } from '@/app/(payload)/admin/image-library/actions'
+import { generateImageViaApi } from '@/app/(payload)/admin/image-library/generate-client'
 import type { LibraryMatch, GeneratableImageType, PhotographicPrompt } from '../../../../content-system/images/types'
 function ArticleImagePickerModal({ position, defaultCountry, defaultSpecies, excludeIds, onSelect, onClose }: {
   position: number
@@ -1032,35 +1033,53 @@ function ArticleImageGenModal({ defaultCountry, defaultSpecies, onClose, onGener
   const [description, setDescription] = useState('')
   const [generating, setGenerating] = useState(false)
   const [prompts, setPrompts] = useState<PhotographicPrompt[]>([])
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null)
+  const [genError, setGenError] = useState<string | null>(null)
+  const [genSuccess, setGenSuccess] = useState<{ mediaId: number; imgixUrl: string } | null>(null)
 
   const handleGenPrompts = useCallback(async () => {
     setGenerating(true)
-    const result = await generateImagePrompts({
-      type: genType,
-      species: species || undefined,
-      country: country || undefined,
-      description: description || undefined,
-    }, 3)
-    setGenerating(false)
-    if ('prompts' in result) setPrompts(result.prompts)
-    else alert(result.error)
+    setGenError(null)
+    setGenSuccess(null)
+    try {
+      const result = await generateImagePrompts({
+        type: genType,
+        species: species || undefined,
+        country: country || undefined,
+        description: description || undefined,
+      }, 3)
+      if ('prompts' in result) setPrompts(result.prompts)
+      else setGenError(result.error)
+    } catch (error) {
+      setGenError(error instanceof Error ? error.message : 'Failed to generate prompts')
+    } finally {
+      setGenerating(false)
+    }
   }, [genType, species, country, description])
 
-  const handleGenImage = useCallback(async (prompt: PhotographicPrompt) => {
-    setGenerating(true)
-    const result = await generateAndSaveImage(prompt.prompt, {
-      type: genType,
-      species: species ? [species] : undefined,
-      country: country || undefined,
-      aspectRatio: prompt.aspectRatio,
-    })
-    setGenerating(false)
-    if ('mediaId' in result) {
-      onGenerated()
-    } else {
-      alert(result.error)
+  const handleGenImage = useCallback(async (index: number) => {
+    setGeneratingIndex(index)
+    setGenError(null)
+    setGenSuccess(null)
+    try {
+      const result = await generateImageViaApi(prompts[index].prompt, {
+        type: genType,
+        species: species ? [species] : undefined,
+        country: country || undefined,
+        aspectRatio: prompts[index].aspectRatio,
+      })
+      if ('mediaId' in result) {
+        setGenSuccess({ mediaId: result.mediaId, imgixUrl: result.imgixUrl })
+        setTimeout(() => onGenerated(), 1500)
+      } else {
+        setGenError(result.error)
+      }
+    } catch (error) {
+      setGenError(error instanceof Error ? error.message : 'Unexpected error')
+    } finally {
+      setGeneratingIndex(null)
     }
-  }, [genType, species, country, onGenerated])
+  }, [prompts, genType, species, country, onGenerated])
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={onClose}>
@@ -1106,19 +1125,48 @@ function ArticleImageGenModal({ defaultCountry, defaultSpecies, onClose, onGener
           </button>
         </div>
 
-        {prompts.length > 0 && (
+        {/* Error banner */}
+        {genError && (
+          <div className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {genError}
+          </div>
+        )}
+
+        {/* Success banner */}
+        {genSuccess && (
+          <div className="mt-3 flex items-center gap-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`${genSuccess.imgixUrl.split('?')[0]}?w=80&h=60&fit=crop&auto=format`}
+              alt="Generated"
+              className="h-12 w-16 rounded object-cover"
+            />
+            <span className="text-xs font-medium text-emerald-700">Image saved to library!</span>
+          </div>
+        )}
+
+        {prompts.length > 0 && !genSuccess && (
           <div className="mt-4 flex flex-col gap-2">
             {prompts.map((p, i) => (
               <div key={i} className="rounded border border-kiuli-gray/60 p-3">
                 <p className="line-clamp-3 text-[11px] text-kiuli-charcoal">{p.prompt}</p>
                 <p className="mt-1 text-[10px] text-kiuli-charcoal/50">{p.cameraSpec} | {p.aspectRatio}</p>
                 <button
-                  onClick={() => handleGenImage(p)}
-                  disabled={generating}
+                  onClick={() => handleGenImage(i)}
+                  disabled={generatingIndex !== null}
                   className="mt-2 rounded bg-kiuli-clay px-3 py-1 text-[11px] font-medium text-white disabled:opacity-40"
                 >
-                  {generating ? <Loader2 className="inline h-3 w-3 animate-spin" /> : 'Generate & Save'}
+                  {generatingIndex === i ? (
+                    <><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Generating...</>
+                  ) : (
+                    'Generate & Save'
+                  )}
                 </button>
+                {generatingIndex === i && (
+                  <p className="mt-2 text-[10px] text-kiuli-charcoal/50">
+                    Generating image — this typically takes 30-60 seconds. Please don&apos;t close this window.
+                  </p>
+                )}
               </div>
             ))}
           </div>

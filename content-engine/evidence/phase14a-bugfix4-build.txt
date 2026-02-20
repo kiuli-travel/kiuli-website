@@ -1,0 +1,6 @@
+Build output confirms:
+├ ƒ /api/content/generate-image   223 B   102 kB   ← new route handler registered
+
+All routes compiled successfully.
+next-sitemap generation completed.
+EXIT: 0

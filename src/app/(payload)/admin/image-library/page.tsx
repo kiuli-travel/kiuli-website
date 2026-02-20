@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Loader2, Search, X, Camera, Sparkles, ChevronDown, ChevronRight, Copy, ArrowLeft, ZoomIn, ZoomOut, Maximize2, ExternalLink } from 'lucide-react'
-import { searchImages, generateImagePrompts, generateAndSaveImage } from './actions'
+import { searchImages, generateImagePrompts } from './actions'
+import { generateImageViaApi } from './generate-client'
 import type { LibraryMatch, LibrarySearchResult, PhotographicPrompt, GeneratableImageType } from '../../../../../content-system/images/types'
 
 // ── Kiuli brand ──────────────────────────────────────────────────────────────
@@ -602,20 +603,25 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
     setGeneratingPrompts(true)
     setPrompts([])
     setResults([])
-    const result = await generateImagePrompts({
-      type: genType,
-      species: species || undefined,
-      destination: destination || undefined,
-      country: country || undefined,
-      mood: mood || undefined,
-      timeOfDay: timeOfDay || undefined,
-      description: description || undefined,
-    }, 3)
-    setGeneratingPrompts(false)
-    if ('prompts' in result) {
-      setPrompts(result.prompts)
-    } else {
-      alert(result.error)
+    try {
+      const result = await generateImagePrompts({
+        type: genType,
+        species: species || undefined,
+        destination: destination || undefined,
+        country: country || undefined,
+        mood: mood || undefined,
+        timeOfDay: timeOfDay || undefined,
+        description: description || undefined,
+      }, 3)
+      if ('prompts' in result) {
+        setPrompts(result.prompts)
+      } else {
+        alert(result.error)
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to generate prompts')
+    } finally {
+      setGeneratingPrompts(false)
     }
   }, [genType, species, destination, country, mood, timeOfDay, description])
 
@@ -623,19 +629,27 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
     const prompt = prompts[index]
     if (!prompt) return
     setGeneratingImage(index)
-    const result = await generateAndSaveImage(prompt.prompt, {
-      type: genType,
-      species: species ? [species] : undefined,
-      country: country || undefined,
-      destination: destination || undefined,
-      aspectRatio: prompt.aspectRatio,
-    })
-    setGeneratingImage(null)
-    if ('mediaId' in result) {
-      setResults((prev) => [...prev, { prompt: prompt.prompt, mediaId: result.mediaId, imgixUrl: result.imgixUrl }])
-      onGenerated()
-    } else {
-      setResults((prev) => [...prev, { prompt: prompt.prompt, error: result.error }])
+    try {
+      const result = await generateImageViaApi(prompt.prompt, {
+        type: genType,
+        species: species ? [species] : undefined,
+        country: country || undefined,
+        destination: destination || undefined,
+        aspectRatio: prompt.aspectRatio,
+      })
+      if ('mediaId' in result) {
+        setResults((prev) => [...prev, { prompt: prompt.prompt, mediaId: result.mediaId, imgixUrl: result.imgixUrl }])
+        onGenerated()
+      } else {
+        setResults((prev) => [...prev, { prompt: prompt.prompt, error: result.error }])
+      }
+    } catch (error) {
+      setResults((prev) => [...prev, {
+        prompt: prompt.prompt,
+        error: error instanceof Error ? error.message : 'Unexpected error',
+      }])
+    } finally {
+      setGeneratingImage(null)
     }
   }, [prompts, genType, species, country, destination, onGenerated])
 
@@ -758,6 +772,11 @@ function GenerationPanel({ onClose, onGenerated }: { onClose: () => void; onGene
                       'Generate Image'
                     )}
                   </button>
+                  {generatingImage === i && (
+                    <p className="mt-2 text-[10px] text-kiuli-charcoal/50">
+                      Generating image — this typically takes 30-60 seconds. Please don&apos;t close this panel.
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

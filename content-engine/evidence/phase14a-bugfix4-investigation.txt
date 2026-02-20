@@ -1,0 +1,28 @@
+=== Phase 14a Bugfix 4 — Investigation ===
+
+1. actions.ts — NO maxDuration export. File is 176 lines. No timeout control anywhere.
+   CONFIRMED.
+
+2. page.tsx — handleGenerateImage (line 622-640) in GenerationPanel:
+   NO try/catch. await generateAndSaveImage() at line 626 with no error handling.
+   setGeneratingImage(null) at line 633 only runs on success path.
+   CONFIRMED.
+
+3. page.tsx — handleGeneratePrompts (line 601-620) in GenerationPanel:
+   NO try/catch. await generateImagePrompts() at line 605 with no error handling.
+   setGeneratingPrompts(false) at line 614 only runs on success path.
+   CONFIRMED.
+
+4. ContentTabs.tsx — handleGenImage (line 1049-1063) in ArticleImageGenModal:
+   NO try/catch. await generateAndSaveImage() at line 1051 with no error handling.
+   setGenerating(false) at line 1057 only runs on success path.
+   CONFIRMED.
+
+5. ContentTabs.tsx — handleGenPrompts (line 1036-1047) in ArticleImageGenModal:
+   NO try/catch. await generateImagePrompts() at line 1038 with no error handling.
+   setGenerating(false) at line 1044 only runs on success path.
+   CONFIRMED.
+
+6. Route handler at src/app/(payload)/api/content/generate-image/route.ts:
+   DOES NOT EXIST (glob returned no files).
+   CONFIRMED.

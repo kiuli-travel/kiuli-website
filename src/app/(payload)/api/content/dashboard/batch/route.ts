@@ -31,9 +31,25 @@ function getNextStage(currentDbStage: string, contentType: string): string | nul
 export async function POST(request: Request) {
   const payload = await getPayload({ config: configPromise })
 
-  // Authenticate via Payload session
-  const { user } = await payload.auth({ headers: request.headers })
-  if (!user) {
+  // Authenticate via Bearer token or Payload session
+  let authenticated = false
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    if (
+      token === process.env.CONTENT_SYSTEM_SECRET ||
+      token === process.env.PAYLOAD_API_KEY
+    ) {
+      authenticated = true
+    }
+  }
+  if (!authenticated) {
+    try {
+      const { user } = await payload.auth({ headers: request.headers })
+      if (user) authenticated = true
+    } catch {}
+  }
+  if (!authenticated) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

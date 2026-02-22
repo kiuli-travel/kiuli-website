@@ -52,6 +52,7 @@ import * as migration_20260217_add_destination_content_fields from './20260217_a
 import * as migration_20260218_fix_posts_faq_items_id_types from './20260218_fix_posts_faq_items_id_types';
 import * as migration_20260219_add_image_generation_fields from './20260219_add_image_generation_fields';
 import * as migration_20260219_fix_version_table_columns from './20260219_fix_version_table_columns';
+import * as migration_20260222_143340 from './20260222_143340';
 
 export const migrations = [
   {
@@ -323,5 +324,10 @@ export const migrations = [
     up: migration_20260219_fix_version_table_columns.up,
     down: migration_20260219_fix_version_table_columns.down,
     name: '20260219_fix_version_table_columns',
+  },
+  {
+    up: migration_20260222_143340.up,
+    down: migration_20260222_143340.down,
+    name: '20260222_143340'
   },
 ];

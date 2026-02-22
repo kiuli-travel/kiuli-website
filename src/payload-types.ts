@@ -84,6 +84,9 @@ export interface Config {
     designers: Designer;
     authors: Author;
     properties: Property;
+    activities: Activity;
+    'transfer-routes': TransferRoute;
+    'itinerary-patterns': ItineraryPattern;
     'content-projects': ContentProject;
     'content-jobs': ContentJob;
     'source-registry': SourceRegistry;
@@ -122,6 +125,9 @@ export interface Config {
     designers: DesignersSelect<false> | DesignersSelect<true>;
     authors: AuthorsSelect<false> | AuthorsSelect<true>;
     properties: PropertiesSelect<false> | PropertiesSelect<true>;
+    activities: ActivitiesSelect<false> | ActivitiesSelect<true>;
+    'transfer-routes': TransferRoutesSelect<false> | TransferRoutesSelect<true>;
+    'itinerary-patterns': ItineraryPatternsSelect<false> | ItineraryPatternsSelect<true>;
     'content-projects': ContentProjectsSelect<false> | ContentProjectsSelect<true>;
     'content-jobs': ContentJobsSelect<false> | ContentJobsSelect<true>;
     'source-registry': SourceRegistrySelect<false> | SourceRegistrySelect<true>;
@@ -1981,6 +1987,144 @@ export interface Property {
    * Price tier classification
    */
   priceTier?: ('comfort' | 'premium' | 'luxury' | 'ultra_luxury') | null;
+  /**
+   * External system identifiers — populated progressively as integrations go live
+   */
+  externalIds?: {
+    /**
+     * supplierCode from iTrvl API — may be the ResRequest property ID
+     */
+    itrvlSupplierCode?: string | null;
+    /**
+     * Property name as it appears in iTrvl (for dedup detection)
+     */
+    itrvlPropertyName?: string | null;
+    /**
+     * ResRequest property ID (Phase 3 — ResConnect integration)
+     */
+    resRequestPropertyId?: string | null;
+    /**
+     * ResRequest principal / lodge group ID (Phase 3)
+     */
+    resRequestPrincipalId?: string | null;
+    /**
+     * Accommodation type IDs in ResRequest (Phase 3)
+     */
+    resRequestAccommTypes?:
+      | {
+          /**
+           * Accommodation type ID in ResRequest
+           */
+          id?: string | null;
+          /**
+           * e.g. "Bush Suite", "Tent"
+           */
+          name?: string | null;
+        }[]
+      | null;
+    /**
+     * Wetu content entity ID (Phase 2 — Wetu integration)
+     */
+    wetuContentEntityId?: number | null;
+  };
+  /**
+   * Canonical content — partially from iTrvl, enriched via Wetu in Phase 2
+   */
+  canonicalContent?: {
+    /**
+     * GPS coordinates — from iTrvl where available, Wetu sync in Phase 2
+     */
+    coordinates?: {
+      latitude?: number | null;
+      longitude?: number | null;
+    };
+    /**
+     * Property contact email from iTrvl notes.contactEmail
+     */
+    contactEmail?: string | null;
+    /**
+     * Property contact phone from iTrvl notes.contactNumber
+     */
+    contactPhone?: string | null;
+  };
+  /**
+   * Room types — populated from Wetu in Phase 2, manual entry before that
+   */
+  roomTypes?:
+    | {
+        /**
+         * e.g. "Bush Suite", "Family Tent"
+         */
+        name: string;
+        /**
+         * Maximum occupancy
+         */
+        maxPax?: number | null;
+        /**
+         * Room type image
+         */
+        image?: (number | null) | Media;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Accumulated intelligence from scraped itineraries — grows with each scrape
+   */
+  accumulatedData?: {
+    pricePositioning?: {
+      /**
+       * One entry per scraped itinerary that features this property
+       */
+      observations?:
+        | {
+            /**
+             * Source itinerary
+             */
+            itineraryId?: (number | null) | Itinerary;
+            /**
+             * USD — total itinerary price divided by total nights
+             */
+            pricePerNight?: number | null;
+            priceTier?: ('ultra_premium' | 'premium' | 'mid_luxury' | 'accessible_luxury') | null;
+            observedAt?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      /**
+       * Total number of price observations
+       */
+      observationCount?: number | null;
+    };
+    /**
+     * Properties that appear immediately before or after this one across scraped itineraries
+     */
+    commonPairings?:
+      | {
+          /**
+           * The paired property
+           */
+          property?: (number | null) | Property;
+          /**
+           * Whether the paired property appears before or after this one in the itinerary
+           */
+          position?: ('before' | 'after') | null;
+          /**
+           * How many times this pairing has been observed
+           */
+          count?: number | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Availability integration status
+   */
+  availability?: {
+    /**
+     * Which source provides live availability for this property
+     */
+    source?: ('none' | 'resconnect' | 'direct') | null;
+  };
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -3233,6 +3377,284 @@ export interface Designer {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activities".
+ */
+export interface Activity {
+  id: number;
+  /**
+   * e.g. "Gorilla Trekking", "Morning Game Drive"
+   */
+  name: string;
+  /**
+   * URL-friendly slug for deduplication
+   */
+  slug: string;
+  /**
+   * Activity category for pattern matching
+   */
+  type?:
+    | (
+        | 'game_drive'
+        | 'walking_safari'
+        | 'gorilla_trek'
+        | 'chimpanzee_trek'
+        | 'balloon_flight'
+        | 'boat_safari'
+        | 'canoe_safari'
+        | 'horseback_safari'
+        | 'cultural_visit'
+        | 'bush_dinner'
+        | 'sundowner'
+        | 'fishing'
+        | 'snorkeling'
+        | 'diving'
+        | 'spa'
+        | 'photography'
+        | 'birding'
+        | 'conservation_experience'
+        | 'community_visit'
+        | 'helicopter_flight'
+        | 'other'
+      )
+    | null;
+  /**
+   * Destinations where this activity is available
+   */
+  destinations?: (number | Destination)[] | null;
+  /**
+   * Properties that offer this activity
+   */
+  properties?: (number | Property)[] | null;
+  /**
+   * Activity description
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * e.g. "3–4 hours", "Full day"
+   */
+  typicalDuration?: string | null;
+  /**
+   * Optimal time of day for this activity
+   */
+  bestTimeOfDay?: ('early_morning' | 'morning' | 'midday' | 'afternoon' | 'evening' | 'night' | 'any') | null;
+  suitability?: ('family' | 'couples' | 'honeymoon' | 'group' | 'solo' | 'accessible')[] | null;
+  /**
+   * Minimum age requirement. Leave empty if no restriction.
+   */
+  minimumAge?: number | null;
+  fitnessLevel?: ('low' | 'moderate' | 'high') | null;
+  /**
+   * Wetu content entity ID (Phase 2)
+   */
+  wetuContentEntityId?: number | null;
+  /**
+   * How many scraped itineraries include this activity
+   */
+  observationCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transfer-routes".
+ */
+export interface TransferRoute {
+  id: number;
+  /**
+   * Origin point name, e.g. "Mara North Airstrip"
+   */
+  from: string;
+  /**
+   * Destination point name, e.g. "Wilson Airport Nairobi"
+   */
+  to: string;
+  /**
+   * Auto-generated: "mara-north-airstrip-to-wilson-airport-nairobi"
+   */
+  slug: string;
+  /**
+   * Destination region containing the origin point
+   */
+  fromDestination?: (number | null) | Destination;
+  /**
+   * Destination region containing the arrival point
+   */
+  toDestination?: (number | null) | Destination;
+  /**
+   * Property at origin, if applicable
+   */
+  fromProperty?: (number | null) | Property;
+  /**
+   * Property at destination, if applicable
+   */
+  toProperty?: (number | null) | Property;
+  mode: 'flight' | 'road' | 'boat' | 'helicopter' | 'charter';
+  /**
+   * Typical journey duration in minutes
+   */
+  typicalDurationMinutes?: number | null;
+  /**
+   * Approximate distance in kilometres
+   */
+  distanceKm?: number | null;
+  /**
+   * Airlines observed on this route across all scraped itineraries
+   */
+  airlines?:
+    | {
+        /**
+         * e.g. "Safarilink", "Auric Air"
+         */
+        name: string;
+        /**
+         * Available via GO7/AeroCRS network (Phase 4)
+         */
+        go7Airline?: boolean | null;
+        /**
+         * Available via Duffel API (Phase 4)
+         */
+        duffelAirline?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  fromCoordinates?: {
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  toCoordinates?: {
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  /**
+   * One entry per scrape that uses this route
+   */
+  observations?:
+    | {
+        /**
+         * Source itinerary
+         */
+        itineraryId?: (number | null) | Itinerary;
+        departureTime?: string | null;
+        arrivalTime?: string | null;
+        airline?: string | null;
+        dateObserved?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * How many scraped itineraries use this route
+   */
+  observationCount?: number | null;
+  /**
+   * Wetu route entity ID (Phase 2)
+   */
+  wetuRouteId?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itinerary-patterns".
+ */
+export interface ItineraryPattern {
+  id: number;
+  /**
+   * The scraped itinerary this pattern was extracted from
+   */
+  sourceItinerary: number | Itinerary;
+  extractedAt?: string | null;
+  /**
+   * Countries covered by this itinerary
+   */
+  countries?: (number | Destination)[] | null;
+  /**
+   * Total nights across all stays
+   */
+  totalNights?: number | null;
+  paxType?: ('family' | 'couple' | 'group' | 'solo' | 'unknown') | null;
+  /**
+   * Adult pax count
+   */
+  adults?: number | null;
+  /**
+   * Child pax count
+   */
+  children?: number | null;
+  /**
+   * Ordered list of properties in this itinerary
+   */
+  propertySequence?:
+    | {
+        property: number | Property;
+        /**
+         * Nights at this property
+         */
+        nights?: number | null;
+        /**
+         * 1-based position in itinerary sequence
+         */
+        order?: number | null;
+        /**
+         * Room type booked, if known
+         */
+        roomType?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Ordered list of transfers, each positioned relative to the preceding property
+   */
+  transferSequence?:
+    | {
+        route?: (number | null) | TransferRoute;
+        /**
+         * 1-based index of the property this transfer follows
+         */
+        afterProperty?: number | null;
+        /**
+         * Segment type from iTrvl: flight, road, boat
+         */
+        mode?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Total itinerary price in USD
+   */
+  priceTotal?: number | null;
+  currency?: string | null;
+  /**
+   * priceTotal divided by totalNights
+   */
+  pricePerNightAvg?: number | null;
+  priceTier?: ('ultra_premium' | 'premium' | 'mid_luxury' | 'accessible_luxury') | null;
+  /**
+   * 1–12, from itinerary start date
+   */
+  travelMonth?: number | null;
+  /**
+   * From itinerary start date
+   */
+  travelYear?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Content production projects — from idea through to publication
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -4186,6 +4608,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'properties';
         value: number | Property;
+      } | null)
+    | ({
+        relationTo: 'activities';
+        value: number | Activity;
+      } | null)
+    | ({
+        relationTo: 'transfer-routes';
+        value: number | TransferRoute;
+      } | null)
+    | ({
+        relationTo: 'itinerary-patterns';
+        value: number | ItineraryPattern;
       } | null)
     | ({
         relationTo: 'content-projects';
@@ -5234,9 +5668,184 @@ export interface PropertiesSelect<T extends boolean = true> {
   relatedArticles?: T;
   websiteUrl?: T;
   priceTier?: T;
+  externalIds?:
+    | T
+    | {
+        itrvlSupplierCode?: T;
+        itrvlPropertyName?: T;
+        resRequestPropertyId?: T;
+        resRequestPrincipalId?: T;
+        resRequestAccommTypes?:
+          | T
+          | {
+              id?: T;
+              name?: T;
+            };
+        wetuContentEntityId?: T;
+      };
+  canonicalContent?:
+    | T
+    | {
+        coordinates?:
+          | T
+          | {
+              latitude?: T;
+              longitude?: T;
+            };
+        contactEmail?: T;
+        contactPhone?: T;
+      };
+  roomTypes?:
+    | T
+    | {
+        name?: T;
+        maxPax?: T;
+        image?: T;
+        id?: T;
+      };
+  accumulatedData?:
+    | T
+    | {
+        pricePositioning?:
+          | T
+          | {
+              observations?:
+                | T
+                | {
+                    itineraryId?: T;
+                    pricePerNight?: T;
+                    priceTier?: T;
+                    observedAt?: T;
+                    id?: T;
+                  };
+              observationCount?: T;
+            };
+        commonPairings?:
+          | T
+          | {
+              property?: T;
+              position?: T;
+              count?: T;
+              id?: T;
+            };
+      };
+  availability?:
+    | T
+    | {
+        source?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activities_select".
+ */
+export interface ActivitiesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  type?: T;
+  destinations?: T;
+  properties?: T;
+  description?: T;
+  typicalDuration?: T;
+  bestTimeOfDay?: T;
+  suitability?: T;
+  minimumAge?: T;
+  fitnessLevel?: T;
+  wetuContentEntityId?: T;
+  observationCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transfer-routes_select".
+ */
+export interface TransferRoutesSelect<T extends boolean = true> {
+  from?: T;
+  to?: T;
+  slug?: T;
+  fromDestination?: T;
+  toDestination?: T;
+  fromProperty?: T;
+  toProperty?: T;
+  mode?: T;
+  typicalDurationMinutes?: T;
+  distanceKm?: T;
+  airlines?:
+    | T
+    | {
+        name?: T;
+        go7Airline?: T;
+        duffelAirline?: T;
+        id?: T;
+      };
+  fromCoordinates?:
+    | T
+    | {
+        latitude?: T;
+        longitude?: T;
+      };
+  toCoordinates?:
+    | T
+    | {
+        latitude?: T;
+        longitude?: T;
+      };
+  observations?:
+    | T
+    | {
+        itineraryId?: T;
+        departureTime?: T;
+        arrivalTime?: T;
+        airline?: T;
+        dateObserved?: T;
+        id?: T;
+      };
+  observationCount?: T;
+  wetuRouteId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itinerary-patterns_select".
+ */
+export interface ItineraryPatternsSelect<T extends boolean = true> {
+  sourceItinerary?: T;
+  extractedAt?: T;
+  countries?: T;
+  totalNights?: T;
+  paxType?: T;
+  adults?: T;
+  children?: T;
+  propertySequence?:
+    | T
+    | {
+        property?: T;
+        nights?: T;
+        order?: T;
+        roomType?: T;
+        id?: T;
+      };
+  transferSequence?:
+    | T
+    | {
+        route?: T;
+        afterProperty?: T;
+        mode?: T;
+        id?: T;
+      };
+  priceTotal?: T;
+  currency?: T;
+  pricePerNightAvg?: T;
+  priceTier?: T;
+  travelMonth?: T;
+  travelYear?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

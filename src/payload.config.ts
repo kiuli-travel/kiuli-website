@@ -23,6 +23,9 @@ import { VoiceConfiguration } from './collections/VoiceConfiguration'
 import { Designers } from './collections/Designers'
 import { Authors } from './collections/Authors'
 import { Properties } from './collections/Properties'
+import { Activities } from './collections/Activities'
+import { TransferRoutes } from './collections/TransferRoutes'
+import { ItineraryPatterns } from './collections/ItineraryPatterns'
 import { ContentProjects } from './collections/ContentProjects'
 import { ContentJobs } from './collections/ContentJobs'
 import { SourceRegistry } from './collections/SourceRegistry'
@@ -87,7 +90,7 @@ export default buildConfig({
     },
     push: false, // Disable schema push - use migrations only
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, Activities, TransferRoutes, ItineraryPatterns, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, DestinationNameMappings, BrandVoice],
   plugins: [

@@ -231,5 +231,226 @@ export const Properties: CollectionConfig = {
         description: 'Price tier classification',
       },
     },
+
+    // === EXTERNAL IDS ===
+    {
+      name: 'externalIds',
+      type: 'group',
+      admin: {
+        description: 'External system identifiers — populated progressively as integrations go live',
+      },
+      fields: [
+        {
+          name: 'itrvlSupplierCode',
+          type: 'text',
+          admin: { description: 'supplierCode from iTrvl API — may be the ResRequest property ID' },
+        },
+        {
+          name: 'itrvlPropertyName',
+          type: 'text',
+          admin: { description: 'Property name as it appears in iTrvl (for dedup detection)' },
+        },
+        {
+          name: 'resRequestPropertyId',
+          type: 'text',
+          admin: { description: 'ResRequest property ID (Phase 3 — ResConnect integration)' },
+        },
+        {
+          name: 'resRequestPrincipalId',
+          type: 'text',
+          admin: { description: 'ResRequest principal / lodge group ID (Phase 3)' },
+        },
+        {
+          name: 'resRequestAccommTypes',
+          type: 'array',
+          admin: { description: 'Accommodation type IDs in ResRequest (Phase 3)' },
+          fields: [
+            {
+              name: 'id',
+              type: 'text',
+              admin: { description: 'Accommodation type ID in ResRequest' },
+            },
+            {
+              name: 'name',
+              type: 'text',
+              admin: { description: 'e.g. "Bush Suite", "Tent"' },
+            },
+          ],
+        },
+        {
+          name: 'wetuContentEntityId',
+          type: 'number',
+          admin: { description: 'Wetu content entity ID (Phase 2 — Wetu integration)' },
+        },
+      ],
+    },
+
+    // === CANONICAL CONTENT ===
+    {
+      name: 'canonicalContent',
+      type: 'group',
+      admin: {
+        description: 'Canonical content — partially from iTrvl, enriched via Wetu in Phase 2',
+      },
+      fields: [
+        {
+          name: 'coordinates',
+          type: 'group',
+          admin: { description: 'GPS coordinates — from iTrvl where available, Wetu sync in Phase 2' },
+          fields: [
+            { name: 'latitude', type: 'number' },
+            { name: 'longitude', type: 'number' },
+          ],
+        },
+        {
+          name: 'contactEmail',
+          type: 'email',
+          admin: { description: 'Property contact email from iTrvl notes.contactEmail' },
+        },
+        {
+          name: 'contactPhone',
+          type: 'text',
+          admin: { description: 'Property contact phone from iTrvl notes.contactNumber' },
+        },
+      ],
+    },
+
+    // === ROOM TYPES ===
+    {
+      name: 'roomTypes',
+      type: 'array',
+      admin: { description: 'Room types — populated from Wetu in Phase 2, manual entry before that' },
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+          required: true,
+          admin: { description: 'e.g. "Bush Suite", "Family Tent"' },
+        },
+        {
+          name: 'maxPax',
+          type: 'number',
+          admin: { description: 'Maximum occupancy' },
+        },
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          admin: { description: 'Room type image' },
+        },
+      ],
+    },
+
+    // === ACCUMULATED DATA ===
+    {
+      name: 'accumulatedData',
+      type: 'group',
+      admin: {
+        description: 'Accumulated intelligence from scraped itineraries — grows with each scrape',
+      },
+      fields: [
+        {
+          name: 'pricePositioning',
+          type: 'group',
+          fields: [
+            {
+              name: 'observations',
+              type: 'array',
+              dbName: 'prop_price_obs',
+              admin: { description: 'One entry per scraped itinerary that features this property' },
+              fields: [
+                {
+                  name: 'itineraryId',
+                  type: 'relationship',
+                  relationTo: 'itineraries',
+                  admin: { description: 'Source itinerary' },
+                },
+                {
+                  name: 'pricePerNight',
+                  type: 'number',
+                  admin: { description: 'USD — total itinerary price divided by total nights' },
+                },
+                {
+                  name: 'priceTier',
+                  type: 'select',
+                  dbName: 'prop_obs_price_tier',
+                  options: [
+                    { label: 'Ultra Premium', value: 'ultra_premium' },
+                    { label: 'Premium', value: 'premium' },
+                    { label: 'Mid Luxury', value: 'mid_luxury' },
+                    { label: 'Accessible Luxury', value: 'accessible_luxury' },
+                  ],
+                },
+                {
+                  name: 'observedAt',
+                  type: 'date',
+                },
+              ],
+            },
+            {
+              name: 'observationCount',
+              type: 'number',
+              defaultValue: 0,
+              admin: { readOnly: true, description: 'Total number of price observations' },
+            },
+          ],
+        },
+        {
+          name: 'commonPairings',
+          type: 'array',
+          admin: {
+            description: 'Properties that appear immediately before or after this one across scraped itineraries',
+          },
+          fields: [
+            {
+              name: 'property',
+              type: 'relationship',
+              relationTo: 'properties',
+              admin: { description: 'The paired property' },
+            },
+            {
+              name: 'position',
+              type: 'select',
+              dbName: 'prop_pairing_pos',
+              options: [
+                { label: 'Before', value: 'before' },
+                { label: 'After', value: 'after' },
+              ],
+              admin: {
+                description: 'Whether the paired property appears before or after this one in the itinerary',
+              },
+            },
+            {
+              name: 'count',
+              type: 'number',
+              defaultValue: 1,
+              admin: { description: 'How many times this pairing has been observed' },
+            },
+          ],
+        },
+      ],
+    },
+
+    // === AVAILABILITY ===
+    {
+      name: 'availability',
+      type: 'group',
+      admin: {
+        description: 'Availability integration status',
+      },
+      fields: [
+        {
+          name: 'source',
+          type: 'select',
+          defaultValue: 'none',
+          options: [
+            { label: 'None', value: 'none' },
+            { label: 'ResConnect', value: 'resconnect' },
+            { label: 'Direct', value: 'direct' },
+          ],
+          admin: { description: 'Which source provides live availability for this property' },
+        },
+      ],
+    },
   ],
 }

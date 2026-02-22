@@ -28,6 +28,35 @@ function mapSegmentType(type) {
   return null;
 }
 
+function classifyPriceTier(priceTotal, totalNights) {
+  if (!priceTotal || !totalNights) return null;
+  const perNight = priceTotal / totalNights;
+  if (perNight >= 3000) return 'ultra_premium';
+  if (perNight >= 1500) return 'premium';
+  if (perNight >= 800) return 'mid_luxury';
+  return 'accessible_luxury';
+}
+
+function determinePaxType(adults, children) {
+  if (children && children > 0) return 'family';
+  if (adults === 1) return 'solo';
+  if (adults === 2) return 'couple';
+  if (adults > 4) return 'group';
+  return 'unknown';
+}
+
+/**
+ * Strip all internal fields (prefixed with _) before saving to Payload.
+ * These fields carry pipeline state and must not reach the database.
+ */
+function stripInternalFields(data) {
+  const stripped = { ...data };
+  Object.keys(stripped)
+    .filter(k => k.startsWith('_'))
+    .forEach(k => delete stripped[k]);
+  return stripped;
+}
+
 exports.handler = async (event) => {
   console.log('[Orchestrator] Invoked');
   const startTime = Date.now();
@@ -239,8 +268,8 @@ exports.handler = async (event) => {
         }
       };
 
-      delete updateData._propertyIds;
-      payloadItinerary = await payload.updateItinerary(existingItinerary.id, updateData);
+      const cleanUpdateData = stripInternalFields(updateData);
+      payloadItinerary = await payload.updateItinerary(existingItinerary.id, cleanUpdateData);
 
     } else {
       // Create mode: new itinerary
@@ -260,8 +289,8 @@ exports.handler = async (event) => {
         }
       };
 
-      delete createData._propertyIds;
-      payloadItinerary = await payload.createItinerary(createData);
+      const cleanCreateData = stripInternalFields(createData);
+      payloadItinerary = await payload.createItinerary(cleanCreateData);
     }
 
     console.log(`[Orchestrator] Itinerary saved: ${payloadItinerary.id}`);
@@ -285,6 +314,122 @@ exports.handler = async (event) => {
           // Non-fatal — don't fail the pipeline
         }
       }
+    }
+
+    // ============================================================
+    // KNOWLEDGE BASE: accumulatedData updates
+    // ============================================================
+    const kb = transformedData._knowledgeBase || {};
+    const orderedPropertyIds = kb.orderedPropertyIds || [];
+    const priceTotal = transformedData.investmentLevel?.fromPrice || null;
+    const totalNights = transformedData.overview?.nights || 0;
+    const priceTierValue = classifyPriceTier(priceTotal, totalNights);
+    const pricePerNight = (priceTotal && totalNights) ? Math.round(priceTotal / totalNights) : null;
+
+    if (orderedPropertyIds.length > 0) {
+      console.log(`[Orchestrator] Updating accumulatedData for ${orderedPropertyIds.length} properties`);
+
+      for (let i = 0; i < orderedPropertyIds.length; i++) {
+        const propertyId = orderedPropertyIds[i];
+        try {
+          const existingProperty = await payload.getById('properties', propertyId, { depth: 0 });
+
+          // === Price observation ===
+          const existingObs = existingProperty.accumulatedData?.pricePositioning?.observations || [];
+          const newObs = {
+            itineraryId: payloadItinerary.id,
+            pricePerNight,
+            priceTier: priceTierValue,
+            observedAt: new Date().toISOString(),
+          };
+          const updatedObs = [...existingObs, newObs];
+
+          // === Common pairings ===
+          const existingPairings = existingProperty.accumulatedData?.commonPairings || [];
+          const newPairings = [];
+          if (i > 0) {
+            newPairings.push({ property: orderedPropertyIds[i - 1], position: 'before', count: 1 });
+          }
+          if (i < orderedPropertyIds.length - 1) {
+            newPairings.push({ property: orderedPropertyIds[i + 1], position: 'after', count: 1 });
+          }
+
+          // Merge: increment count if pairing already exists, otherwise add
+          const mergedPairings = [...existingPairings];
+          for (const newPairing of newPairings) {
+            const existingIdx = mergedPairings.findIndex(p => {
+              const pId = typeof p.property === 'object' ? p.property?.id : p.property;
+              return pId === newPairing.property && p.position === newPairing.position;
+            });
+            if (existingIdx >= 0) {
+              mergedPairings[existingIdx] = {
+                ...mergedPairings[existingIdx],
+                count: (mergedPairings[existingIdx].count || 1) + 1,
+              };
+            } else {
+              mergedPairings.push(newPairing);
+            }
+          }
+
+          // PATCH — send complete accumulatedData group to avoid partial overwrite
+          await payload.update('properties', propertyId, {
+            accumulatedData: {
+              pricePositioning: {
+                observations: updatedObs,
+                observationCount: updatedObs.length,
+              },
+              commonPairings: mergedPairings,
+            },
+          });
+          console.log(`[Orchestrator] Updated accumulatedData for property ${propertyId} (${updatedObs.length} obs)`);
+
+        } catch (err) {
+          console.error(`[Orchestrator] accumulatedData update failed for property ${propertyId}: ${err.message}`);
+          // Non-fatal — continue to next property
+        }
+      }
+    }
+
+    // ============================================================
+    // KNOWLEDGE BASE: ItineraryPatterns upsert
+    // ============================================================
+    try {
+      const startDate = kb.startDate || null;
+
+      const patternData = {
+        sourceItinerary: payloadItinerary.id,
+        extractedAt: new Date().toISOString(),
+        countries: transformedData.destinations || [],
+        totalNights,
+        paxType: determinePaxType(kb.adultsCount, kb.childrenCount),
+        adults: kb.adultsCount,
+        children: kb.childrenCount,
+        propertySequence: kb.propertySequence || [],
+        transferSequence: kb.transferSequence || [],
+        priceTotal,
+        currency: transformedData.investmentLevel?.currency || 'USD',
+        pricePerNightAvg: (totalNights > 0 && priceTotal) ? Math.round(priceTotal / totalNights) : null,
+        priceTier: priceTierValue,
+        travelMonth: startDate ? parseInt(startDate.slice(5, 7)) : null,
+        travelYear: startDate ? parseInt(startDate.slice(0, 4)) : null,
+      };
+
+      // Upsert: check if a pattern already exists for this itinerary (handles re-scrape)
+      const existingPattern = await payload.findOne('itinerary-patterns', {
+        'where[sourceItinerary][equals]': String(payloadItinerary.id),
+      });
+
+      if (existingPattern) {
+        await payload.update('itinerary-patterns', existingPattern.id, patternData);
+        console.log(`[Orchestrator] Updated ItineraryPattern ${existingPattern.id} for itinerary ${payloadItinerary.id}`);
+      } else {
+        const created = await payload.create('itinerary-patterns', patternData);
+        console.log(`[Orchestrator] Created ItineraryPattern ${created.doc?.id || created.id} for itinerary ${payloadItinerary.id}`);
+      }
+
+    } catch (err) {
+      console.error(`[Orchestrator] ItineraryPattern upsert failed: ${err.message}`);
+      // Non-fatal — log and continue
     }
 
     // 7. Update job with itinerary reference and counters

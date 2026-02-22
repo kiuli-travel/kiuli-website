@@ -13,15 +13,16 @@
 async function linkDestinations(countries) {
   const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'http://localhost:3000';
   const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
+  const destinationCache = new Map();
 
   if (!countries || countries.length === 0) {
     console.log('[linkDestinations] No countries to link');
-    return [];
+    return { ids: [], cache: destinationCache };
   }
 
   if (!PAYLOAD_API_KEY) {
     console.error('[linkDestinations] PAYLOAD_API_KEY not set');
-    return [];
+    return { ids: [], cache: destinationCache };
   }
 
   const destinationIds = [];
@@ -39,6 +40,7 @@ async function linkDestinations(countries) {
 
       if (!response.ok) {
         console.error(`[linkDestinations] Query failed for ${country}: ${response.status}`);
+        destinationCache.set(country, null);
         continue;
       }
 
@@ -46,17 +48,20 @@ async function linkDestinations(countries) {
 
       if (data.docs?.[0]?.id) {
         destinationIds.push(data.docs[0].id);
+        destinationCache.set(country, data.docs[0].id);
         console.log(`[linkDestinations] LINKED: ${country} -> ${data.docs[0].id}`);
       } else {
         console.warn(`[linkDestinations] NOT FOUND: ${country}`);
+        destinationCache.set(country, null);
       }
     } catch (err) {
       console.error(`[linkDestinations] Error for ${country}:`, err.message);
+      destinationCache.set(country, null);
     }
   }
 
   console.log(`[linkDestinations] Total linked: ${destinationIds.length}/${countries.length}`);
-  return destinationIds;
+  return { ids: destinationIds, cache: destinationCache };
 }
 
 /**
@@ -66,7 +71,7 @@ async function linkDestinations(countries) {
  * @param {string[]} destinationIds - Destination IDs returned by linkDestinations()
  * @returns {Promise<Map<string, number|string>>} Map of accommodation name → Property ID
  */
-async function linkProperties(segments, destinationIds) {
+async function linkProperties(segments, destinationIds, destinationCache) {
   const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'http://localhost:3000';
   const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
 
@@ -139,10 +144,12 @@ async function linkProperties(segments, destinationIds) {
 
       // 3. Create new Property if not found
       if (!propertyId) {
-        // Resolve destination for this stay
+        // Resolve destination for this stay — use cache first
         let destinationId = null;
         const country = stay.country || stay.countryName;
-        if (country) {
+        if (country && destinationCache) {
+          destinationId = await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL);
+        } else if (country) {
           const destRes = await fetch(
             `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(country)}&limit=1`,
             { headers }
@@ -169,6 +176,14 @@ async function linkProperties(segments, destinationIds) {
             slug,
             destination: destinationId,
             description_itrvl: descriptionText,
+            externalIds: {
+              itrvlSupplierCode: stay.supplierCode || null,
+              itrvlPropertyName: accommodationName,
+            },
+            canonicalContent: {
+              contactEmail: stay.notes?.contactEmail || null,
+              contactPhone: stay.notes?.contactNumber || null,
+            },
             _status: 'draft',
           }),
         });
@@ -199,6 +214,50 @@ async function linkProperties(segments, destinationIds) {
         }
       }
 
+      // 4. Backfill supplierCode on existing records without it
+      if (propertyId && !propertyId.__backfilled) {
+        try {
+          const existingRes = await fetch(
+            `${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=0`,
+            { headers }
+          );
+          if (existingRes.ok) {
+            const existing = await existingRes.json();
+            const existingExternalIds = existing.externalIds || {};
+            if (!existingExternalIds.itrvlSupplierCode && (stay.supplierCode || stay.notes?.contactEmail)) {
+              const mergedExternalIds = {
+                ...existingExternalIds,
+                ...(stay.supplierCode ? { itrvlSupplierCode: stay.supplierCode, itrvlPropertyName: accommodationName } : {}),
+              };
+              const existingCanonicalContent = existing.canonicalContent || {};
+              const mergedCanonicalContent = {
+                ...existingCanonicalContent,
+                ...(stay.notes?.contactEmail && !existingCanonicalContent.contactEmail
+                  ? { contactEmail: stay.notes.contactEmail } : {}),
+                ...(stay.notes?.contactNumber && !existingCanonicalContent.contactPhone
+                  ? { contactPhone: stay.notes.contactNumber } : {}),
+              };
+              try {
+                await fetch(`${PAYLOAD_API_URL}/api/properties/${propertyId}`, {
+                  method: 'PATCH',
+                  headers: { ...headers, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    externalIds: mergedExternalIds,
+                    canonicalContent: mergedCanonicalContent,
+                  }),
+                });
+                console.log(`[linkProperties] BACKFILLED externalIds for property ${propertyId}`);
+              } catch (err) {
+                console.error(`[linkProperties] BACKFILL failed for ${propertyId}: ${err.message}`);
+              }
+            }
+          }
+        } catch (err) {
+          // Non-fatal — continue
+          console.error(`[linkProperties] BACKFILL fetch failed for ${propertyId}: ${err.message}`);
+        }
+      }
+
       if (propertyId) {
         propertyMap.set(accommodationName, propertyId);
         slugMap.set(slug, propertyId);
@@ -210,6 +269,414 @@ async function linkProperties(segments, destinationIds) {
 
   console.log(`[linkProperties] Total linked: ${propertyMap.size} properties`);
   return propertyMap;
+}
+
+/**
+ * Creates or updates TransferRoutes records for each flight/road/boat segment.
+ * Returns a Map of route-slug → routeId and an array of transfer objects
+ * in the order they appear in the segment list, each referencing the 1-based
+ * index of the property that precedes it.
+ *
+ * @param {Array} segments - Presentation segments in chronological order
+ * @param {Map<string, string|null>} destinationCache - Country → destinationId cache
+ * @returns {Promise<{ routeMap: Map<string, string>, transferSequence: Array }>}
+ */
+async function linkTransferRoutes(segments, destinationCache) {
+  const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'http://localhost:3000';
+  const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
+  const headers = {
+    'Authorization': `users API-Key ${PAYLOAD_API_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
+  const routeMap = new Map();
+  const slugLookupCache = new Map();
+  const transferSequence = [];
+
+  let propertyOrderIndex = 0;
+
+  const transferTypes = new Set(['flight', 'road', 'boat']);
+
+  for (const segment of segments) {
+    const type = segment.type?.toLowerCase();
+
+    if (type === 'stay' || type === 'accommodation') {
+      propertyOrderIndex++;
+      continue;
+    }
+
+    if (!transferTypes.has(type)) continue;
+
+    const from = segment.from || segment.fromPoint || segment.location || null;
+    const to = segment.to || segment.toPoint || null;
+
+    if (!from || !to || from === to) continue;
+
+    const slug = generateSlug(from + '-to-' + to);
+
+    let mode = 'road';
+    if (type === 'flight') mode = 'flight';
+    if (type === 'boat') mode = 'boat';
+
+    const fromCountry = segment.country || segment.countryName || null;
+    const fromDestinationId = fromCountry
+      ? await lookupDestinationByCountry(fromCountry, destinationCache, headers, PAYLOAD_API_URL)
+      : null;
+
+    try {
+      let routeId = routeMap.get(slug) || null;
+
+      if (!routeId) {
+        let existingRoute = slugLookupCache.get(slug) || null;
+        if (!existingRoute) {
+          const res = await fetch(
+            `${PAYLOAD_API_URL}/api/transfer-routes?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+            { headers }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            existingRoute = data.docs?.[0] || null;
+            if (existingRoute) slugLookupCache.set(slug, existingRoute);
+          }
+        }
+
+        if (existingRoute) {
+          routeId = existingRoute.id;
+          routeMap.set(slug, routeId);
+
+          const existingObs = existingRoute.observations || [];
+          const existingAirlines = existingRoute.airlines || [];
+          const airlineName = segment.airline || null;
+          const airlineAlreadyPresent = airlineName &&
+            existingAirlines.some(a => a.name === airlineName);
+
+          const updatedAirlines = airlineAlreadyPresent
+            ? existingAirlines
+            : [
+                ...existingAirlines,
+                ...(airlineName ? [{ name: airlineName, go7Airline: false, duffelAirline: false }] : []),
+              ];
+
+          const newObs = {
+            departureTime: segment.departureTime || null,
+            arrivalTime: segment.arrivalTime || null,
+            airline: airlineName,
+            dateObserved: new Date().toISOString().slice(0, 10),
+          };
+
+          await fetch(`${PAYLOAD_API_URL}/api/transfer-routes/${routeId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({
+              observations: [...existingObs, newObs],
+              observationCount: existingObs.length + 1,
+              airlines: updatedAirlines,
+              ...(fromDestinationId && !existingRoute.fromDestination
+                ? { fromDestination: fromDestinationId }
+                : {}),
+            }),
+          });
+          console.log(`[linkTransferRoutes] UPDATED: ${from} → ${to} (${existingObs.length + 1} observations)`);
+
+        } else {
+          const airlineName = segment.airline || null;
+          const createRes = await fetch(`${PAYLOAD_API_URL}/api/transfer-routes`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              from,
+              to,
+              slug,
+              mode,
+              fromDestination: fromDestinationId,
+              airlines: airlineName ? [{ name: airlineName, go7Airline: false, duffelAirline: false }] : [],
+              observations: [{
+                departureTime: segment.departureTime || null,
+                arrivalTime: segment.arrivalTime || null,
+                airline: airlineName,
+                dateObserved: new Date().toISOString().slice(0, 10),
+              }],
+              observationCount: 1,
+            }),
+          });
+
+          if (createRes.ok) {
+            const created = await createRes.json();
+            routeId = created.doc?.id || created.id;
+            routeMap.set(slug, routeId);
+            console.log(`[linkTransferRoutes] CREATED: ${from} → ${to} (${routeId})`);
+          } else {
+            const errText = await createRes.text();
+            if (createRes.status === 400 && errText.includes('unique')) {
+              const retryRes = await fetch(
+                `${PAYLOAD_API_URL}/api/transfer-routes?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+                { headers }
+              );
+              if (retryRes.ok) {
+                const retryData = await retryRes.json();
+                if (retryData.docs?.[0]?.id) {
+                  routeId = retryData.docs[0].id;
+                  routeMap.set(slug, routeId);
+                  console.log(`[linkTransferRoutes] LINKED (after conflict): ${from} → ${to}`);
+                }
+              }
+            }
+            if (!routeId) {
+              console.error(`[linkTransferRoutes] Failed to create ${from} → ${to}: ${createRes.status}`);
+            }
+          }
+        }
+      }
+
+      if (routeId) {
+        transferSequence.push({
+          route: routeId,
+          afterProperty: propertyOrderIndex,
+          mode,
+        });
+      }
+
+    } catch (err) {
+      console.error(`[linkTransferRoutes] Error for ${from} → ${to}:`, err.message);
+    }
+  }
+
+  console.log(`[linkTransferRoutes] Total routes: ${routeMap.size}, transfers in sequence: ${transferSequence.length}`);
+  return { routeMap, transferSequence };
+}
+
+/**
+ * Creates or updates Activity records for each service/activity segment.
+ *
+ * @param {Array} segments - Presentation segments in chronological order
+ * @param {Map<string, string>} propertyMap - accommodationName → propertyId
+ * @param {Map<string, string|null>} destinationCache - Country → destinationId cache
+ * @returns {Promise<Map<string, string>>} Map of activity-slug → activityId
+ */
+async function linkActivities(segments, propertyMap, destinationCache) {
+  const PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || 'http://localhost:3000';
+  const PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY;
+  const headers = {
+    'Authorization': `users API-Key ${PAYLOAD_API_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
+  const activityMap = new Map();
+  const slugCache = new Map();
+
+  let currentPropertyId = null;
+  let currentCountry = null;
+
+  for (const segment of segments) {
+    const type = segment.type?.toLowerCase();
+
+    if (type === 'stay' || type === 'accommodation') {
+      const name = segment.name || segment.title || segment.supplierName;
+      currentPropertyId = name ? (propertyMap.get(name) || null) : null;
+      currentCountry = segment.country || segment.countryName || null;
+      continue;
+    }
+
+    if (type !== 'service' && type !== 'activity') continue;
+
+    const activityName = segment.name || segment.title;
+    if (!activityName) continue;
+
+    const country = segment.country || segment.countryName || currentCountry;
+    const destinationId = country
+      ? await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL)
+      : null;
+
+    const slug = generateSlug(activityName);
+    const activityType = classifyActivity(activityName);
+
+    try {
+      let activityId = activityMap.get(slug) || null;
+
+      if (!activityId) {
+        let existingActivity = slugCache.get(slug) || null;
+        if (!existingActivity) {
+          const res = await fetch(
+            `${PAYLOAD_API_URL}/api/activities?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+            { headers }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            existingActivity = data.docs?.[0] || null;
+            if (existingActivity) slugCache.set(slug, existingActivity);
+          }
+        }
+
+        if (existingActivity) {
+          activityId = existingActivity.id;
+          activityMap.set(slug, activityId);
+
+          const existingDestinations = (existingActivity.destinations || [])
+            .map(d => typeof d === 'object' ? d.id : d);
+          const existingProperties = (existingActivity.properties || [])
+            .map(p => typeof p === 'object' ? p.id : p);
+
+          const updatedDestinations = destinationId && !existingDestinations.includes(destinationId)
+            ? [...existingDestinations, destinationId]
+            : existingDestinations;
+
+          const updatedProperties = currentPropertyId && !existingProperties.includes(currentPropertyId)
+            ? [...existingProperties, currentPropertyId]
+            : existingProperties;
+
+          await fetch(`${PAYLOAD_API_URL}/api/activities/${activityId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({
+              observationCount: (existingActivity.observationCount || 0) + 1,
+              destinations: updatedDestinations,
+              properties: updatedProperties,
+            }),
+          });
+          console.log(`[linkActivities] UPDATED: ${activityName} (${(existingActivity.observationCount || 0) + 1} observations)`);
+
+        } else {
+          const createRes = await fetch(`${PAYLOAD_API_URL}/api/activities`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              name: activityName,
+              slug,
+              type: activityType,
+              destinations: destinationId ? [destinationId] : [],
+              properties: currentPropertyId ? [currentPropertyId] : [],
+              observationCount: 1,
+            }),
+          });
+
+          if (createRes.ok) {
+            const created = await createRes.json();
+            activityId = created.doc?.id || created.id;
+            activityMap.set(slug, activityId);
+            console.log(`[linkActivities] CREATED: ${activityName} → ${activityId}`);
+          } else {
+            const errText = await createRes.text();
+            if (createRes.status === 400 && errText.includes('unique')) {
+              const retryRes = await fetch(
+                `${PAYLOAD_API_URL}/api/activities?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+                { headers }
+              );
+              if (retryRes.ok) {
+                const retryData = await retryRes.json();
+                if (retryData.docs?.[0]?.id) {
+                  activityId = retryData.docs[0].id;
+                  activityMap.set(slug, activityId);
+                  console.log(`[linkActivities] LINKED (after conflict): ${activityName}`);
+                }
+              }
+            }
+            if (!activityId) {
+              console.error(`[linkActivities] Failed to create ${activityName}: ${createRes.status}`);
+            }
+          }
+        }
+      }
+
+    } catch (err) {
+      console.error(`[linkActivities] Error for ${activityName}:`, err.message);
+    }
+  }
+
+  console.log(`[linkActivities] Total activities: ${activityMap.size}`);
+  return activityMap;
+}
+
+/**
+ * Resolves a country name to a Destination ID.
+ * Results are cached in the provided Map.
+ * Returns null if not found or on error.
+ * @param {string} countryName
+ * @param {Map<string, string|null>} cache - Shared cache Map keyed by countryName
+ * @param {object} headers - Auth headers
+ * @param {string} PAYLOAD_API_URL
+ * @returns {Promise<string|null>}
+ */
+async function lookupDestinationByCountry(countryName, cache, headers, PAYLOAD_API_URL) {
+  if (!countryName) return null;
+  if (cache.has(countryName)) return cache.get(countryName);
+
+  try {
+    const res = await fetch(
+      `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(countryName)}&limit=1`,
+      { headers }
+    );
+    if (!res.ok) {
+      cache.set(countryName, null);
+      return null;
+    }
+    const data = await res.json();
+    const id = data.docs?.[0]?.id || null;
+    cache.set(countryName, id);
+    return id;
+  } catch (err) {
+    console.error(`[lookupDestinationByCountry] Error for ${countryName}:`, err.message);
+    cache.set(countryName, null);
+    return null;
+  }
+}
+
+/**
+ * Maps an activity name to an activity type value.
+ * @param {string} name
+ * @returns {string} Activity type value
+ */
+function classifyActivity(name) {
+  const n = name.toLowerCase();
+  if (n.includes('gorilla')) return 'gorilla_trek';
+  if (n.includes('chimp') || n.includes('chimpanzee')) return 'chimpanzee_trek';
+  if (n.includes('game drive')) return 'game_drive';
+  if (n.includes('balloon')) return 'balloon_flight';
+  if (n.includes('walking') || n.includes('bush walk')) return 'walking_safari';
+  if (n.includes('boat')) return 'boat_safari';
+  if (n.includes('canoe')) return 'canoe_safari';
+  if (n.includes('horse')) return 'horseback_safari';
+  if (n.includes('sundowner')) return 'sundowner';
+  if (n.includes('bush dinner') || (n.includes('dinner') && n.includes('bush'))) return 'bush_dinner';
+  if (n.includes('fishing')) return 'fishing';
+  if (n.includes('bird') || n.includes('birding')) return 'birding';
+  if (n.includes('helicopter')) return 'helicopter_flight';
+  if (n.includes('photo') || n.includes('photography')) return 'photography';
+  if (n.includes('spa') || n.includes('wellness')) return 'spa';
+  if (n.includes('conservation')) return 'conservation_experience';
+  if (n.includes('community') || n.includes('village')) return 'community_visit';
+  if (n.includes('cultural')) return 'cultural_visit';
+  if (n.includes('snorkel')) return 'snorkeling';
+  if (n.includes('div')) return 'diving';
+  return 'other';
+}
+
+/**
+ * Classifies an itinerary into a price tier based on per-night cost.
+ * @param {number|null} priceTotal - Total price in USD
+ * @param {number} totalNights
+ * @returns {string|null}
+ */
+function classifyPriceTier(priceTotal, totalNights) {
+  if (!priceTotal || !totalNights) return null;
+  const perNight = priceTotal / totalNights;
+  if (perNight >= 3000) return 'ultra_premium';
+  if (perNight >= 1500) return 'premium';
+  if (perNight >= 800) return 'mid_luxury';
+  return 'accessible_luxury';
+}
+
+/**
+ * Classifies pax configuration into a type.
+ * @param {number|null} adults
+ * @param {number|null} children
+ * @returns {string}
+ */
+function determinePaxType(adults, children) {
+  if (children && children > 0) return 'family';
+  if (adults === 1) return 'solo';
+  if (adults === 2) return 'couple';
+  if (adults > 4) return 'group';
+  return 'unknown';
 }
 
 /**
@@ -745,10 +1212,49 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
 
   // Link to destination records based on extracted countries
   const countriesForLinking = countries.map(c => ({ country: c }));
-  const destinationIds = await linkDestinations(countriesForLinking);
+  const { ids: destinationIds, cache: destinationCache } = await linkDestinations(countriesForLinking);
 
   // Link/create property records for stay segments
-  const propertyMap = await linkProperties(segments, destinationIds);
+  const propertyMap = await linkProperties(segments, destinationIds, destinationCache);
+
+  // Link transfer routes and activities
+  const { routeMap: transferRouteMap, transferSequence } = await linkTransferRoutes(segments, destinationCache);
+  const activityMap = await linkActivities(segments, propertyMap, destinationCache);
+
+  // Extract pax counts from the itinerary-level data
+  const adultsCount = itinerary.adults ?? null;
+  const childrenCount = itinerary.children ?? null;
+
+  // Build propertySequence in chronological order from segments
+  const propertySequence = [];
+  let stayOrder = 0;
+  for (const segment of segments) {
+    const type = segment.type?.toLowerCase();
+    if (type === 'stay' || type === 'accommodation') {
+      stayOrder++;
+      const name = segment.name || segment.title || segment.supplierName;
+      const propertyId = name ? (propertyMap.get(name) || null) : null;
+      if (propertyId) {
+        propertySequence.push({
+          property: propertyId,
+          nights: segment.nights || 1,
+          order: stayOrder,
+          roomType: segment.roomType || null,
+        });
+      }
+    }
+  }
+
+  // Build _knowledgeBase payload for handler.js to use after payloadItinerary.id is known
+  const _knowledgeBase = {
+    orderedPropertyIds: propertySequence.map(p => p.property),
+    propertySequence,
+    transferSequence,
+    activityIds: [...activityMap.values()],
+    adultsCount,
+    childrenCount,
+    startDate: itinerary.startDate || null,
+  };
 
   const days = groupedDays.map(day => ({
     dayNumber: day.dayNumber,
@@ -830,8 +1336,9 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     buildTimestamp: new Date().toISOString(),
     _status: 'draft',
 
-    // Property IDs for bidirectional linking (stripped before Payload save)
+    // Internal fields for handler.js — stripped before Payload save
     _propertyIds: [...new Set(propertyMap.values())],
+    _knowledgeBase,
   };
 
   console.log(`[Transform] Complete: ${days.length} days, ${faqItems.length} FAQs`);

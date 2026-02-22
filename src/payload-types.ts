@@ -3631,6 +3631,34 @@ export interface ContentProject {
       }[]
     | null;
   /**
+   * Result of last quality gates check
+   */
+  qualityGatesResult?: ('pass' | 'fail' | 'not_checked') | null;
+  /**
+   * Array of quality violations from last check
+   */
+  qualityGatesViolations?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * When quality gates were last run
+   */
+  qualityGatesCheckedAt?: string | null;
+  /**
+   * Whether error-level gate violations have been overridden for publishing
+   */
+  qualityGatesOverridden?: boolean | null;
+  /**
+   * Mandatory explanation for why gate violations were overridden
+   */
+  qualityGatesOverrideNote?: string | null;
+  /**
    * String array of destination names this content covers
    */
   destinations?:
@@ -5309,6 +5337,11 @@ export interface ContentProjectsSelect<T extends boolean = true> {
         resolutionNote?: T;
         id?: T;
       };
+  qualityGatesResult?: T;
+  qualityGatesViolations?: T;
+  qualityGatesCheckedAt?: T;
+  qualityGatesOverridden?: T;
+  qualityGatesOverrideNote?: T;
   destinations?: T;
   properties?: T;
   species?: T;

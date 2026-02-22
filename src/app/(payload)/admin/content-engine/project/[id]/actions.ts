@@ -223,6 +223,22 @@ export async function advanceProjectStage(
           }
         }
       }
+
+      // Block publish if quality gates failed and not overridden
+      const gatesResult = project.qualityGatesResult as string
+      const gatesOverridden = project.qualityGatesOverridden as boolean
+
+      if (gatesResult === 'not_checked' || !gatesResult) {
+        return {
+          error: 'Cannot publish: quality gates have not been run. Run them in the Quality Gates tab first.',
+        }
+      }
+
+      if (gatesResult === 'fail' && !gatesOverridden) {
+        return {
+          error: 'Cannot publish: quality gates failed with error-level violations. Fix violations or override in the Quality Gates tab.',
+        }
+      }
     }
 
     const updateData: Record<string, unknown> = {
@@ -282,6 +298,56 @@ export async function advanceProjectStage(
             data: { processingStatus: 'failed', processingError: `Consistency check failed: ${message}` },
           })
         } catch {}
+      }
+
+      // Auto-trigger quality gates (separate from consistency — non-fatal)
+      try {
+        const { checkHardGates } = await import(
+          '../../../../../../../content-system/quality/hard-gates'
+        )
+        const { extractTextFromLexical } = await import(
+          '../../../../../../../content-system/embeddings/lexical-text'
+        )
+
+        const freshProject = await payload.findByID({
+          collection: 'content-projects',
+          id: projectId,
+          depth: 0,
+        }) as unknown as Record<string, unknown>
+
+        let bodyText = ''
+        if (freshProject.body) {
+          bodyText = extractTextFromLexical(freshProject.body)
+        } else if (freshProject.sections) {
+          const sections = typeof freshProject.sections === 'string'
+            ? JSON.parse(freshProject.sections as string)
+            : freshProject.sections
+          bodyText = Object.values(sections || {}).map((v) => String(v || '')).join('\n\n')
+        }
+
+        const gateResult = await checkHardGates({
+          projectId: String(projectId),
+          body: bodyText,
+          metaTitle: (freshProject.metaTitle as string) || undefined,
+          metaDescription: (freshProject.metaDescription as string) || undefined,
+        })
+
+        await payload.update({
+          collection: 'content-projects',
+          id: projectId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          data: {
+            qualityGatesResult: gateResult.passed ? 'pass' : 'fail',
+            qualityGatesViolations: gateResult.violations,
+            qualityGatesCheckedAt: new Date().toISOString(),
+            qualityGatesOverridden: false,
+            qualityGatesOverrideNote: null,
+          } as any,
+        })
+      } catch (gateError) {
+        console.error(`[advanceProjectStage] Quality gates failed for project ${projectId}:`,
+          gateError instanceof Error ? gateError.message : gateError)
+        // Non-fatal — don't block stage advance, just leave as not_checked
       }
     }
 
@@ -682,7 +748,128 @@ export async function resolveConsistencyIssue(
   }
 }
 
-// ── Action 11: Trigger Publish ───────────────────────────────────────────────
+// ── Action 11: Trigger Quality Gates ────────────────────────────────────────────
+
+export async function triggerQualityGates(
+  projectId: number,
+): Promise<{ success: true; result: { passed: boolean; errorCount: number; warningCount: number } } | { error: string }> {
+  const { payload, user } = await authenticate()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  try {
+    await payload.findByID({ collection: 'content-projects', id: projectId, depth: 0 })
+  } catch {
+    return { error: 'Project not found' }
+  }
+
+  try {
+    const { checkHardGates } = await import(
+      '../../../../../../../content-system/quality/hard-gates'
+    )
+    const { extractTextFromLexical } = await import(
+      '../../../../../../../content-system/embeddings/lexical-text'
+    )
+
+    const project = await payload.findByID({
+      collection: 'content-projects',
+      id: projectId,
+      depth: 0,
+    }) as unknown as Record<string, unknown>
+
+    // Extract body text
+    let bodyText = ''
+    if (project.body) {
+      bodyText = extractTextFromLexical(project.body)
+    } else if (project.sections) {
+      const sections = typeof project.sections === 'string'
+        ? JSON.parse(project.sections as string)
+        : project.sections
+      bodyText = Object.values(sections || {}).map((v) => String(v || '')).join('\n\n')
+    }
+
+    const result = await checkHardGates({
+      projectId: String(projectId),
+      body: bodyText,
+      metaTitle: (project.metaTitle as string) || undefined,
+      metaDescription: (project.metaDescription as string) || undefined,
+    })
+
+    const now = new Date().toISOString()
+
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {
+        qualityGatesResult: result.passed ? 'pass' : 'fail',
+        qualityGatesViolations: result.violations,
+        qualityGatesCheckedAt: now,
+        qualityGatesOverridden: false,
+        qualityGatesOverrideNote: null,
+      } as any,
+    })
+
+    return {
+      success: true,
+      result: {
+        passed: result.passed,
+        errorCount: result.violations.filter((v: { severity: string }) => v.severity === 'error').length,
+        warningCount: result.violations.filter((v: { severity: string }) => v.severity === 'warning').length,
+      },
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { error: message }
+  }
+}
+
+// ── Action 12: Override Quality Gates ───────────────────────────────────────────
+
+export async function overrideQualityGates(
+  projectId: number,
+  note: string,
+): Promise<{ success: true } | { error: string }> {
+  const { payload, user } = await authenticate()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  if (!note || note.trim().length === 0) {
+    return { error: 'Override requires a note explaining why.' }
+  }
+
+  try {
+    const project = await payload.findByID({
+      collection: 'content-projects',
+      id: projectId,
+      depth: 0,
+    }) as unknown as Record<string, unknown>
+
+    if ((project.qualityGatesResult as string) !== 'fail') {
+      return { error: 'Nothing to override — gates did not fail.' }
+    }
+
+    await payload.update({
+      collection: 'content-projects',
+      id: projectId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {
+        qualityGatesOverridden: true,
+        qualityGatesOverrideNote: note.trim(),
+      } as any,
+    })
+
+    return { success: true }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+// ── Action 13: Trigger Publish ───────────────────────────────────────────────
 
 export async function triggerPublish(
   projectId: number,
@@ -712,6 +899,18 @@ export async function triggerPublish(
       if (unresolvedHard.length > 0) {
         return { error: `${unresolvedHard.length} unresolved hard contradiction(s). Resolve them first.` }
       }
+    }
+
+    // Block if quality gates failed and not overridden
+    const gatesResult = project.qualityGatesResult as string
+    const gatesOverridden = project.qualityGatesOverridden as boolean
+
+    if (gatesResult === 'not_checked' || !gatesResult) {
+      return { error: 'Cannot publish: quality gates have not been run.' }
+    }
+
+    if (gatesResult === 'fail' && !gatesOverridden) {
+      return { error: 'Cannot publish: quality gates failed. Fix violations or override first.' }
     }
 
     await payload.update({

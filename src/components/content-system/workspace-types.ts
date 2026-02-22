@@ -96,6 +96,14 @@ export interface ConsistencyIssueDisplay {
   resolutionNote?: string
 }
 
+export interface QualityViolationDisplay {
+  gate: string
+  severity: 'error' | 'warning'
+  message: string
+  field?: string
+  details?: Record<string, unknown>
+}
+
 export interface WorkspaceProject {
   id: number
   title: string
@@ -145,6 +153,13 @@ export interface WorkspaceProject {
   // Consistency
   consistencyCheckResult?: 'pass' | 'hard_contradiction' | 'soft_contradiction' | 'not_checked'
   consistencyIssues?: ConsistencyIssueDisplay[]
+
+  // Quality Gates
+  qualityGatesResult?: 'pass' | 'fail' | 'not_checked'
+  qualityGatesViolations?: QualityViolationDisplay[]
+  qualityGatesCheckedAt?: string | null
+  qualityGatesOverridden?: boolean
+  qualityGatesOverrideNote?: string
 
   // Hero image
   heroImageId?: number | null
@@ -220,16 +235,16 @@ export function isCompoundType(type: WorkspaceContentType | string): boolean {
 
 export function getTabsForContentType(type: WorkspaceContentType | string): string[] {
   if (isArticleType(type)) {
-    return ['Brief', 'Research', 'Draft', 'FAQ', 'Consistency', 'Images', 'Distribution', 'Metadata']
+    return ['Brief', 'Research', 'Draft', 'FAQ', 'Consistency', 'Quality Gates', 'Images', 'Distribution', 'Metadata']
   }
   if (isCompoundType(type)) {
-    return ['Draft', 'FAQ', 'Consistency', 'Images', 'Metadata']
+    return ['Draft', 'FAQ', 'Consistency', 'Quality Gates', 'Images', 'Metadata']
   }
   if (type === 'itinerary_enhancement') {
-    return ['Draft', 'Consistency', 'Metadata']
+    return ['Draft', 'Consistency', 'Quality Gates', 'Metadata']
   }
   if (type === 'page_update') {
-    return ['Current vs Proposed', 'Consistency', 'Metadata']
+    return ['Current vs Proposed', 'Consistency', 'Quality Gates', 'Metadata']
   }
   return ['Draft', 'Metadata']
 }

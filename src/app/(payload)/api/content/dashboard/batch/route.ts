@@ -89,6 +89,20 @@ export async function POST(request: Request) {
                 continue
               }
             }
+
+            // Block if quality gates failed and not overridden
+            const gatesResult = (project as Record<string, unknown>).qualityGatesResult as string
+            const gatesOverridden = (project as Record<string, unknown>).qualityGatesOverridden as boolean
+
+            if (gatesResult === 'not_checked' || !gatesResult) {
+              skipped.push({ id, reason: 'Quality gates have not been run' })
+              continue
+            }
+
+            if (gatesResult === 'fail' && !gatesOverridden) {
+              skipped.push({ id, reason: 'Quality gates failed — not overridden' })
+              continue
+            }
           }
 
           const updateData: Record<string, unknown> = {
@@ -147,6 +161,56 @@ export async function POST(request: Request) {
                   data: { processingStatus: 'failed', processingError: `Consistency check failed: ${msg}` },
                 })
               } catch {}
+            }
+
+            // Auto-trigger quality gates (separate from consistency — non-fatal)
+            try {
+              const { checkHardGates } = await import(
+                '../../../../../../../content-system/quality/hard-gates'
+              )
+              const { extractTextFromLexical } = await import(
+                '../../../../../../../content-system/embeddings/lexical-text'
+              )
+
+              const freshProject = await payload.findByID({
+                collection: 'content-projects',
+                id,
+                depth: 0,
+              }) as unknown as Record<string, unknown>
+
+              let bodyText = ''
+              if (freshProject.body) {
+                bodyText = extractTextFromLexical(freshProject.body)
+              } else if (freshProject.sections) {
+                const sections = typeof freshProject.sections === 'string'
+                  ? JSON.parse(freshProject.sections as string)
+                  : freshProject.sections
+                bodyText = Object.values(sections || {}).map((v) => String(v || '')).join('\n\n')
+              }
+
+              const gateResult = await checkHardGates({
+                projectId: String(id),
+                body: bodyText,
+                metaTitle: (freshProject.metaTitle as string) || undefined,
+                metaDescription: (freshProject.metaDescription as string) || undefined,
+              })
+
+              await payload.update({
+                collection: 'content-projects',
+                id,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                data: {
+                  qualityGatesResult: gateResult.passed ? 'pass' : 'fail',
+                  qualityGatesViolations: gateResult.violations,
+                  qualityGatesCheckedAt: new Date().toISOString(),
+                  qualityGatesOverridden: false,
+                  qualityGatesOverrideNote: null,
+                } as any,
+              })
+            } catch (gateError) {
+              console.error(`[batch-advance] Quality gates failed for project ${id}:`,
+                gateError instanceof Error ? gateError.message : gateError)
+              // Non-fatal — don't block stage advance
             }
           }
         }

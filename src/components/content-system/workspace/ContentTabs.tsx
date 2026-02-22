@@ -8,6 +8,7 @@ import {
   sectionLabels,
   type WorkspaceProject,
   type ConsistencyIssueDisplay,
+  type QualityViolationDisplay,
   type ArticleImage,
 } from '../workspace-types'
 import {
@@ -18,6 +19,8 @@ import {
   triggerConsistencyCheck,
   resolveConsistencyIssue,
   saveArticleImages,
+  triggerQualityGates,
+  overrideQualityGates,
 } from '@/app/(payload)/admin/content-engine/project/[id]/actions'
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -1372,6 +1375,191 @@ export function ConsistencyTab({ project, projectId, onDataChanged }: Consistenc
         <div className="flex flex-col items-center justify-center py-8 text-sm text-kiuli-charcoal/40">
           <p>No consistency check has been run yet.</p>
           <p className="mt-1 text-xs">Click &quot;Run Consistency Check&quot; to scan for contradictions.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Quality Gates Tab ────────────────────────────────────────────────────────
+
+interface QualityGatesTabProps {
+  project: WorkspaceProject
+  projectId: number
+  onDataChanged?: () => void
+}
+
+const gatesResultStyles: Record<string, { bg: string; text: string; label: string }> = {
+  pass: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', label: 'All quality gates passed' },
+  fail: { bg: 'bg-red-50 border-red-200', text: 'text-red-700', label: 'Quality gates failed' },
+  not_checked: { bg: 'bg-gray-50 border-gray-200', text: 'text-gray-500', label: 'Quality gates not yet run' },
+}
+
+const violationSeverityBadge: Record<string, { bg: string; text: string }> = {
+  error: { bg: 'bg-red-100', text: 'text-red-700' },
+  warning: { bg: 'bg-amber-100', text: 'text-amber-700' },
+}
+
+export function QualityGatesTab({ project, projectId, onDataChanged }: QualityGatesTabProps) {
+  const [running, setRunning] = useState(false)
+  const [showOverride, setShowOverride] = useState(false)
+  const [overrideNote, setOverrideNote] = useState('')
+  const [overriding, setOverriding] = useState(false)
+
+  const result = project.qualityGatesResult || 'not_checked'
+  const violations = project.qualityGatesViolations || []
+  const banner = gatesResultStyles[result] || gatesResultStyles.not_checked
+  const errorViolations = violations.filter((v: QualityViolationDisplay) => v.severity === 'error')
+  const warningViolations = violations.filter((v: QualityViolationDisplay) => v.severity === 'warning')
+
+  const handleRunGates = useCallback(async () => {
+    setRunning(true)
+    const res = await triggerQualityGates(projectId)
+    setRunning(false)
+    if ('error' in res) {
+      alert(res.error)
+    } else if (onDataChanged) {
+      onDataChanged()
+    }
+  }, [projectId, onDataChanged])
+
+  const handleOverride = useCallback(async () => {
+    if (!overrideNote.trim()) return
+    setOverriding(true)
+    const res = await overrideQualityGates(projectId, overrideNote)
+    setOverriding(false)
+    if ('error' in res) {
+      alert(res.error)
+    } else {
+      setShowOverride(false)
+      setOverrideNote('')
+      if (onDataChanged) onDataChanged()
+    }
+  }, [projectId, overrideNote, onDataChanged])
+
+  return (
+    <div className="flex flex-col gap-5 p-5">
+      {/* Header + Run button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-kiuli-charcoal">Quality Gates</h3>
+        <button onClick={handleRunGates} disabled={running} className={btnSecondary}>
+          {running ? (
+            <>
+              <Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" />
+              Checking...
+            </>
+          ) : (
+            'Run Quality Gates'
+          )}
+        </button>
+      </div>
+
+      {/* Result banner */}
+      <div className={`rounded border p-3 ${banner.bg}`}>
+        <span className={`text-sm font-medium ${banner.text}`}>{banner.label}</span>
+        {violations.length > 0 && (
+          <span className={`ml-2 text-xs ${banner.text}`}>
+            ({errorViolations.length} error{errorViolations.length !== 1 ? 's' : ''}, {warningViolations.length} warning{warningViolations.length !== 1 ? 's' : ''})
+          </span>
+        )}
+        {project.qualityGatesCheckedAt && (
+          <p className={`mt-1 text-[10px] ${banner.text}`}>
+            Last checked: {new Date(project.qualityGatesCheckedAt).toLocaleString()}
+          </p>
+        )}
+      </div>
+
+      {/* Override banner (if overridden) */}
+      {project.qualityGatesOverridden && (
+        <div className="rounded border border-purple-200 bg-purple-50 p-3">
+          <p className="text-sm font-medium text-purple-700">Gates overridden for publishing</p>
+          {project.qualityGatesOverrideNote && (
+            <p className="mt-1 text-xs text-purple-600">Reason: {project.qualityGatesOverrideNote}</p>
+          )}
+        </div>
+      )}
+
+      {/* Violations */}
+      {violations.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {/* Errors first, then warnings */}
+          {[...errorViolations, ...warningViolations].map((violation: QualityViolationDisplay, i: number) => {
+            const badge = violationSeverityBadge[violation.severity] || violationSeverityBadge.warning
+            return (
+              <div key={i} className="rounded border border-kiuli-gray/60 bg-white p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase ${badge.bg} ${badge.text}`}>
+                    {violation.severity}
+                  </span>
+                  <span className="rounded-full bg-kiuli-gray/20 px-2 py-0.5 text-[10px] font-medium text-kiuli-charcoal/60">
+                    {violation.gate.replace(/_/g, ' ')}
+                  </span>
+                  {violation.field && (
+                    <span className="text-[10px] text-kiuli-charcoal/40">
+                      Field: {violation.field}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-kiuli-charcoal">{violation.message}</p>
+                {violation.details && 'context' in violation.details && (
+                  <p className="mt-1 rounded bg-kiuli-gray/10 p-2 font-mono text-[11px] text-kiuli-charcoal/70">
+                    ...{String(violation.details.context)}...
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Override mechanism (only when failed and not already overridden) */}
+      {result === 'fail' && !project.qualityGatesOverridden && errorViolations.length > 0 && (
+        <div className="border-t border-kiuli-gray/30 pt-4">
+          {showOverride ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-kiuli-charcoal">
+                Override {errorViolations.length} error-level violation{errorViolations.length !== 1 ? 's' : ''}?
+                This allows publishing despite gate failures.
+              </p>
+              <textarea
+                className={textareaClass}
+                rows={2}
+                placeholder="Why are you overriding these violations? (required)"
+                value={overrideNote}
+                onChange={(e) => setOverrideNote(e.target.value)}
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOverride}
+                  disabled={!overrideNote.trim() || overriding}
+                  className="rounded bg-purple-50 px-3 py-1.5 text-[11px] font-medium text-purple-600 transition-colors hover:bg-purple-100 disabled:opacity-40"
+                >
+                  {overriding ? <Loader2 className="inline h-3 w-3 animate-spin" /> : 'Confirm Override'}
+                </button>
+                <button
+                  onClick={() => { setShowOverride(false); setOverrideNote('') }}
+                  className="text-[11px] text-kiuli-charcoal/50 hover:text-kiuli-charcoal"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowOverride(true)}
+              className="rounded bg-purple-50 px-3 py-1.5 text-[11px] font-medium text-purple-600 transition-colors hover:bg-purple-100"
+            >
+              Override Gate Failures
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {result === 'not_checked' && violations.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-8 text-sm text-kiuli-charcoal/40">
+          <p>No quality gates check has been run yet.</p>
+          <p className="mt-1 text-xs">Quality gates auto-run when advancing to review, or click &quot;Run Quality Gates&quot; manually.</p>
         </div>
       )}
     </div>

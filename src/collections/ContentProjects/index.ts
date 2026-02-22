@@ -709,7 +709,57 @@ export const ContentProjects: CollectionConfig = {
             },
           ],
         },
-        // Tab 11: Metadata
+        // Tab 11: Quality Gates
+        {
+          label: 'Quality Gates',
+          fields: [
+            {
+              name: 'qualityGatesResult',
+              type: 'select',
+              defaultValue: 'not_checked',
+              options: [
+                { label: 'Pass', value: 'pass' },
+                { label: 'Fail', value: 'fail' },
+                { label: 'Not Checked', value: 'not_checked' },
+              ],
+              admin: {
+                description: 'Result of last quality gates check',
+              },
+            },
+            {
+              name: 'qualityGatesViolations',
+              type: 'json',
+              admin: {
+                description: 'Array of quality violations from last check',
+              },
+            },
+            {
+              name: 'qualityGatesCheckedAt',
+              type: 'date',
+              admin: {
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When quality gates were last run',
+              },
+            },
+            {
+              name: 'qualityGatesOverridden',
+              type: 'checkbox',
+              defaultValue: false,
+              admin: {
+                description: 'Whether error-level gate violations have been overridden for publishing',
+              },
+            },
+            {
+              name: 'qualityGatesOverrideNote',
+              type: 'textarea',
+              admin: {
+                description: 'Mandatory explanation for why gate violations were overridden',
+                condition: (data) => data?.qualityGatesOverridden === true,
+              },
+            },
+          ],
+        },
+        // Tab 12: Metadata (renumbered — was Tab 11)
         {
           label: 'Metadata',
           fields: [
@@ -765,7 +815,7 @@ export const ContentProjects: CollectionConfig = {
             },
           ],
         },
-        // Tab 12: Conversation
+        // Tab 13: Conversation (renumbered — was Tab 12)
         {
           label: 'Conversation',
           fields: [

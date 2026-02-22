@@ -1,0 +1,71 @@
+Phase 15: Quality Gates — Investigation Results
+================================================
+Date: 2026-02-22
+
+Check 1: Stub confirmation
+---------------------------
+File: content-system/quality/hard-gates.ts
+Contents (exact):
+  import type { HardGatesOptions, HardGateResult } from './types'
+  export declare function checkHardGates(options: HardGatesOptions): Promise<HardGateResult>
+CONFIRMED: Only a type import and a `declare function` stub — no actual implementation.
+
+Check 2: No API route
+---------------------
+Searched for: src/app/(payload)/api/content/quality-gates/route.ts
+Result: No files found
+CONFIRMED: API route does NOT exist.
+
+Check 3: No workspace tab
+--------------------------
+Searched for: QualityGatesTab across entire codebase
+Result: Zero matches (only in phase15-quality-gates.md prompt file)
+CONFIRMED: QualityGatesTab does not exist.
+
+Check 4: No quality gate fields on schema
+------------------------------------------
+Searched ContentProjects/index.ts for: qualityGatesResult, qualityGatesViolations, qualityGatesCheckedAt, qualityGatesOverridden
+Result: No matches
+CONFIRMED: No quality gate fields exist on ContentProjects schema.
+
+Check 5: All publish paths unguarded
+--------------------------------------
+Path A — advanceProjectStage (nextStage === 'published') [actions.ts:212-226]:
+  Only checks consistencyCheckResult for hard_contradiction with unresolved issues.
+  NO quality gates check.
+
+Path B — triggerPublish [actions.ts:704-715]:
+  Checks stage === 'review' and consistencyCheckResult for hard_contradiction.
+  NO quality gates check.
+
+Path C — POST handler [publish/route.ts:57-67]:
+  Checks consistencyCheckResult for hard_contradiction with unresolved issues.
+  NO quality gates check.
+
+Path D — batch advance (nextStage === 'published') [batch/route.ts:75-92]:
+  Checks consistencyCheckResult for hard_contradiction with unresolved issues.
+  NO quality gates check.
+
+CONFIRMED: All four publish paths only check consistency — no quality gates.
+
+Review auto-trigger paths (nextStage === 'review'):
+  actions.ts:245-286: Auto-triggers consistency check only
+  batch/route.ts:111-151: Auto-triggers consistency check only
+  Neither triggers quality gates.
+
+Check 6: BrandVoice has banned phrases
+---------------------------------------
+SQL: SELECT COUNT(*) FROM brand_voice_banned_phrases;
+Result: 11
+CONFIRMED: BrandVoice has 11 banned phrases populated.
+
+Check 7: Test candidate exists
+-------------------------------
+SQL: SELECT id, title, stage FROM content_projects WHERE body IS NOT NULL AND stage = 'draft' LIMIT 3;
+Results:
+  ID 27: "Mountain Gorilla Trekking vs Chimpanzee Tracking..." (draft)
+  ID 53: "Kalahari Desert Safari: Why the Northern Cape..." (draft)
+  ID 87: "Uganda's Primate Diversity Hotspot: Why Kibale..." (draft)
+CONFIRMED: Test candidates available.
+
+ALL CHECKS PASSED — proceeding with implementation.

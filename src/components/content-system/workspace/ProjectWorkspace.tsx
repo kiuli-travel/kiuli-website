@@ -10,6 +10,7 @@ import {
   DraftTab,
   FAQTab,
   ConsistencyTab,
+  QualityGatesTab,
   ImagesTab,
   DistributionTab,
   MetadataTab,
@@ -124,6 +125,14 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
       case 'Consistency':
         return (
           <ConsistencyTab
+            project={currentProject}
+            projectId={projectId}
+            onDataChanged={refreshProject}
+          />
+        )
+      case 'Quality Gates':
+        return (
+          <QualityGatesTab
             project={currentProject}
             projectId={projectId}
             onDataChanged={refreshProject}

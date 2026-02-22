@@ -66,6 +66,22 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Block if quality gates failed and not overridden
+  const gatesResult = project.qualityGatesResult as string
+  const gatesOverridden = project.qualityGatesOverridden as boolean
+
+  if (gatesResult === 'not_checked' || !gatesResult) {
+    return NextResponse.json({
+      error: 'Cannot publish: quality gates have not been run.',
+    }, { status: 409 })
+  }
+
+  if (gatesResult === 'fail' && !gatesOverridden) {
+    return NextResponse.json({
+      error: 'Cannot publish: quality gates failed. Fix violations or override first.',
+    }, { status: 409 })
+  }
+
   // Set processing
   await payload.update({
     collection: 'content-projects',

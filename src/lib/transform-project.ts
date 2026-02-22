@@ -9,6 +9,7 @@ import type {
   FAQItem,
   ConversationMessage,
   ConsistencyIssueDisplay,
+  QualityViolationDisplay,
   ArticleImage,
 } from '@/components/content-system/workspace-types'
 
@@ -174,6 +175,15 @@ export function transformProject(raw: Record<string, unknown>): WorkspaceProject
     // Consistency
     consistencyCheckResult: (raw.consistencyCheckResult as WorkspaceProject['consistencyCheckResult']) || undefined,
     consistencyIssues: consistencyIssues.length > 0 ? consistencyIssues : undefined,
+
+    // Quality Gates
+    qualityGatesResult: (raw.qualityGatesResult as WorkspaceProject['qualityGatesResult']) || undefined,
+    qualityGatesViolations: Array.isArray(raw.qualityGatesViolations)
+      ? (raw.qualityGatesViolations as QualityViolationDisplay[])
+      : undefined,
+    qualityGatesCheckedAt: (raw.qualityGatesCheckedAt as string) || undefined,
+    qualityGatesOverridden: (raw.qualityGatesOverridden as boolean) || false,
+    qualityGatesOverrideNote: (raw.qualityGatesOverrideNote as string) || undefined,
 
     // Hero image
     heroImageId: (raw.heroImage as number) || (raw.heroImageId as number) || undefined,

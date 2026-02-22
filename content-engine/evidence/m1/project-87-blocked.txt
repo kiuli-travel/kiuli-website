@@ -1,0 +1,20 @@
+PROJECT 87 BLOCKED AT GATE E3
+Date: 2026-02-22T14:53:31Z
+
+Status: Advanced to review, quality gates PASS, but BLOCKED by hard contradictions.
+
+content_projects row:
+ id | stage  | processing_status | quality_gates_result | consistency_check_result
+----+--------+-------------------+----------------------+--------------------------
+ 87 | review | completed         | pass                 | hard_contradiction
+(1 row)
+
+Hard contradictions (2 unresolved):
+ id                       | issue_type | resolution | existing_content                                                                        | new_content                                                                      | source_record
+--------------------------+------------+------------+-----------------------------------------------------------------------------------------+---------------------------------------------------------------------------------+--------------------------------------------------------------------
+ 699b1867aafbcf000424ea75 | hard       | pending    | Nyungwe Forest's Biodiversity Secrets: 13 Primate Species Beyond the Famous Chimpanzees | Kibale Forest National Park supports 13 distinct species                        | Article section about Nyungwe Forest's primate diversity
+ 699b1867aafbcf000424ea76 | hard       | pending    | Kibale Forest National Park supports 13 distinct species                                | Chimpanzee tracking in Nyungwe Forest operates on entirely different principles | Article section describing chimpanzee tracking experience location
+
+Note: These contradictions appear to be cross-referencing two different locations
+(Uganda's Kibale Forest and Rwanda's Nyungwe Forest). Both could be factually correct
+but the consistency checker flagged the different location context as contradictory.

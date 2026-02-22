@@ -1,0 +1,25 @@
+PROJECT 53 PUBLISH EVIDENCE
+Date: 2026-02-22T14:51:47Z
+
+content_projects row:
+ id |   stage   |        published_at        | target_collection | target_record_id | processing_status
+----+-----------+----------------------------+-------------------+------------------+-------------------
+ 53 | published | 2026-02-22 14:51:47.159+00 | posts             |                  | completed
+(1 row)
+
+posts row:
+ id |                                               title                                               |                                              slug                                               |  _status  |        published_at
+----+---------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+-----------+----------------------------
+ 24 | Kalahari Desert Safari: Why the Northern Cape Offers Africa's Most Underrated Wildlife Experience | kalahari-desert-safari-why-the-northern-cape-offers-africas-most-underrated-wildlife-experience | published | 2026-02-22 14:51:47.159+00
+(1 row)
+
+Live page HTTP status:
+HTTP_STATUS:200
+
+Quality gates warning (non-blocking):
+  gate: superlative_language
+  field: body
+  message: Superlative/fear-forward phrase "the most" found in body
+  severity: warning
+
+Total embeddings at this point: 212 (project 53 embeddings may be async)

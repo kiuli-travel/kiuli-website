@@ -1,0 +1,25 @@
+PROJECT 27 PUBLISH EVIDENCE
+Date: 2026-02-22T14:44:49Z
+
+content_projects row:
+ id |   stage   |        published_at        | target_collection | target_record_id | processing_status
+----+-----------+----------------------------+-------------------+------------------+-------------------
+ 27 | published | 2026-02-22 14:44:49.667+00 | posts             |                  | completed
+(1 row)
+
+posts row:
+ id |                                             title                                              |                                             slug                                              |  _status  |        published_at
+----+------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------+-----------+----------------------------
+ 23 | Mountain Gorilla Trekking vs Chimpanzee Tracking: Which Primate Experience to Choose in Rwanda | mountain-gorilla-trekking-vs-chimpanzee-tracking-which-primate-experience-to-choose-in-rwanda | published | 2026-02-22 14:44:49.667+00
+(1 row)
+
+Live page HTTP status:
+HTTP_STATUS:200
+
+Embeddings:
+ chunk_type      | chunks | with_vector | latest
+-----------------+--------+-------------+-------------------------------
+ article_section |     10 |          10 | 2026-02-22 14:45:01.998348+00
+(1 row)
+
+Total embeddings at this point: 212

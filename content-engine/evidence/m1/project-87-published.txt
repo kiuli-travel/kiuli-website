@@ -1,0 +1,26 @@
+PROJECT 87 PUBLISH EVIDENCE
+Date: 2026-02-22T16:10:36Z
+
+content_projects row:
+ id |   stage   | target_record_id | target_collection |       published_at        | processing_status
+----+-----------+------------------+-------------------+---------------------------+-------------------
+ 87 | published | 25               | posts             | 2026-02-22 16:10:36.57+00 | processing
+(1 row)
+
+Note: target_record_id = '25' — publish route fix (Task 1) confirmed working.
+
+posts row:
+ id |                                          title                                          |                                         slug                                          |  _status  |       published_at
+----+-----------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------+-----------+---------------------------
+ 25 | Uganda's Primate Diversity Hotspot: Why Kibale Forest Hosts 13 Species in One Ecosystem | ugandas-primate-diversity-hotspot-why-kibale-forest-hosts-13-species-in-one-ecosystem | published | 2026-02-22 16:10:36.57+00
+(1 row)
+
+Live page HTTP status:
+HTTP_STATUS:200
+
+Consistency issues resolved:
+  699b1867aafbcf000424ea75: overridden (false positive — Kibale/Nyungwe are different forests)
+  699b1867aafbcf000424ea76: overridden (false positive — same reason)
+
+Quality gates:
+  Result: pass (1 warning: superlative "the most" in body)

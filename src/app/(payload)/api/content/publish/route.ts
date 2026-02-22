@@ -129,12 +129,15 @@ export async function POST(request: NextRequest) {
     await payload.update({
       collection: 'content-projects',
       id: projectId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: {
         stage: 'published',
         publishedAt: result.publishedAt,
+        targetRecordId: String(result.targetId),
+        targetCollection: result.targetCollection,
         processingStatus: 'completed',
         processingError: null,
-      },
+      } as any,
     })
 
     // Trigger embedding (fire and forget)

@@ -324,11 +324,11 @@ Aesthetic: understated luxury, editorial magazine feel, generous whitespace, no 
 All Content Engine phases (1–15) are complete. The scraper pipeline works. The inquiry funnel works. Zero production content exists.
 
 The launch roadmap (KIULI_LAUNCH_ROADMAP.md) defines 7 milestones:
-1. **M1: Pipeline Validation** — fix ghost bug, publish 2-3 projects
-2. **M2: Schema Evolution & Scraper Upgrade** — future-proof for agentic vision
-3. **M3: Frontend Development** — all pages to Awwwards standard
+1. **M1: Pipeline Validation** ✅ COMPLETE — ghost bug fixed, 4 articles published end-to-end (posts 22–25), target_record_id bug fixed, quality gates migration applied
+2. **M2: Schema Evolution & Scraper Upgrade** — future-proof for agentic vision (BLOCKED: requires KIULI_AGENTIC_VISION.md in project knowledge)
+3. **M3: Frontend Development** — all pages to Awwwards standard (requires M2 + test content)
 4. **M4: Admin UI Overhaul** — integrated workflow
-5. **M5: Integration Test Cycle** — delete test data, re-scrape, full pipeline
+5. **M5: Integration Test Cycle** — delete all test data, re-scrape 6 test itineraries, full pipeline
 6. **M6: Production Content Run** — 75-100 itineraries
 7. **M7: Launch**
 

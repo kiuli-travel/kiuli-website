@@ -2,82 +2,90 @@
 
 **Version:** 2.0  
 **Date:** February 2026  
-**Status:** AUTHORITATIVE — CLI must implement from this document exactly  
-**Owner:** Graham Wallington  
-**Supersedes:** Version 1.0 (contained factual errors and underspecified implementation)
+**Status:** AUTHORITATIVE — CLI implements exactly from this document. No improvisation.  
+**Owner:** Graham Wallington
 
 ---
 
 ## Purpose
 
-This document defines the canonical entity hierarchy, all schema changes required, the resolution algorithm for external location strings, and the complete scraper evolution. Every function signature, return value, handler.js change, migration order, and verification query is specified completely. The CLI must not improvise any implementation detail not stated here.
+This document defines the canonical entity hierarchy, all schema changes, the LocationMappings resolution algorithm, the complete scraper evolution, and ungameable verification gates. Every field, every dedup key, every algorithm is specified precisely. If something is not specified here, CLI stops and asks — it does not invent.
 
 ---
 
 ## 1. The Canonical Entity Hierarchy
 
-Five entity types form Kiuli's canonical knowledge base.
+Five entity types. Each has exactly one definition.
 
 ```
-Countries (stored as destinations where type='country')
-  └── Destinations (stored as destinations where type='destination')
+Countries
+  └── Destinations
         └── Properties
-Airports (in Countries, optionally near Destinations)
-ServiceItems (linked to Airports, Destinations, and Itineraries)
+Airports (belong to Countries; optionally near Destinations)
+ServiceItems (independent; linked to Airports and/or Destinations)
 ```
 
 ### 1.1 Countries
 
 **Collection:** `destinations` (type = 'country')  
-**Rule:** Pre-seeded. The scraper NEVER creates a country. It only links to existing country records by name lookup.  
-**Current records:** Kenya, Tanzania, Uganda, Rwanda, Botswana, South Africa, Zambia, Zimbabwe, Namibia, Mozambique  
-**Adding new countries:** Manual only, before scraping itineraries that visit them.
+**Scraper rule:** NEVER creates. NEVER updates. Reads only.  
+**Current records (confirmed in DB):** Kenya (id=2), Tanzania (id=3), Uganda (id=4), Rwanda (id=5), Botswana (id=6), South Africa (id=7), Zambia (id=8), Zimbabwe (id=9), Namibia (id=10), Mozambique (id=11)  
+**Adding new countries:** Manual, by Graham, before scraping itineraries that visit them.
 
 ### 1.2 Destinations
 
 **Collection:** `destinations` (type = 'destination')  
-**Definition:** A geographic area within a country that a guest visits — a park, reserve, city, coastal area, or region — that Kiuli will build a content page for.  
-**Examples:** Masai Mara, Serengeti National Park, Ngorongoro, Okavango Delta, Nairobi, Arusha, Sabi Sands, Tarangire National Park, Mwiba Wildlife Reserve, Cape Town.  
-**A park is a destination. A city with multiple properties is a destination. A private reserve is a destination.**  
-**NOT a destination:** a property name, a mobile camp concept name, an airport, a country.  
-**Parent:** Always one country record (destinations.country FK).  
-**Creation:** Scraper auto-creates when a stay segment's location string is not found. Gated by LocationMappings resolution — if the string resolves to 'property', 'airport', or 'ignore', no Destination is created.  
-**ContentProject trigger:** Auto-created destinations are flagged for the content cascade to create a `destination_page` ContentProject. The SCRAPER does not create ContentProjects. The cascade does.
+**Definition:** A geographic area within a country that guests visit and that Kiuli builds a content page for. National parks, private reserves, cities with multiple properties, coastal areas.  
+**Examples:** Masai Mara, Serengeti National Park, Tarangire National Park, Mwiba Wildlife Reserve, Arusha, Nairobi, Sabi Sands, Cape Town.  
+**NOT a destination:** A property name, a mobile camp concept, an airport, a country.  
+**Parent:** Always one Country record (via `country_id` FK).  
+**Dedup key:** `slug` (unique constraint). Lookup: `name` exact match + `type = 'destination'`.  
+**Auto-creation:** Scraper creates when `stay.location` resolves to no existing Destination and no LocationMappings entry resolves it as 'property' or 'airport'. Auto-created records are `_status: 'draft'`. ContentProject (`destination_page` at `idea`) is created by the content cascade on its next run — not by the scraper.  
+**LocationMappings:** Scraper DOES NOT auto-add LocationMappings entries for auto-created Destinations. A human adds mappings manually after review.
 
 ### 1.3 Properties
 
 **Collection:** `properties`  
-**Definition:** An individual lodge, camp, hotel, mobile camp, or villa where a guest sleeps.  
-**Examples:** Angama Mara, Nyasi Tented Camp, Mwiba Lodge, Legendary Lodge, Singita Boulders.  
-**NOT a property:** a destination, a park, a city, a mobile camp concept name.  
-**Parent:** Always one Destination record. Never a Country record.  
-**Creation:** Scraper auto-creates from stay segments using PropertyNameMappings for dedup and LocationMappings to resolve the correct parent Destination.  
-**ContentProject trigger:** Same as Destinations — cascade handles this, not the scraper.
+**Definition:** An individual lodge, camp, hotel, villa, tented camp, or mobile camp where a guest sleeps.  
+**Examples:** Angama Mara, Nyasi Tented Camp, Mwiba Lodge, Legendary Lodge.  
+**NOT a property:** A destination, a park, a city, a mobile camp concept (e.g. "Serengeti Mobile"), an airport.  
+**Parent:** Always one Destination record (type='destination'). NEVER a Country record (type='country').  
+**Dedup key:** `slug` (unique constraint). Lookup order: PropertyNameMappings aliases → slug exact match.  
+**Type classification:** See Section 9.  
+**Auto-creation:** Scraper creates when property name not found in PropertyNameMappings or by slug.
 
 ### 1.4 Airports
 
 **Collection:** `airports` (NEW)  
-**Definition:** A physical aviation facility — international airport, domestic airport, or bush airstrip.  
-**NOT an airport:** a property, a destination, a country.  
-**Examples:** Wilson Airport Nairobi (WIL), Kilimanjaro International Airport (JRO), Mara North Airstrip (MRE).  
-**Parent:** Always one Country record. Optionally linked to nearest Destination.  
-**Creation:** Scraper auto-creates from `point`, `entry`, and `exit` segment types. Deduplicates by IATA code first, then slug.
+**Definition:** A physical aviation facility — international airport, domestic airport, or bush airstrip — where passengers board or disembark aircraft.  
+**Examples:** Wilson Airport Nairobi (WIL), Kilimanjaro International Airport (JRO), Arusha Airport (ARK), Mara North Airstrip (MRE).  
+**NOT an airport:** A property, a destination, a country.  
+**Parent:** Always one Country record. Optionally linked to the nearest Destination (manually or via LocationMappings).  
+**Dedup key (in priority order):**  
+  1. `iataCode` (where not null) — query: `WHERE iata_code = ?`  
+  2. `slug` — query: `WHERE slug = ?`  
+**Auto-creation:** Scraper creates from `point`, `entry`, and `exit` segment types.
 
 ### 1.5 ServiceItems
 
 **Collection:** `service-items` (NEW)  
-**Definition:** A billable service or fee observed in an iTrvl `service` segment that is NOT an experiential activity. Never displayed on itinerary pages. Informs knowledge base about service level and price composition.  
-**Examples:** Meet and Assist, VIP Lounge, Serengeti Camping Fee, Serengeti National Park Fee.  
-**NOT a ServiceItem:** an experiential activity (those go to Activities).  
-**Creation:** Scraper creates from `service` segments where `classifyActivity()` returns 'other'.
+**Definition:** A billable service or fee observed in an iTrvl itinerary that is NOT an experiential activity. Never displayed on itinerary landing pages. Informs the knowledge base about service level, included costs, and pricing composition.  
+**Examples:** Meet and Assist, VIP Lounge, Serengeti National Park Fee, Serengeti Camping Fee, Departure Tax.  
+**NOT a service item:** A genuine experiential activity (game drive, balloon flight, gorilla trek, etc.).  
+**Dedup key:** `slug` (unique constraint, generated from `name`).  
+**Auto-creation:** Scraper creates from `service` segments that `classifyActivity()` returns 'other' for.
 
 ---
 
-## 2. LocationMappings Global (replaces DestinationNameMappings)
+## 2. LocationMappings Global
 
 ### 2.1 Purpose
 
-Translation layer between external system naming and Kiuli's canonical hierarchy. When iTrvl says a stay location is "Serengeti Mobile", LocationMappings maps that to the canonical Destination "Serengeti National Park". When Wetu or Expert Africa introduce different naming, mappings are added here. No code changes required — one row in the admin UI.
+LocationMappings is the translation layer between external system naming and Kiuli's canonical entity hierarchy. When an external system provides a location string, LocationMappings answers: what Kiuli entity type is this, and which specific record does it resolve to?
+
+This global **replaces** `DestinationNameMappings`. The `DestinationNameMappings` and `DestinationNameMappings_mappings` tables are currently empty (confirmed). They remain in the DB as migration artefacts but are deregistered from payload.config.ts.
+
+`PropertyNameMappings` is unchanged. It handles property name aliases within a confirmed property entity.
 
 ### 2.2 Schema: `src/globals/LocationMappings.ts`
 
@@ -107,7 +115,7 @@ export const LocationMappings: GlobalConfig = {
           type: 'text',
           required: true,
           admin: {
-            description: 'Exact string as it appears in the source system, e.g. "Serengeti Mobile"',
+            description: 'Exact string from the source system, e.g. "Serengeti Mobile", "WIL", "Wilson Airport"',
           },
         },
         {
@@ -152,7 +160,7 @@ export const LocationMappings: GlobalConfig = {
           type: 'relationship',
           relationTo: 'properties',
           admin: {
-            description: 'Required when resolvedAs = property',
+            description: 'Required when resolvedAs = property. The stay supplierName is still the canonical property name; this confirms which record to link to.',
           },
         },
         {
@@ -167,7 +175,7 @@ export const LocationMappings: GlobalConfig = {
           name: 'notes',
           type: 'textarea',
           admin: {
-            description: 'Why this mapping exists — required for audit trail',
+            description: 'Why this mapping exists, e.g. "Serengeti Mobile is the operating concept for Nyasi Tented Camp. Destination is Serengeti National Park."',
           },
         },
       ],
@@ -176,33 +184,13 @@ export const LocationMappings: GlobalConfig = {
 }
 ```
 
-### 2.3 Resolution Algorithm (implemented in transform.js as `resolveStayLocation()`)
+### 2.3 Resolution Algorithm
 
-This function is called by `linkProperties()` for every stay segment. It returns one of four outcomes.
+Used by the scraper for every `stay` segment location string. Never runs for `flight`, `road`, `point`, `entry`, or `exit` segment locations.
 
 ```javascript
-/**
- * Resolves a stay segment's location string against LocationMappings and the
- * Destinations collection. Returns the canonical destination ID to use as the
- * property's parent, or null if resolution fails entirely.
- *
- * ONLY called for 'stay' segment types.
- *
- * @param {string} locationString - e.g. "Serengeti Mobile", "Tarangire National Park"
- * @param {string} countryName - e.g. "Tanzania"
- * @param {Map} destinationCache - country name → country destination ID
- * @param {object} headers - auth headers
- * @param {string} PAYLOAD_API_URL
- * @returns {Promise<{ destinationId: string|null, resolved: 'destination'|'country_fallback'|'failed' }>}
- */
-async function resolveStayLocation(locationString, countryName, destinationCache, headers, PAYLOAD_API_URL) {
-  if (!locationString) {
-    // No location string — fall back to country
-    const countryId = await lookupDestinationByCountry(countryName, destinationCache, headers, PAYLOAD_API_URL)
-    return { destinationId: countryId, resolved: 'country_fallback' }
-  }
-
-  // STEP 1: Query LocationMappings
+async function resolveLocationToDestination(locationString, countryId, headers, PAYLOAD_API_URL) {
+  // Step 1: Query LocationMappings
   const mappingsRes = await fetch(
     `${PAYLOAD_API_URL}/api/globals/location-mappings`,
     { headers }
@@ -210,75 +198,61 @@ async function resolveStayLocation(locationString, countryName, destinationCache
   if (mappingsRes.ok) {
     const mappingsData = await mappingsRes.json()
     const mappings = mappingsData.mappings || []
-    const match = mappings.find(m => {
-      const stringMatch = m.externalString?.toLowerCase() === locationString.toLowerCase()
-      const systemMatch = m.sourceSystem === 'itrvl' || m.sourceSystem === 'any'
-      return stringMatch && systemMatch
-    })
-    if (match) {
-      if (match.resolvedAs === 'destination' && match.destination) {
-        const destId = typeof match.destination === 'object' ? match.destination.id : match.destination
-        console.log(`[resolveStayLocation] LocationMappings: "${locationString}" → destination ${destId}`)
-        return { destinationId: destId, resolved: 'destination' }
+    
+    for (const mapping of mappings) {
+      if (mapping.externalString.toLowerCase() !== locationString.toLowerCase()) continue
+      if (mapping.sourceSystem !== 'itrvl' && mapping.sourceSystem !== 'any') continue
+      
+      if (mapping.resolvedAs === 'destination') {
+        const destId = typeof mapping.destination === 'object' ? mapping.destination.id : mapping.destination
+        console.log(`[resolveLocation] MAPPING: "${locationString}" → destination ${destId}`)
+        return destId  // Return destination ID
       }
-      if (match.resolvedAs === 'property') {
-        // This string is a property concept name, not a destination.
-        // Fall back to country level for the property's destination.
-        console.log(`[resolveStayLocation] LocationMappings: "${locationString}" → property (using country fallback)`)
-        const countryId = await lookupDestinationByCountry(countryName, destinationCache, headers, PAYLOAD_API_URL)
-        return { destinationId: countryId, resolved: 'country_fallback' }
-      }
-      if (match.resolvedAs === 'airport' || match.resolvedAs === 'ignore') {
-        console.log(`[resolveStayLocation] LocationMappings: "${locationString}" → ${match.resolvedAs} (country fallback)`)
-        const countryId = await lookupDestinationByCountry(countryName, destinationCache, headers, PAYLOAD_API_URL)
-        return { destinationId: countryId, resolved: 'country_fallback' }
+      if (mapping.resolvedAs === 'property' || mapping.resolvedAs === 'airport' || mapping.resolvedAs === 'ignore') {
+        console.log(`[resolveLocation] MAPPING: "${locationString}" resolves as ${mapping.resolvedAs} — using country fallback`)
+        return countryId  // Fall back to country — property destination is resolved separately
       }
     }
   }
-
-  // STEP 2: Direct name match in Destinations (type=destination only)
-  const countryId = await lookupDestinationByCountry(countryName, destinationCache, headers, PAYLOAD_API_URL)
-  const nameRes = await fetch(
+  
+  // Step 2: Direct name match in Destinations (type='destination')
+  const destRes = await fetch(
     `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(locationString)}&where[type][equals]=destination&limit=1`,
     { headers }
   )
-  if (nameRes.ok) {
-    const nameData = await nameRes.json()
-    if (nameData.docs?.[0]?.id) {
-      console.log(`[resolveStayLocation] Name match: "${locationString}" → ${nameData.docs[0].id}`)
-      return { destinationId: nameData.docs[0].id, resolved: 'destination' }
+  if (destRes.ok) {
+    const destData = await destRes.json()
+    if (destData.docs?.[0]?.id) {
+      console.log(`[resolveLocation] DIRECT MATCH: "${locationString}" → destination ${destData.docs[0].id}`)
+      return destData.docs[0].id
     }
   }
-
-  // STEP 3: Auto-create Destination record
-  // Only reached if no LocationMappings entry and no existing Destination record.
-  if (countryId) {
-    const slug = generateSlug(locationString)
-    const createRes = await fetch(`${PAYLOAD_API_URL}/api/destinations`, {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: locationString,
-        slug,
-        type: 'destination',
-        country: countryId,
-        _status: 'draft',
-      }),
-    })
-    if (createRes.ok) {
-      const created = await createRes.json()
-      const newId = created.doc?.id || created.id
-      console.log(`[resolveStayLocation] AUTO-CREATED destination: "${locationString}" → ${newId}`)
-      // NOTE: ContentProject creation for this destination is handled by the content cascade,
-      // not the scraper. The cascade will find this draft destination record and create the project.
-      return { destinationId: newId, resolved: 'destination' }
-    }
+  
+  // Step 3: Auto-create Destination
+  // Only runs for stay segments (caller responsibility to enforce this)
+  const slug = generateSlug(locationString)
+  const createRes = await fetch(`${PAYLOAD_API_URL}/api/destinations`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: locationString,
+      slug,
+      type: 'destination',
+      country: countryId,  // parent country relationship
+      _status: 'draft',
+    }),
+  })
+  if (createRes.ok) {
+    const created = await createRes.json()
+    const newId = created.doc?.id || created.id
+    console.log(`[resolveLocation] AUTO-CREATED destination: "${locationString}" → ${newId}`)
+    // ContentProject is created by content cascade on next run — not here
+    return newId
   }
-
-  // STEP 4: Failed — fall back to country
-  console.warn(`[resolveStayLocation] FAILED to resolve "${locationString}" — using country fallback`)
-  const fallbackId = await lookupDestinationByCountry(countryName, destinationCache, headers, PAYLOAD_API_URL)
-  return { destinationId: fallbackId, resolved: 'country_fallback' }
+  
+  // Step 4: Fall back to country
+  console.warn(`[resolveLocation] All resolution attempts failed for "${locationString}" — falling back to country ${countryId}`)
+  return countryId
 }
 ```
 
@@ -295,7 +269,7 @@ export const Airports: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     group: 'Knowledge Base',
-    defaultColumns: ['name', 'iataCode', 'type', 'country', 'observationCount'],
+    defaultColumns: ['name', 'iataCode', 'type', 'country', 'observationCount', 'updatedAt'],
   },
   access: {
     create: authenticated,
@@ -316,12 +290,13 @@ export const Airports: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
+      admin: { description: 'e.g. "wilson-airport", "kilimanjaro-international-airport"' },
     },
     {
       name: 'iataCode',
       type: 'text',
       index: true,
-      admin: { description: 'e.g. "WIL", "JRO", "MRE" — nullable for bush airstrips' },
+      admin: { description: 'e.g. "WIL", "JRO", "MRE" — nullable for bush airstrips without scheduled service' },
     },
     {
       name: 'icaoCode',
@@ -337,6 +312,7 @@ export const Airports: CollectionConfig = {
         { label: 'Domestic', value: 'domestic' },
         { label: 'Airstrip', value: 'airstrip' },
       ],
+      admin: { description: 'international = major international gateway; domestic = scheduled domestic service; airstrip = bush airstrip, no scheduled service' },
     },
     {
       name: 'city',
@@ -348,13 +324,13 @@ export const Airports: CollectionConfig = {
       type: 'relationship',
       relationTo: 'destinations',
       required: true,
-      admin: { description: 'Country this airport is in (destinations where type=country)' },
+      admin: { description: 'Parent country — must be a Destination record with type="country"' },
     },
     {
       name: 'nearestDestination',
       type: 'relationship',
       relationTo: 'destinations',
-      admin: { description: 'Primary safari destination this airport serves — nullable, populated manually or via Wetu' },
+      admin: { description: 'Primary safari destination this airport serves — nullable; populated manually or via LocationMappings' },
     },
     {
       name: 'coordinates',
@@ -368,120 +344,46 @@ export const Airports: CollectionConfig = {
       name: 'observationCount',
       type: 'number',
       defaultValue: 0,
-      admin: { readOnly: true, description: 'How many scraped itineraries include this airport' },
+      admin: { readOnly: true, description: 'How many scraped itineraries transit this airport' },
     },
   ],
 }
 ```
 
-### 3.1 Airport deduplication logic (in transform.js)
-
-Primary dedup key: `iataCode` (when not null).  
-Secondary dedup key: `slug` (when IATA unavailable).
+### 3.1 Airport Type Classification (scraper)
 
 ```javascript
-async function lookupOrCreateAirport(name, iataCode, countryId, headers, PAYLOAD_API_URL) {
-  // Try by IATA code first
-  if (iataCode) {
-    const res = await fetch(
-      `${PAYLOAD_API_URL}/api/airports?where[iataCode][equals]=${encodeURIComponent(iataCode)}&limit=1`,
-      { headers }
-    )
-    if (res.ok) {
-      const data = await res.json()
-      if (data.docs?.[0]?.id) {
-        return data.docs[0].id
-      }
-    }
-  }
-
-  // Try by slug
-  const slug = generateSlug(name)
-  const slugRes = await fetch(
-    `${PAYLOAD_API_URL}/api/airports?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
-    { headers }
-  )
-  if (slugRes.ok) {
-    const slugData = await slugRes.json()
-    if (slugData.docs?.[0]?.id) {
-      return slugData.docs[0].id
-    }
-  }
-
-  // Create
-  const createRes = await fetch(`${PAYLOAD_API_URL}/api/airports`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name,
-      slug,
-      iataCode: iataCode || null,
-      type: inferAirportType(name, iataCode),
-      country: countryId,
-      nearestDestination: null,
-      observationCount: 0,
-    }),
-  })
-  if (createRes.ok) {
-    const created = await createRes.json()
-    const newId = created.doc?.id || created.id
-    console.log(`[linkAirports] CREATED airport: "${name}" (${iataCode || 'no IATA'}) → ${newId}`)
-    return newId
-  }
-  console.error(`[linkAirports] Failed to create airport "${name}": ${createRes.status}`)
-  return null
-}
-
-function inferAirportType(name, iataCode) {
+function classifyAirportType(name, iataCode) {
   const n = name.toLowerCase()
+  // International airports typically have 'international' in name or 3-letter IATA
   if (n.includes('international')) return 'international'
-  if (n.includes('airstrip') || n.includes('strip') || n.includes('camp') || !iataCode) return 'airstrip'
+  // Bush airstrips typically have 'airstrip' or 'strip' in name, or are small known strips
+  if (n.includes('airstrip') || n.includes('strip') || n.includes('mara north') || n.includes('mara keekorok')) return 'airstrip'
+  // Default to domestic
   return 'domestic'
 }
 ```
 
-### 3.2 `linkAirports()` function (new, in transform.js)
+### 3.2 Airport Country Resolution (scraper)
+
+Airport segments provide `countryCode` (e.g. "KE", "TZ"). Scraper must map ISO code to destination record ID. Use a hardcoded lookup map (not a DB query) since countries are pre-seeded and fixed:
 
 ```javascript
-/**
- * Creates or looks up Airport records from point/entry/exit segments.
- * Returns Map of (iataCode || slug) → airportId.
- * Also increments observationCount on existing airports.
- */
-async function linkAirports(segments, destinationCache, headers, PAYLOAD_API_URL) {
-  const airportMap = new Map() // (iataCode || slug) → airportId
-
-  for (const segment of segments) {
-    const type = segment.type?.toLowerCase()
-    if (!['point', 'entry', 'exit'].includes(type)) continue
-
-    const name = segment.title || segment.supplierName || segment.location
-    if (!name) continue
-
-    const iataCode = segment.locationCode || null
-    const countryName = segment.country || segment.countryName
-    if (!countryName) continue
-
-    const countryId = await lookupDestinationByCountry(countryName, destinationCache, headers, PAYLOAD_API_URL)
-    if (!countryId) {
-      console.warn(`[linkAirports] Cannot resolve country "${countryName}" for airport "${name}" — skipping`)
-      continue
-    }
-
-    const dedupKey = iataCode || generateSlug(name)
-    if (airportMap.has(dedupKey)) continue
-
-    const airportId = await lookupOrCreateAirport(name, iataCode, countryId, headers, PAYLOAD_API_URL)
-    if (airportId) {
-      airportMap.set(dedupKey, airportId)
-      console.log(`[linkAirports] LINKED: "${name}" (${iataCode || 'no IATA'}) → ${airportId}`)
-    }
-  }
-
-  console.log(`[linkAirports] Total airports: ${airportMap.size}`)
-  return airportMap
+const COUNTRY_CODE_TO_ID = {
+  'KE': 2,   // Kenya
+  'TZ': 3,   // Tanzania
+  'UG': 4,   // Uganda
+  'RW': 5,   // Rwanda
+  'BW': 6,   // Botswana
+  'ZA': 7,   // South Africa
+  'ZM': 8,   // Zambia
+  'ZW': 9,   // Zimbabwe
+  'NA': 10,  // Namibia
+  'MZ': 11,  // Mozambique
 }
 ```
+
+If `countryCode` is not in this map, log a warning and leave country null. Do not create a new country record.
 
 ---
 
@@ -496,7 +398,7 @@ export const ServiceItems: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     group: 'Knowledge Base',
-    defaultColumns: ['name', 'category', 'serviceLevel', 'observationCount'],
+    defaultColumns: ['name', 'category', 'serviceLevel', 'observationCount', 'updatedAt'],
   },
   access: {
     create: authenticated,
@@ -517,6 +419,7 @@ export const ServiceItems: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
+      admin: { description: 'Generated from name — deduplication key' },
     },
     {
       name: 'category',
@@ -530,6 +433,7 @@ export const ServiceItems: CollectionConfig = {
         { label: 'Accommodation Supplement', value: 'accommodation_supplement' },
         { label: 'Other', value: 'other' },
       ],
+      admin: { description: 'Service item category — determines display and agentic builder logic' },
     },
     {
       name: 'serviceLevel',
@@ -540,55 +444,49 @@ export const ServiceItems: CollectionConfig = {
         { label: 'Premium', value: 'premium' },
         { label: 'Ultra Premium', value: 'ultra_premium' },
       ],
-    },
-    {
-      name: 'isInclusionIndicator',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: {
-        description: 'True if presence of this item means it is INCLUDED in the itinerary price',
-      },
+      admin: { description: 'Service tier indicator — used by agentic builder for itinerary quality scoring' },
     },
     {
       name: 'associatedAirport',
       type: 'relationship',
       relationTo: 'airports',
-      admin: { description: 'For airport_service items' },
+      admin: { description: 'Nullable — for airport_service category' },
     },
     {
       name: 'associatedDestination',
       type: 'relationship',
       relationTo: 'destinations',
-      admin: { description: 'For park_fee and conservation_fee items' },
+      admin: { description: 'Nullable — for park_fee and conservation_fee categories' },
+    },
+    {
+      name: 'isInclusionIndicator',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: { description: 'True if presence indicates cost is included in the itinerary price' },
     },
     {
       name: 'observationCount',
       type: 'number',
       defaultValue: 0,
-      admin: { readOnly: true },
+      admin: { readOnly: true, description: 'How many scraped itineraries include this service item' },
     },
     {
       name: 'observedInItineraries',
       type: 'relationship',
       relationTo: 'itineraries',
       hasMany: true,
-      admin: { readOnly: true },
+      admin: { readOnly: true, description: 'Which itineraries include this service item' },
     },
   ],
 }
 ```
 
-### 4.1 Service segment routing logic (in transform.js)
+### 4.1 Service Segment Classification (scraper)
 
 ```javascript
-/**
- * Called for every 'service' or 'activity' segment BEFORE any Activity logic.
- * Returns null if it should go to Activities (genuine experiential activity).
- * Returns classification object if it should go to ServiceItems.
- */
-function classifyAsServiceItem(name) {
+function classifyServiceItem(name) {
   const n = name.toLowerCase()
-
+  
   if (n.includes('meet and assist') || n.includes('meet & assist'))
     return { category: 'airport_service', serviceLevel: 'premium' }
   if (n.includes('vip lounge') || n.includes('vip fast') || n.includes('fast track') || n.includes('fast-track'))
@@ -605,187 +503,131 @@ function classifyAsServiceItem(name) {
     return { category: 'departure_tax', serviceLevel: 'standard' }
   if (n.includes('single supplement') || n.includes('peak supplement'))
     return { category: 'accommodation_supplement', serviceLevel: 'standard' }
-
-  return null // Not a service item — goes to Activities (where classifyActivity handles it)
+  
+  return { category: 'other', serviceLevel: 'standard' }
 }
 ```
 
-**Routing decision in `linkActivities()` / new `linkServiceItems()`:**
+### 4.2 Service Segment Routing Logic (scraper)
 
-For every `service` or `activity` segment:
-1. Run `classifyAsServiceItem(segment.name)`
-2. If result is NOT null → call `linkServiceItems()` with this segment and the classification
-3. If result IS null → proceed to existing `classifyActivity()` and `linkActivities()` logic
-
-### 4.2 `linkServiceItems()` function (new, in transform.js)
+For every iTrvl `service` segment:
 
 ```javascript
-/**
- * Creates or updates ServiceItem records for service segments that are not
- * experiential activities. Returns map of slug → serviceItemId and pending
- * observations for handler.js to finalize.
- */
-async function linkServiceItems(segments, airportMap, destinationCache, headers, PAYLOAD_API_URL) {
-  const serviceItemMap = new Map() // slug → serviceItemId
-  const pendingServiceItemObs = []
+const activityType = classifyActivity(segment.name)
 
-  for (const segment of segments) {
-    const type = segment.type?.toLowerCase()
-    if (type !== 'service' && type !== 'activity') continue
-
-    const itemName = segment.name || segment.title
-    if (!itemName) continue
-
-    const classification = classifyAsServiceItem(itemName)
-    if (!classification) continue // This is an experiential activity — skip here
-
-    const slug = generateSlug(itemName)
-
-    try {
-      let serviceItemId = serviceItemMap.get(slug) || null
-
-      if (!serviceItemId) {
-        // Check if exists
-        const res = await fetch(
-          `${PAYLOAD_API_URL}/api/service-items?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
-          { headers }
-        )
-        if (res.ok) {
-          const data = await res.json()
-          if (data.docs?.[0]?.id) {
-            serviceItemId = data.docs[0].id
-          }
-        }
-
-        if (!serviceItemId) {
-          // Resolve associated airport (look for airport name in segment name)
-          let associatedAirportId = null
-          for (const [key, airportId] of airportMap.entries()) {
-            // key is iataCode or slug — check if segment name includes it
-            if (itemName.toLowerCase().includes(key.toLowerCase())) {
-              associatedAirportId = airportId
-              break
-            }
-          }
-
-          // Resolve associated destination for park/conservation fees
-          let associatedDestinationId = null
-          if (classification.category === 'park_fee' || classification.category === 'conservation_fee') {
-            const country = segment.country || segment.countryName
-            if (country) {
-              // Try to find a destination mentioned in the item name
-              // e.g. "Serengeti National Park Fee" — look for "Serengeti" in destinations
-              // Best effort — destination linking is refined manually or via cascade
-              associatedDestinationId = null // Leave null; refined by humans or cascade
-            }
-          }
-
-          const createRes = await fetch(`${PAYLOAD_API_URL}/api/service-items`, {
-            method: 'POST',
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: itemName,
-              slug,
-              category: classification.category,
-              serviceLevel: classification.serviceLevel,
-              isInclusionIndicator: true,
-              associatedAirport: associatedAirportId,
-              associatedDestination: associatedDestinationId,
-              observationCount: 0,
-            }),
-          })
-
-          if (createRes.ok) {
-            const created = await createRes.json()
-            serviceItemId = created.doc?.id || created.id
-            console.log(`[linkServiceItems] CREATED: "${itemName}" → ${serviceItemId}`)
-          } else {
-            // Handle slug conflict (race condition on concurrent scrapes)
-            const retryRes = await fetch(
-              `${PAYLOAD_API_URL}/api/service-items?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
-              { headers }
-            )
-            if (retryRes.ok) {
-              const retryData = await retryRes.json()
-              serviceItemId = retryData.docs?.[0]?.id || null
-            }
-          }
-        }
-      }
-
-      if (serviceItemId) {
-        serviceItemMap.set(slug, serviceItemId)
-        pendingServiceItemObs.push({ serviceItemId, name: itemName })
-      }
-    } catch (err) {
-      console.error(`[linkServiceItems] Error for "${itemName}":`, err.message)
-    }
-  }
-
-  console.log(`[linkServiceItems] Total service items: ${serviceItemMap.size}`)
-  return { serviceItemMap, pendingServiceItemObs }
+if (activityType !== 'other') {
+  // → create/update Activities record (existing logic, unchanged)
+} else {
+  const { category, serviceLevel } = classifyServiceItem(segment.name)
+  // → create/update ServiceItems record (new logic)
 }
 ```
 
+### 4.3 ServiceItem Airport Association (scraper)
+
+After `linkAirports()` runs and returns an `airportMap`, when creating/updating a ServiceItem:
+
+```javascript
+// Extract airport name from service item name
+// Pattern: "Meet and Assist - [Airport Name] Arrival/Departure"
+function extractAirportFromServiceName(name, airportMap) {
+  // Try to match airport name from the service item name
+  for (const [key, airportId] of airportMap.entries()) {
+    // airportMap keys are IATA codes or slugs
+    // Check if the service item name contains any airport name
+    // Use the airports loaded during linkAirports() for name matching
+  }
+  return null // nullable — not all service items are airport-specific
+}
+```
+
+For the current test data, the airport associations are:
+- "Meet and Assist - Kilimanjaro Int Airport Arrival" → associatedAirport = Kilimanjaro International Airport (JRO)
+- "VIP Lounge - Kilimanjaro International Airport Arrival" → associatedAirport = Kilimanjaro International Airport (JRO)
+- "Serengeti Camping Fee" → associatedDestination = Serengeti National Park
+- "Serengeti National Park Fee" → associatedDestination = Serengeti National Park
+
+Note: The scraper resolves these associations when it has the airport and destination IDs available from earlier pipeline steps. Airport association is a best-effort match — if not matched, leave null. Do not fail the pipeline.
+
 ---
 
-## 5. Modified Collection: Activities (`src/collections/Activities.ts`)
+## 5. Modified Collection: `src/collections/Activities.ts`
 
-Remove `{ label: 'Other', value: 'other' }` from the type select options array.
+**One change only:** Remove `'other'` from the type select options.
 
-**Important:** This change is a Postgres enum modification. Postgres cannot drop an enum value while rows exist with that value. The data fix (Section 10, Step 4 — deleting Activity records with type='other') must be completed and verified BEFORE this schema change is applied and the migration run. See Section 10 for the correct execution order.
+The other option previously existed because there was no ServiceItems collection. With ServiceItems, 'other' service segments route there. After migration, no Activity record should have type='other'.
 
-The updated type enum after removing 'other':
-```
-game_drive, walking_safari, gorilla_trek, chimpanzee_trek,
-balloon_flight, boat_safari, canoe_safari, horseback_safari,
-cultural_visit, bush_dinner, sundowner, fishing, snorkeling,
-diving, spa, photography, birding, conservation_experience,
-community_visit, helicopter_flight
-```
-
----
-
-## 6. Modified Collection: ItineraryPatterns (`src/collections/ItineraryPatterns.ts`)
-
-Add two fields. Insert `regions` immediately after the existing `countries` field. Insert `serviceItems` immediately after the existing `transferSequence` field.
+Updated type options:
 
 ```typescript
-// After 'countries' field:
+options: [
+  { label: 'Game Drive', value: 'game_drive' },
+  { label: 'Walking Safari', value: 'walking_safari' },
+  { label: 'Gorilla Trek', value: 'gorilla_trek' },
+  { label: 'Chimpanzee Trek', value: 'chimpanzee_trek' },
+  { label: 'Balloon Flight', value: 'balloon_flight' },
+  { label: 'Boat Safari', value: 'boat_safari' },
+  { label: 'Canoe Safari', value: 'canoe_safari' },
+  { label: 'Horseback Safari', value: 'horseback_safari' },
+  { label: 'Cultural Visit', value: 'cultural_visit' },
+  { label: 'Bush Dinner', value: 'bush_dinner' },
+  { label: 'Sundowner', value: 'sundowner' },
+  { label: 'Fishing', value: 'fishing' },
+  { label: 'Snorkeling', value: 'snorkeling' },
+  { label: 'Diving', value: 'diving' },
+  { label: 'Spa', value: 'spa' },
+  { label: 'Photography', value: 'photography' },
+  { label: 'Birding', value: 'birding' },
+  { label: 'Conservation Experience', value: 'conservation_experience' },
+  { label: 'Community Visit', value: 'community_visit' },
+  { label: 'Helicopter Flight', value: 'helicopter_flight' },
+],
+```
+
+**CRITICAL:** The 'other' option must be removed from schema AFTER the data migration in Section 14 converts all existing type='other' Activity records to ServiceItems. If removed before, Payload will throw a validation error on existing records. Migration sequence in Section 14 enforces this order.
+
+---
+
+## 6. Modified Collection: `src/collections/ItineraryPatterns.ts`
+
+Add two fields:
+
+```typescript
+// After the 'countries' field, add:
 {
   name: 'regions',
   type: 'relationship',
   relationTo: 'destinations',
   hasMany: true,
   admin: {
-    description: 'Specific destinations/parks visited — not countries. e.g. Serengeti, Masai Mara, Tarangire.',
+    description: 'Specific destinations visited (not countries) — e.g. Serengeti National Park, Masai Mara',
   },
 },
 
-// After 'transferSequence' field:
+// After the 'transferSequence' field, add:
 {
   name: 'serviceItems',
   type: 'relationship',
   relationTo: 'service-items',
   hasMany: true,
   admin: {
-    description: 'Service items observed in this itinerary — fees, airport services, supplements.',
+    description: 'Service items observed in this itinerary — park fees, airport services, supplements',
   },
 },
 ```
 
 ---
 
-## 7. Modified Collection: Properties (`src/collections/Properties.ts`)
+## 7. Modified Collection: `src/collections/Properties.ts`
 
-Add `seasonalityData` inside the `accumulatedData` group, after `commonPairings`.
+Add `seasonalityData` inside the `accumulatedData` group, after `commonPairings`:
 
 ```typescript
 {
   name: 'seasonalityData',
   type: 'array',
   admin: {
-    description: 'Monthly observation counts — how many scraped itineraries include this property in each month of the year',
+    description: 'Monthly observation counts — how many scraped itineraries feature this property per month',
   },
   fields: [
     {
@@ -805,746 +647,766 @@ Add `seasonalityData` inside the `accumulatedData` group, after `commonPairings`
 
 ---
 
-## 8. Modified Collection: TransferRoutes (`src/collections/TransferRoutes.ts`)
+## 8. Modified Collection: `src/collections/TransferRoutes.ts`
 
-Add two fields after `toProperty`:
+Add two fields after `toDestination`:
 
 ```typescript
 {
   name: 'fromAirport',
   type: 'relationship',
   relationTo: 'airports',
-  admin: { description: 'Origin airport — nullable, for flight segments' },
+  admin: { description: 'Origin airport if applicable — in addition to fromDestination' },
 },
 {
   name: 'toAirport',
   type: 'relationship',
   relationTo: 'airports',
-  admin: { description: 'Destination airport — nullable, for flight segments' },
+  admin: { description: 'Destination airport if applicable — in addition to toDestination' },
 },
 ```
 
-These are additive alongside `fromDestination`/`toDestination`, not replacing them.
-
 ---
 
-## 9. Modified Global: payload.config.ts changes
+## 9. Property Type Classification (new function in transform.js)
 
-**Register:**
-- `Airports` collection
-- `ServiceItems` collection
-- `LocationMappings` global
+When auto-creating a Property record, the `type` field must be populated from the `supplierName`:
 
-**Deregister:**
-- `DestinationNameMappings` global (removed from config, DB table retained as migration artefact)
-
-The existing import and registration of `DestinationNameMappings` is removed. LocationMappings supersedes it. Do not drop the `destination_name_mappings` DB table.
-
----
-
-## 10. Required Changes to transform.js
-
-### 10.1 Updated `linkProperties()` signature and return value
-
-Current: `async function linkProperties(segments, destinationIds, destinationCache)`  
-Returns: `Map<accommodationName, propertyId>`
-
-**Updated:**
-- Now calls `resolveStayLocation()` for each stay's location string
-- Also returns a `stayDestinationMap` alongside `propertyMap`
-
-Updated return:
 ```javascript
-return {
-  propertyMap,        // Map<accommodationName, propertyId> — unchanged
-  stayDestinationMap, // Map<accommodationName, destinationId> — NEW
-                      // Maps each property's canonical parent destination ID
+function classifyPropertyType(name) {
+  const n = name.toLowerCase()
+  if (n.includes('tented camp') || n.includes('tented-camp')) return 'tented_camp'
+  if (n.includes('mobile camp') || n.includes('mobile-camp') || n.includes('mobile')) return 'mobile_camp'
+  if (n.includes(' camp') || n.endsWith('camp')) return 'camp'
+  if (n.includes('lodge')) return 'lodge'
+  if (n.includes('hotel') || n.includes('manor') || n.includes('house') || n.includes('retreat')) return 'hotel'
+  if (n.includes('villa') || n.includes('private')) return 'villa'
+  return 'lodge'  // default — most luxury properties in the Kiuli universe are lodges
 }
 ```
 
-`stayDestinationMap` is built during the property resolution loop:
+This function is called when creating a new Property record. It is NOT called when updating existing records.
+
+---
+
+## 10. Scraper: linkProperties() Rewrite
+
+Replace the destination resolution block inside `linkProperties()` with `resolveLocationToDestination()`. The key change is in step 3 (Create new Property if not found):
+
 ```javascript
-const stayDestinationMap = new Map()
+// BEFORE (wrong — uses country only):
+let destinationId = null;
+const country = stay.country || stay.countryName;
+if (country && destinationCache) {
+  destinationId = await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL);
+}
 
-// In the loop, for each stay:
-const { destinationId } = await resolveStayLocation(
-  stay.location, stay.country, destinationCache, headers, PAYLOAD_API_URL
-)
-stayDestinationMap.set(accommodationName, destinationId)
+// AFTER (correct — tries location first):
+let destinationId = null;
+const locationString = stay.location || stay.locationName || null;
+const country = stay.country || stay.countryName || null;
 
-// Use destinationId (not country ID) when creating the Property record
+if (locationString) {
+  const countryId = country ? await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL) : null;
+  if (countryId) {
+    destinationId = await resolveLocationToDestination(locationString, countryId, headers, PAYLOAD_API_URL);
+  }
+}
+
+// Fallback to country if location resolution failed
+if (!destinationId && country) {
+  destinationId = await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL);
+}
+// Fallback to first itinerary destination
+if (!destinationId && destinationIds.length > 0) {
+  destinationId = destinationIds[0];
+}
 ```
 
-### 10.2 Updated `linkActivities()` signature
-
-Current: `async function linkActivities(segments, propertyMap, destinationCache)`
-
-**Updated:** `async function linkActivities(segments, propertyMap, stayDestinationMap, destinationCache)`
-
-Inside the loop, replace country-based destination lookup with stay-based destination lookup:
+Also add `type` to the Property creation body:
 
 ```javascript
-// Current (WRONG):
-let currentCountry = null
-// ...tracks currentCountry from stays and calls:
+body: JSON.stringify({
+  name: accommodationName,
+  slug,
+  type: classifyPropertyType(accommodationName),  // ADD THIS
+  destination: destinationId,
+  // ... rest unchanged
+})
+```
+
+**IMPORTANT:** `resolveLocationToDestination()` must be defined in transform.js as a standalone async function (see Section 2.3). `lookupDestinationByCountry()` already exists and is unchanged.
+
+---
+
+## 11. Scraper: linkActivities() Fix
+
+Two changes:
+
+**Change 1: Destination resolution**
+
+Replace:
+```javascript
+const country = segment.country || segment.countryName || currentCountry;
 const destinationId = country
   ? await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL)
-  : null
+  : null;
+```
 
-// Corrected:
-let currentDestinationId = null
-// In stay tracking block:
+With:
+```javascript
+// Use the current stay's resolved destination, not the country
+// currentDestinationId is tracked alongside currentPropertyId (see below)
+const destinationId = currentDestinationId || null;
+```
+
+Add `currentDestinationId` tracking alongside `currentPropertyId`:
+
+```javascript
+// In the segment loop, before the loop starts:
+let currentPropertyId = null;
+let currentDestinationId = null;  // ADD THIS
+let currentCountry = null;
+
+// In the stay block handler:
 if (type === 'stay' || type === 'accommodation') {
-  const name = segment.name || segment.title || segment.supplierName
-  currentPropertyId = name ? (propertyMap.get(name) || null) : null
-  currentDestinationId = name ? (stayDestinationMap.get(name) || null) : null
-  continue
-}
-// When creating/updating Activity:
-// Use currentDestinationId directly, not lookupDestinationByCountry
-```
-
-**Also:** `linkActivities()` must now skip service segment types that `classifyAsServiceItem()` returns non-null for. Add this check at the top of the segment loop:
-
-```javascript
-if (classifyAsServiceItem(activityName) !== null) {
-  continue // This segment goes to linkServiceItems(), not Activities
-}
-```
-
-### 10.3 Updated `linkTransferRoutes()` signature
-
-Current: `async function linkTransferRoutes(segments, destinationCache)`
-
-**Updated:** `async function linkTransferRoutes(segments, stayDestinationMap, airportMap, destinationCache)`
-
-Inside the loop, track the preceding and following stay's destination:
-
-```javascript
-let precedingDestinationId = null
-let precedingPropertyName = null
-
-// In the loop, for stay segments:
-if (type === 'stay' || type === 'accommodation') {
-  const name = segment.name || segment.title || segment.supplierName
-  precedingDestinationId = name ? (stayDestinationMap.get(name) || null) : null
-  precedingPropertyName = name
-  propertyOrderIndex++
-  continue
-}
-```
-
-For transfer segments, resolve `fromDestination` from `precedingDestinationId`:
-
-```javascript
-// CURRENT (wrong — uses country):
-const fromDestinationId = fromCountry
-  ? await lookupDestinationByCountry(fromCountry, destinationCache, headers, PAYLOAD_API_URL)
-  : null
-
-// CORRECTED:
-const fromDestinationId = precedingDestinationId || null
-// toDestination: resolved from the NEXT stay in the sequence.
-// Implementation: build a look-ahead array before the loop.
-// For each transfer at index i, toDestination = stayDestinationMap of the
-// first stay segment that appears after position i in the segment array.
-```
-
-**Look-ahead implementation (before the loop):**
-```javascript
-// Build array of [segmentIndex, destinationId] for all stay segments
-const stayDestinationByIndex = []
-segments.forEach((seg, idx) => {
-  const t = seg.type?.toLowerCase()
-  if (t === 'stay' || t === 'accommodation') {
-    const name = seg.name || seg.title || seg.supplierName
-    const destId = name ? (stayDestinationMap.get(name) || null) : null
-    stayDestinationByIndex.push({ idx, destId })
-  }
-})
-
-// For each transfer segment at index i:
-function getToDestination(transferIdx) {
-  const nextStay = stayDestinationByIndex.find(s => s.idx > transferIdx)
-  return nextStay?.destId || null
-}
-```
-
-**Airport linking in transfer segments:**
-```javascript
-// For flight segments, try to match fromPoint/toPoint to airports
-const fromPointName = segment.fromPoint || segment.from
-const toPointName = segment.toPoint || segment.to
-
-let fromAirportId = null
-let toAirportId = null
-
-if (type === 'flight') {
-  for (const [key, airportId] of airportMap.entries()) {
-    if (fromPointName?.toLowerCase().includes(key.toLowerCase())) fromAirportId = airportId
-    if (toPointName?.toLowerCase().includes(key.toLowerCase())) toAirportId = airportId
-  }
-}
-
-// Include fromAirport/toAirport in route create/update:
-body: JSON.stringify({
-  from, to, slug, mode,
-  fromDestination: fromDestinationId,
-  toDestination: toDestinationId, // was never populated before
-  fromAirport: fromAirportId,
-  toAirport: toAirportId,
-  ...
-})
-```
-
-### 10.4 Fix observationCount bug in `linkActivities()`
-
-When creating a new Activity record:
-```javascript
-// CURRENT (wrong):
-observationCount: 1,
-
-// CORRECTED:
-observationCount: 0,
-// handler.js increments via (activity.observationCount || 0) + 1 → result = 1
-```
-
-### 10.5 Updated `transform()` main function call sequence
-
-```javascript
-// Current call sequence (wrong — missing new functions):
-const { ids: destinationIds, cache: destinationCache } = await linkDestinations(...)
-const propertyMap = await linkProperties(segments, destinationIds, destinationCache)
-const { routeMap, transferSequence, pendingTransferObs } = await linkTransferRoutes(segments, destinationCache)
-const { activityMap, pendingActivityObs } = await linkActivities(segments, propertyMap, destinationCache)
-
-// Corrected call sequence:
-const { ids: destinationIds, cache: destinationCache } = await linkDestinations(...)
-const { propertyMap, stayDestinationMap } = await linkProperties(segments, destinationIds, destinationCache)
-const airportMap = await linkAirports(segments, destinationCache, headers, PAYLOAD_API_URL)
-const { routeMap, transferSequence, pendingTransferObs } = await linkTransferRoutes(segments, stayDestinationMap, airportMap, destinationCache)
-const { activityMap, pendingActivityObs } = await linkActivities(segments, propertyMap, stayDestinationMap, destinationCache)
-const { serviceItemMap, pendingServiceItemObs } = await linkServiceItems(segments, airportMap, destinationCache, headers, PAYLOAD_API_URL)
-```
-
-Note: `headers` and `PAYLOAD_API_URL` must be defined at the top of `transform()` and passed through. Currently they are defined only inside each function. Move them to the outer function scope.
-
-### 10.6 Updated `_knowledgeBase` object
-
-Add to the `_knowledgeBase` object built in `transform()`:
-
-```javascript
-const _knowledgeBase = {
-  // Existing fields (unchanged):
-  orderedPropertyIds,
-  propertySequence,
-  transferSequence,
-  pendingTransferObs,
-  pendingActivityObs: pendingActivityObsList,
-  activityIds: [...activityMap.values()],
-  adultsCount,
-  childrenCount,
-  startDate: itinerary.startDate || null,
-
-  // NEW fields:
-  stayDestinationIds: [...new Set(stayDestinationMap.values())].filter(Boolean), // Destination-level IDs
-  serviceItemIds: [...new Set(serviceItemMap.values())],
-  pendingServiceItemObs,
-  airportIds: [...new Set(airportMap.values())],
-}
-```
-
----
-
-## 11. Required Changes to handler.js
-
-### 11.1 ServiceItem observations
-
-After the existing Activity observations block, add:
-
-```javascript
-// KNOWLEDGE BASE: ServiceItem observation dedup
-const pendingServiceItemObs = kb.pendingServiceItemObs || []
-if (pendingServiceItemObs.length > 0) {
-  console.log(`[Orchestrator] Processing ${pendingServiceItemObs.length} service item observations`)
-  for (const obs of pendingServiceItemObs) {
-    try {
-      const item = await payload.getById('service-items', obs.serviceItemId, { depth: 0 })
-      const existingObserved = (item.observedInItineraries || [])
-        .map(id => typeof id === 'object' ? id?.id : id)
-        .filter(id => id != null)
-
-      if (existingObserved.some(id => String(id) === String(payloadItinerary.id))) {
-        console.log(`[Orchestrator] ServiceItem already observed: ${obs.name} — skipping`)
-        continue
-      }
-
-      await payload.update('service-items', obs.serviceItemId, {
-        observationCount: (item.observationCount || 0) + 1,
-        observedInItineraries: [...existingObserved, payloadItinerary.id],
-      })
-      console.log(`[Orchestrator] ServiceItem obs recorded: ${obs.name}`)
-    } catch (err) {
-      console.error(`[Orchestrator] ServiceItem obs failed for ${obs.serviceItemId}: ${err.message}`)
-      // Non-fatal
-    }
-  }
-}
-```
-
-### 11.2 Airport observationCount increment
-
-After the ServiceItem block, add:
-
-```javascript
-// KNOWLEDGE BASE: Airport observation count
-const airportIds = kb.airportIds || []
-if (airportIds.length > 0) {
-  console.log(`[Orchestrator] Incrementing observation count for ${airportIds.length} airports`)
-  for (const airportId of airportIds) {
-    try {
-      const airport = await payload.getById('airports', airportId, { depth: 0 })
-      await payload.update('airports', airportId, {
-        observationCount: (airport.observationCount || 0) + 1,
-      })
-    } catch (err) {
-      console.error(`[Orchestrator] Airport count failed for ${airportId}: ${err.message}`)
-      // Non-fatal
-    }
-  }
-}
-```
-
-### 11.3 ItineraryPatterns: add `regions` and `serviceItems`
-
-In the existing `patternData` object, add two fields:
-
-```javascript
-const patternData = {
-  // ... all existing fields unchanged ...
-  countries: transformedData.destinations || [], // country-level IDs — unchanged
-
-  // NEW:
-  regions: kb.stayDestinationIds || [],          // destination-level IDs
-  serviceItems: kb.serviceItemIds || [],          // service item IDs
-}
-```
-
-### 11.4 Properties.accumulatedData: add `seasonalityData`
-
-In the existing accumulatedData PATCH in the property loop, add `seasonalityData`:
-
-```javascript
-// Determine travel month from itinerary start date
-const travelMonth = kb.startDate ? parseInt(kb.startDate.slice(5, 7)) : null
-
-// Inside the property loop, add to accumulatedData PATCH:
-let updatedSeasonality = existingProperty.accumulatedData?.seasonalityData || []
-if (travelMonth) {
-  const existingMonthIdx = updatedSeasonality.findIndex(s => s.month === travelMonth)
-  if (existingMonthIdx >= 0) {
-    updatedSeasonality = updatedSeasonality.map((s, idx) =>
-      idx === existingMonthIdx ? { ...s, observationCount: (s.observationCount || 0) + 1 } : s
-    )
+  const name = segment.name || segment.title || segment.supplierName;
+  currentPropertyId = name ? (propertyMap.get(name) || null) : null;
+  currentCountry = segment.country || segment.countryName || null;
+  // ADD THIS: resolve destination for the current stay
+  const locationString = segment.location || segment.locationName || null;
+  const country = segment.country || segment.countryName || null;
+  if (locationString && country) {
+    const countryId = await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL);
+    currentDestinationId = countryId ? await resolveLocationToDestination(locationString, countryId, headers, PAYLOAD_API_URL) : null;
+  } else if (country) {
+    currentDestinationId = await lookupDestinationByCountry(country, destinationCache, headers, PAYLOAD_API_URL);
   } else {
-    updatedSeasonality = [...updatedSeasonality, { month: travelMonth, observationCount: 1 }]
+    currentDestinationId = null;
   }
+  continue;
 }
+```
 
-// In the PATCH body:
-await payload.update('properties', propertyId, {
-  accumulatedData: {
-    pricePositioning: { observations: updatedObs, observationCount: updatedObs.length },
-    commonPairings: mergedPairings,
-    seasonalityData: updatedSeasonality, // NEW
-  },
-})
+**Change 2: observationCount initialization**
+
+When creating a new Activity record, change:
+```javascript
+observationCount: 1,   // WRONG — handler increments from 0, result should be 1 not 2
+```
+To:
+```javascript
+observationCount: 0,   // handler.js increments: (activity.observationCount || 0) + 1 → 1
 ```
 
 ---
 
-## 12. Update content cascade: destination-resolver.ts
+## 12. Scraper: New linkAirports() Function
 
-In `content-system/cascade/destination-resolver.ts`, change the global lookup from `destination-name-mappings` to `location-mappings`, filtering for `resolvedAs = 'destination'`:
+Add to transform.js. Returns a Map of `iataCode|slug → airportId`. Called after linkDestinations(), before linkTransferRoutes().
+
+```javascript
+async function linkAirports(segments, headers, PAYLOAD_API_URL) {
+  const airportMap = new Map()  // iataCode or slug → airportId
+  const processedKeys = new Set()
+
+  const airportSegmentTypes = new Set(['point', 'entry', 'exit'])
+
+  for (const segment of segments) {
+    const type = segment.type?.toLowerCase()
+    if (!airportSegmentTypes.has(type)) continue
+
+    const airportName = segment.title || segment.name || segment.supplierName || segment.location
+    const iataCode = segment.locationCode || null  // e.g. "JRO", "WIL", "ARK"
+    const countryCode = segment.countryCode || null
+
+    if (!airportName) continue
+
+    const lookupKey = iataCode ? iataCode.toUpperCase() : generateSlug(airportName)
+    if (processedKeys.has(lookupKey)) continue
+    processedKeys.add(lookupKey)
+
+    let airportId = null
+
+    // Lookup by IATA code (most reliable dedup)
+    if (iataCode) {
+      const res = await fetch(
+        `${PAYLOAD_API_URL}/api/airports?where[iataCode][equals]=${encodeURIComponent(iataCode.toUpperCase())}&limit=1`,
+        { headers }
+      )
+      if (res.ok) {
+        const data = await res.json()
+        if (data.docs?.[0]?.id) {
+          airportId = data.docs[0].id
+          airportMap.set(lookupKey, airportId)
+          // Update observationCount
+          await fetch(`${PAYLOAD_API_URL}/api/airports/${airportId}`, {
+            method: 'PATCH',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ observationCount: (data.docs[0].observationCount || 0) + 1 }),
+          })
+          console.log(`[linkAirports] FOUND by IATA: ${iataCode} → ${airportId}`)
+          continue
+        }
+      }
+    }
+
+    // Lookup by slug
+    if (!airportId) {
+      const slug = generateSlug(airportName)
+      const res = await fetch(
+        `${PAYLOAD_API_URL}/api/airports?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+        { headers }
+      )
+      if (res.ok) {
+        const data = await res.json()
+        if (data.docs?.[0]?.id) {
+          airportId = data.docs[0].id
+          airportMap.set(lookupKey, airportId)
+          await fetch(`${PAYLOAD_API_URL}/api/airports/${airportId}`, {
+            method: 'PATCH',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ observationCount: (data.docs[0].observationCount || 0) + 1 }),
+          })
+          console.log(`[linkAirports] FOUND by slug: ${slug} → ${airportId}`)
+          continue
+        }
+      }
+    }
+
+    // Create airport
+    if (!airportId) {
+      const countryId = countryCode ? COUNTRY_CODE_TO_ID[countryCode.toUpperCase()] || null : null
+      const slug = generateSlug(airportName)
+      const createRes = await fetch(`${PAYLOAD_API_URL}/api/airports`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: airportName,
+          slug,
+          iataCode: iataCode ? iataCode.toUpperCase() : null,
+          type: classifyAirportType(airportName, iataCode),
+          city: segment.location || null,
+          country: countryId,
+          nearestDestination: null,  // populated manually via Payload admin
+          observationCount: 1,
+        }),
+      })
+      if (createRes.ok) {
+        const created = await createRes.json()
+        airportId = created.doc?.id || created.id
+        airportMap.set(lookupKey, airportId)
+        console.log(`[linkAirports] CREATED: ${airportName} (${iataCode || 'no IATA'}) → ${airportId}`)
+      } else {
+        const errText = await createRes.text()
+        // Handle slug conflict
+        if (createRes.status === 400 && errText.includes('unique')) {
+          const slug = generateSlug(airportName)
+          const retryRes = await fetch(
+            `${PAYLOAD_API_URL}/api/airports?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+            { headers }
+          )
+          if (retryRes.ok) {
+            const retryData = await retryRes.json()
+            if (retryData.docs?.[0]?.id) {
+              airportId = retryData.docs[0].id
+              airportMap.set(lookupKey, airportId)
+              console.log(`[linkAirports] LINKED (after conflict): ${airportName} → ${airportId}`)
+            }
+          }
+        }
+        if (!airportId) console.error(`[linkAirports] Failed to create ${airportName}: ${createRes.status}`)
+      }
+    }
+  }
+
+  console.log(`[linkAirports] Total airports: ${airportMap.size}`)
+  return airportMap
+}
+```
+
+---
+
+## 13. Scraper: linkTransferRoutes() Fix
+
+**fromDestination and toDestination resolution — precise algorithm:**
+
+For each transfer segment, the endpoints (from/to) can be:
+- A Property name (in the propertyMap) → use that property's destination
+- An Airport name (in the airportMap) → use that airport's nearestDestination (nullable)
+- An unknown string → use the country-level destination as fallback
+
+The current `linkTransferRoutes()` passes `destinationCache` (country → id). This must be extended to also accept `propertyMap` and `airportMap` so it can resolve endpoints correctly.
+
+Add a helper function:
+
+```javascript
+async function resolveEndpointDestination(endpointName, propertyMap, airportMap, destinationCache, headers, PAYLOAD_API_URL) {
+  if (!endpointName) return null
+
+  // Check if endpoint is a known property
+  const propertyId = propertyMap.get(endpointName)
+  if (propertyId) {
+    // Fetch property to get its destination
+    const res = await fetch(`${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=1`, { headers })
+    if (res.ok) {
+      const prop = await res.json()
+      const destId = typeof prop.destination === 'object' ? prop.destination.id : prop.destination
+      if (destId) return destId
+    }
+  }
+
+  // Check if endpoint is a known airport (by name)
+  for (const [key, airportId] of airportMap.entries()) {
+    // airportMap keys are IATA codes or slugs — check if endpoint name generates the same slug
+    if (generateSlug(endpointName) === key || endpointName.toUpperCase() === key) {
+      // Fetch airport to get nearestDestination
+      const res = await fetch(`${PAYLOAD_API_URL}/api/airports/${airportId}?depth=1`, { headers })
+      if (res.ok) {
+        const airport = await res.json()
+        const destId = typeof airport.nearestDestination === 'object'
+          ? airport.nearestDestination?.id
+          : airport.nearestDestination
+        if (destId) return destId
+        // Airport has no nearestDestination yet — use airport's country as fallback
+        const countryId = typeof airport.country === 'object' ? airport.country?.id : airport.country
+        return countryId || null
+      }
+    }
+  }
+
+  // Unknown endpoint — fall back to country from destinationCache
+  // Use the segment's country field (passed in caller)
+  return null
+}
+```
+
+Update `linkTransferRoutes()` signature to accept `propertyMap` and `airportMap`:
+
+```javascript
+async function linkTransferRoutes(segments, destinationCache, propertyMap, airportMap) {
+```
+
+When creating/updating a TransferRoute, resolve fromDestination and toDestination:
+
+```javascript
+const from = segment.from || segment.fromPoint || segment.location || null
+const to = segment.to || segment.toPoint || null
+
+const fromDestinationId = await resolveEndpointDestination(from, propertyMap, airportMap, destinationCache, headers, PAYLOAD_API_URL)
+const toDestinationId = await resolveEndpointDestination(to, propertyMap, airportMap, destinationCache, headers, PAYLOAD_API_URL)
+
+// Also resolve airport links
+const fromAirportKey = from ? from.toUpperCase() : null
+const toAirportKey = to ? to.toUpperCase() : null
+const fromAirportId = fromAirportKey && airportMap.has(fromAirportKey) ? airportMap.get(fromAirportKey) : null
+const toAirportId = toAirportKey && airportMap.has(toAirportKey) ? airportMap.get(toAirportKey) : null
+```
+
+Use `fromDestinationId`, `toDestinationId`, `fromAirportId`, `toAirportId` when creating/patching TransferRoute records.
+
+---
+
+## 14. Scraper: handler.js — ItineraryPatterns regions and serviceItems
+
+After creating/updating the ItineraryPatterns record, populate:
+
+**regions:** Collect the unique destination IDs from `propertySequence`. For each property in the sequence, fetch its `destination` field. Deduplicate. These are the specific Destination records (parks, reserves, cities), not countries. Only add destination-type records (type='destination'), exclude country-type records.
+
+```javascript
+// Collect region IDs from property sequence
+const regionIds = []
+for (const seq of _knowledgeBase.propertySequence) {
+  if (!seq.property) continue
+  const propRes = await payload.getById('properties', seq.property, { depth: 1 })
+  const destId = typeof propRes.destination === 'object' ? propRes.destination?.id : propRes.destination
+  if (destId && !regionIds.includes(destId)) {
+    // Verify it's a destination-type record, not a country
+    // If depth=1, propRes.destination.type is available
+    const destType = typeof propRes.destination === 'object' ? propRes.destination?.type : null
+    if (!destType || destType === 'destination') {
+      regionIds.push(destId)
+    }
+  }
+}
+// Update ItineraryPatterns with regions
+await payload.update('itinerary-patterns', patternId, { regions: regionIds })
+```
+
+**serviceItems:** Pass `serviceItemIds` from `linkServiceItems()` (new function in transform.js, analogous to `linkActivities()` but for ServiceItems). Update ItineraryPatterns with those IDs.
+
+---
+
+## 15. Scraper: transform() Function — Call Sequence Update
+
+The `transform()` function currently calls:
+1. `linkDestinations()`
+2. `linkProperties()`
+3. `linkTransferRoutes(segments, destinationCache)`
+4. `linkActivities(segments, propertyMap, destinationCache)`
+
+New call sequence:
+1. `linkDestinations()`
+2. `linkProperties()` ← now uses `resolveLocationToDestination()`
+3. `linkAirports(segments, headers, PAYLOAD_API_URL)` ← NEW
+4. `linkTransferRoutes(segments, destinationCache, propertyMap, airportMap)` ← signature updated
+5. `linkActivities(segments, propertyMap, destinationCache)` ← destination resolution fixed
+6. `linkServiceItems(segments, propertyMap, airportMap, destinationCache)` ← NEW (analogous to linkActivities)
+
+Add to `_knowledgeBase` in `transform()`:
+```javascript
+serviceItemIds: [...serviceItemMap.values()],
+airportIds: [...airportMap.values()],
+```
+
+---
+
+## 16. payload.config.ts Updates
+
+Add imports and register:
+```typescript
+import { Airports } from './collections/Airports'
+import { ServiceItems } from './collections/ServiceItems'
+import { LocationMappings } from './globals/LocationMappings'
+```
+
+In `collections` array: add `Airports`, `ServiceItems`  
+In `globals` array: add `LocationMappings`, remove `DestinationNameMappings`
+
+---
+
+## 17. content-system/cascade/destination-resolver.ts Update
+
+Change the global it reads from:
 
 ```typescript
-// CURRENT:
+// BEFORE:
 const mappingsData = await payload.findGlobal({ slug: 'destination-name-mappings' })
-const mappings = mappingsData.mappings || []
-
-// UPDATED:
+// AFTER:
 const mappingsData = await payload.findGlobal({ slug: 'location-mappings' })
-const mappings = (mappingsData.mappings || []).filter(m => m.resolvedAs === 'destination')
-// The rest of the alias matching logic is unchanged — use mapping.destination relationship
+
+// BEFORE: search mappings[].aliases for match
+// AFTER: search mappings[] where resolvedAs === 'destination', match on externalString
+for (const mapping of mappings) {
+  if (mapping.resolvedAs !== 'destination') continue
+  if (mapping.externalString.toLowerCase() === locationName.toLowerCase()) {
+    const destId = typeof mapping.destination === 'object' ? mapping.destination.id : mapping.destination
+    return { action: 'found', payloadId: destId, ... }
+  }
+}
 ```
 
 ---
 
-## 13. Execution Order (MANDATORY — do not change the order)
+## 18. Required Data Fixes (exact SQL and Payload operations)
 
-### Step 1: Data fixes — execute via direct DB queries
+These run in this exact sequence. Each step is verified before the next starts.
 
-This must happen BEFORE schema files are changed. While Activity records with type='other' exist, the schema cannot remove 'other' from the enum.
+### Step A: Create Serengeti National Park destination
 
-**Step 1a: Create Serengeti National Park destination**
-```sql
-INSERT INTO destinations (name, slug, type, country_id, _status, updated_at, created_at)
-VALUES (
-  'Serengeti National Park',
-  'serengeti-national-park',
-  'destination',
-  3,
-  'draft',
-  NOW(),
-  NOW()
-)
-RETURNING id;
--- Note the returned ID — needed in Step 1b and 1c
+Via Payload API (not direct SQL — Payload must process it for draft status and version history):
+
+```
+POST /api/destinations
+{
+  name: "Serengeti National Park",
+  slug: "serengeti-national-park",
+  type: "destination",
+  country: 3,   // Tanzania
+  _status: "draft"
+}
 ```
 
-**Step 1b: Fix all four property destination_id values**
+Record the new ID returned. Call it `SERENGETI_ID`.
 
-Match by NAME, not by ID:
-```sql
--- Nyasi Tented Camp → Serengeti National Park (use ID from Step 1a)
-UPDATE properties SET destination_id = <new_serengeti_id>
-WHERE name = 'Nyasi Tented Camp';
+**Verification:** `SELECT id, name, type, country_id FROM destinations WHERE slug = 'serengeti-national-park';` → must return exactly 1 row with type='destination', country_id=3.
 
--- Little Chem Chem → Tarangire National Park (id=35)
-UPDATE properties SET destination_id = 35
-WHERE name = 'Little Chem Chem';
+### Step B: Fix Nyasi Tented Camp destination
 
--- Mwiba Lodge → Mwiba Wildlife Reserve (id=37)
-UPDATE properties SET destination_id = 37
-WHERE name = 'Mwiba Lodge';
-
--- Legendary Lodge → Arusha (id=34)
-UPDATE properties SET destination_id = 34
-WHERE name = 'Legendary Lodge';
+```
+PATCH /api/properties/41
+{ destination: SERENGETI_ID }
 ```
 
-**Step 1c: Delete wrong destination record**
+**Verification:** `SELECT destination_id FROM properties WHERE id = 41;` → must equal SERENGETI_ID.
+
+### Step C: Fix remaining property destinations (confirm they're correct)
+
+```
+PATCH /api/properties/42   { destination: 37 }  // Mwiba Lodge → Mwiba Wildlife Reserve
+PATCH /api/properties/40   { destination: 35 }  // Little Chem Chem → Tarangire National Park
+PATCH /api/properties/39   { destination: 34 }  // Legendary Lodge → Arusha
+```
+
+**Verification:** 
 ```sql
--- First verify no other records reference id=36 (Serengeti Mobile)
+SELECT p.name, d.name AS destination, d.type 
+FROM properties p JOIN destinations d ON p.destination_id = d.id 
+ORDER BY p.id;
+```
+Expected result:
+```
+Legendary Lodge   | Arusha                  | destination
+Little Chem Chem  | Tarangire National Park | destination
+Nyasi Tented Camp | Serengeti National Park | destination
+Mwiba Lodge       | Mwiba Wildlife Reserve  | destination
+```
+Any other result = FAIL.
+
+### Step D: Create ServiceItems for the 6 misclassified Activity records
+
+Create the following ServiceItem records via Payload API:
+
+1. name: "Meet and Assist - Kilimanjaro Int Airport Arrival", slug: "meet-and-assist-kilimanjaro-int-airport-arrival", category: "airport_service", serviceLevel: "premium", isInclusionIndicator: true, observationCount: 1
+2. name: "VIP Lounge - Kilimanjaro International Airport Arrival", slug: "vip-lounge-kilimanjaro-international-airport-arrival", category: "airport_service", serviceLevel: "ultra_premium", isInclusionIndicator: true, observationCount: 1
+3. name: "Serengeti Camping Fee", slug: "serengeti-camping-fee", category: "park_fee", serviceLevel: "standard", isInclusionIndicator: true, observationCount: 1
+4. name: " Serengeti National Park Fee", slug: "serengeti-national-park-fee", category: "park_fee", serviceLevel: "standard", isInclusionIndicator: true, observationCount: 1
+
+Note: The leading space in " Serengeti National Park Fee" is the actual name as stored in the Activities table. The slug strips it. Use the trimmed name "Serengeti National Park Fee" when creating the ServiceItem.
+
+5. name: "Meet and Assist - Kilimanjaro Int Airport Departure", slug: "meet-and-assist-kilimanjaro-int-airport-departure", category: "airport_service", serviceLevel: "premium", isInclusionIndicator: true, observationCount: 1
+6. name: "VIP Lounge - Kilimanjaro International Airport Departure", slug: "vip-lounge-kilimanjaro-international-airport-departure", category: "airport_service", serviceLevel: "ultra_premium", isInclusionIndicator: true, observationCount: 1
+
+**Verification:** `SELECT id, name, category, service_level FROM service_items ORDER BY id;` → must return exactly 6 rows with categories matching the above.
+
+### Step E: Delete Activity records 8, 9, 10, 11, 13, 14 (but NOT 12)
+
+These are the 6 misclassified records. Activity id=12 (Serengeti Balloon Safari, type=balloon_flight) is correct and must remain.
+
+Deletion must handle the `activities_rels` table. Delete child rows first, then the parent:
+
+```sql
+DELETE FROM activities_rels WHERE parent_id IN (8, 9, 10, 11, 13, 14);
+DELETE FROM activities WHERE id IN (8, 9, 10, 11, 13, 14);
+```
+
+Note: Payload versioning may also have rows in `_activities_v` and `_activities_v_rels`. Check and delete:
+
+```sql
+SELECT id FROM _activities_v WHERE parent_id IN (8, 9, 10, 11, 13, 14);
+-- If rows exist:
+DELETE FROM _activities_v_rels WHERE parent_id IN (SELECT id FROM _activities_v WHERE parent_id IN (8, 9, 10, 11, 13, 14));
+DELETE FROM activities_suitability WHERE parent_id IN (8, 9, 10, 11, 13, 14);
+DELETE FROM _activities_v WHERE parent_id IN (8, 9, 10, 11, 13, 14);
+```
+
+**Verification:** 
+```sql
+SELECT id, name, type FROM activities;
+```
+Expected: exactly 1 row — id=12, name="Serengeti Balloon Safari", type="balloon_flight".
+
+### Step F: Fix Activity id=12 destination
+
+Serengeti Balloon Safari currently has destinations=[Tanzania/id=3]. Update to point to Serengeti National Park:
+
+```
+PATCH /api/activities/12
+{ destinations: [SERENGETI_ID] }
+```
+
+**Verification:** 
+```sql
+SELECT a.name, d.name AS destination, d.type 
+FROM activities a 
+JOIN activities_rels r ON r.parent_id = a.id AND r.path = 'destinations'
+JOIN destinations d ON d.id = r.destinations_id
+WHERE a.id = 12;
+```
+Expected: "Serengeti Balloon Safari" | "Serengeti National Park" | "destination"
+
+### Step G: Delete wrong Destination record (id=36)
+
+First verify no FK references remain:
+```sql
 SELECT COUNT(*) FROM properties WHERE destination_id = 36;
--- Expected: 0 (after Step 1b fixes Nyasi)
+-- Expected: 0
+SELECT COUNT(*) FROM activities_rels WHERE destinations_id = 36;
+-- Expected: 0 (after Step E+F)
+SELECT COUNT(*) FROM itinerary_patterns_rels WHERE destinations_id = 36;
+-- Expected: 0 or fix first
+```
 
-SELECT COUNT(*) FROM destinations WHERE country_id = 36;
--- Expected: 0 (Serengeti Mobile has no child destinations)
-
--- Safe to delete:
+Then delete:
+```sql
 DELETE FROM destinations WHERE id = 36 AND name = 'Serengeti Mobile';
--- Expected: 1 row deleted
 ```
 
-**Step 1d: Migrate Activity records to ServiceItems**
+**Verification:** `SELECT id FROM destinations WHERE id = 36;` → 0 rows.
 
-The ServiceItems table does not exist yet (it's created in Step 2). Therefore Step 1d cannot use the service-items table. Instead, delete the wrong Activity records now and the ServiceItem records will be created by the NEXT scrape (after Step 3 deploys the updated scraper).
+### Step H: Add LocationMappings entry
 
-Delete Activity records that are not genuine experiential activities:
-```sql
-DELETE FROM activities WHERE name IN (
-  'Meet and Assist - Kilimanjaro Int Airport Arrival',
-  'VIP Lounge -  Kilimanjaro International Airport Arrival',
-  'Serengeti Camping Fee',
-  ' Serengeti National Park Fee',
-  'Meet and Assist - Kilimanjaro Int Airport Departure',
-  'VIP Lounge -  Kilimanjaro International Airport Departure'
-);
--- Expected: 6 rows deleted
+Via Payload admin UI (not API — first entry in a new global):
+- externalString: "Serengeti Mobile"
+- sourceSystem: "itrvl"
+- resolvedAs: "destination"
+- destination: SERENGETI_ID (Serengeti National Park)
+- notes: "Serengeti Mobile is the mobile camp operating concept for Nyasi Tented Camp. The actual destination is Serengeti National Park."
 
--- Clean up orphaned relationships
-DELETE FROM activities_rels WHERE parent_id NOT IN (SELECT id FROM activities);
+### Step I: Update ItineraryPatterns record (id=2)
+
+The existing ItineraryPatterns record has `countries=[Tanzania/id=3]` only. After schema migration adds the `regions` field, populate it:
+
 ```
-
-Verify only Serengeti Balloon Safari remains:
-```sql
-SELECT id, name, type FROM activities;
--- Expected: exactly 1 row: Serengeti Balloon Safari, balloon_flight
+PATCH /api/itinerary-patterns/2
+{
+  regions: [SERENGETI_ID, 37, 35, 34],  // Serengeti NP, Mwiba Wildlife Reserve, Tarangire NP, Arusha
+  serviceItems: [IDs of the 6 ServiceItems created in Step D]
+}
 ```
-
-**Step 1e: Update ItineraryPatterns.countries to reflect corrected destinations**
-
-The existing ItineraryPatterns record links to country-level destinations via itinerary_patterns_rels. After the scraper upgrade runs (Step 3), the next scrape will repopulate these correctly. No manual fix needed here — the existing record will be overwritten on next scrape.
-
-**Step 1f: Verify Step 1 complete before proceeding**
-```sql
--- All properties at destination level (not country level):
-SELECT p.name, d.name AS destination, d.type
-FROM properties p JOIN destinations d ON p.destination_id = d.id;
--- Expected: 4 rows, all d.type = 'destination'
-
--- Only one Activity record remains:
-SELECT id, name, type FROM activities;
--- Expected: 1 row (Serengeti Balloon Safari)
-
--- Serengeti Mobile destination deleted:
-SELECT id, name FROM destinations WHERE name = 'Serengeti Mobile';
--- Expected: 0 rows
-
--- Serengeti National Park exists:
-SELECT id, name, type, country_id FROM destinations WHERE name = 'Serengeti National Park';
--- Expected: 1 row, type='destination', country_id=3
-```
-
-**DO NOT PROCEED to Step 2 until Step 1f queries all pass.**
 
 ---
 
-### Step 2: Schema files — create and modify TypeScript files
+## 19. Implementation Sequence
 
-Create:
-- `src/collections/Airports.ts`
-- `src/collections/ServiceItems.ts`
-- `src/globals/LocationMappings.ts`
+Steps must be executed in this exact order. No step starts before the previous is verified with the specified query.
 
-Modify:
-- `src/collections/Activities.ts` — remove `{ label: 'Other', value: 'other' }` from type select
-- `src/collections/ItineraryPatterns.ts` — add `regions` and `serviceItems` fields
-- `src/collections/Properties.ts` — add `seasonalityData` inside `accumulatedData` group
-- `src/collections/TransferRoutes.ts` — add `fromAirport` and `toAirport` fields
-- `src/payload.config.ts` — register Airports, ServiceItems, LocationMappings; remove DestinationNameMappings
+```
+Step 1: Schema files (Sections 2–8, 16)
+  ↓ verified: all .ts files exist and compile without errors
+Step 2: Payload migration
+  ↓ verified: new tables exist in DB (Section 20, Gate 1)
+Step 3: Data fixes A–I (Section 18)
+  ↓ verified: each step's verification query passes before next step
+Step 4: Remove 'other' from Activities type enum (now safe — no records have type='other')
+  ↓ verified: schema compiles, Payload admin loads Activities without error
+Step 5: Update content cascade (Section 17)
+  ↓ verified: cascade reads from location-mappings global without error
+Step 6: Update scraper (Sections 10–15)
+  ↓ verified: transform.js compiles, no undefined function references
+Step 7: Deploy and test scrape (Section 20, Gates 2–4)
+```
 
 ---
 
-### Step 3: Generate and run migration
+## 20. Ungameable Verification Gates
 
-```bash
-pnpm payload migrate:create
-```
+These gates verify data content, not just structure. A gate fails if any expected value is wrong — even if the structure is correct.
 
-This generates a migration file in `src/migrations/`. Inspect the generated file before running. Verify it:
-- Creates `airports` table
-- Creates `service_items` table
-- Creates `service_items_rels` table
-- Adds `from_airport_id` and `to_airport_id` columns to `transfer_routes`
-- Adds `regions` relationship path to `itinerary_patterns_rels`
-- Adds `service_items` relationship path to `itinerary_patterns_rels`
-- Adds `seasonality_data` array table for properties
-- Modifies the activities type enum to remove 'other'
+### Gate 1: Schema migration complete
 
-If the migration file looks correct:
-```bash
-pnpm payload migrate
-```
+Run after Step 2.
 
-**Verify migration:**
 ```sql
--- New tables exist:
-SELECT table_name FROM information_schema.tables
-WHERE table_schema = 'public'
-AND table_name IN ('airports', 'service_items', 'service_items_rels')
+-- New tables exist
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('airports', 'service_items', 'location_mappings', 'location_mappings_mappings')
 ORDER BY table_name;
--- Expected: 3 rows
+-- Expected: 4 rows
 
--- TransferRoutes has new columns:
-SELECT column_name FROM information_schema.columns
-WHERE table_name = 'transfer_routes'
-AND column_name IN ('from_airport_id', 'to_airport_id');
--- Expected: 2 rows
+-- airports columns exist
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'airports' 
+AND column_name IN ('id', 'name', 'slug', 'iata_code', 'type', 'country_id', 'nearest_destination_id', 'observation_count')
+ORDER BY column_name;
+-- Expected: 8 rows (exact column names depend on Payload naming convention — adjust if needed)
 
--- 'other' removed from activities type enum:
-SELECT enumlabel FROM pg_enum e
-JOIN pg_type t ON e.enumtypid = t.oid
-WHERE t.typname LIKE '%activ%' AND enumlabel = 'other';
+-- ItineraryPatterns has regions path in rels table (will exist after first record update, not immediately)
+-- Skip this check until after Step I
+
+-- activities table no longer has type='other' as a valid stored value 
+-- (cannot check schema constraint directly — check via Gate 3 Step E verification instead)
+```
+
+### Gate 2: Data fixes complete
+
+Run after Step 3 (all sub-steps A–I complete).
+
+```sql
+-- Gate 2A: Serengeti National Park exists as destination
+SELECT id, name, type, country_id FROM destinations 
+WHERE slug = 'serengeti-national-park';
+-- Expected: 1 row, type='destination', country_id=3
+
+-- Gate 2B: Serengeti Mobile is gone
+SELECT id FROM destinations WHERE name = 'Serengeti Mobile';
 -- Expected: 0 rows
+
+-- Gate 2C: All 4 properties point to destination-type records (not country-type)
+SELECT p.name, d.name AS destination, d.type 
+FROM properties p JOIN destinations d ON p.destination_id = d.id 
+ORDER BY p.id;
+-- Expected exactly:
+-- Legendary Lodge   | Arusha                  | destination
+-- Little Chem Chem  | Tarangire National Park | destination
+-- Nyasi Tented Camp | Serengeti National Park | destination
+-- Mwiba Lodge       | Mwiba Wildlife Reserve  | destination
+
+-- Gate 2D: Activities table has exactly 1 record
+SELECT id, name, type FROM activities;
+-- Expected: exactly 1 row — id=12, name='Serengeti Balloon Safari', type='balloon_flight'
+
+-- Gate 2E: Balloon Safari points to Serengeti National Park (not Tanzania)
+SELECT d.name, d.type FROM activities_rels r 
+JOIN destinations d ON d.id = r.destinations_id
+WHERE r.parent_id = 12 AND r.path = 'destinations';
+-- Expected: 1 row, name='Serengeti National Park', type='destination'
+
+-- Gate 2F: Service items exist with correct categories
+SELECT name, category, service_level FROM service_items ORDER BY id;
+-- Expected: 6 rows
+-- 2 with category='airport_service', service_level='ultra_premium' (VIP Lounges)
+-- 2 with category='airport_service', service_level='premium' (Meet and Assist)
+-- 2 with category='park_fee', service_level='standard' (fees)
+
+-- Gate 2G: No activity records with wrong category still exist
+SELECT COUNT(*) FROM activities WHERE type = 'other';
+-- Expected: 0
 ```
 
-**DO NOT PROCEED to Step 4 until Step 3 verification passes.**
+### Gate 3: Scraper test — after scraping 1 new itinerary
+
+Run after Step 7. Use the same Tanzania itinerary (same URL) to test idempotency, OR use a Kenya itinerary to test new-country handling.
+
+```sql
+-- Gate 3A: No properties linked to country-type destinations
+SELECT p.name, d.name, d.type 
+FROM properties p JOIN destinations d ON p.destination_id = d.id 
+WHERE d.type = 'country';
+-- Expected: 0 rows
+
+-- Gate 3B: No activity records with type='other'
+SELECT id, name, type FROM activities WHERE type = 'other';
+-- Expected: 0 rows
+
+-- Gate 3C: Airports table populated (at minimum KIA exists)
+SELECT id, name, iata_code, type FROM airports ORDER BY id;
+-- Expected: at minimum 1 row containing 'Kilimanjaro' with iata_code='JRO'
+
+-- Gate 3D: ServiceItems populated (at minimum the 6 migrated records still exist)
+SELECT COUNT(*) FROM service_items;
+-- Expected: >= 6
+
+-- Gate 3E: ItineraryPatterns has regions (not just countries)
+SELECT path, COUNT(*) FROM itinerary_patterns_rels 
+GROUP BY path ORDER BY path;
+-- Expected: path='countries' AND path='regions' both present
+-- regions must have >= 1 row referencing a destination-type record
+
+-- Gate 3F: TransferRoutes have fromDestination pointing to destination-type records (not country)
+SELECT tr.from, tr.to, d.name, d.type 
+FROM transfer_routes tr 
+JOIN destinations d ON d.id = tr.from_destination_id
+ORDER BY tr.id;
+-- Expected: all rows show d.type='destination', not 'country'
+-- If this is a re-scrape of the Tanzania itinerary, from_destination should be
+-- 'Arusha', 'Tarangire National Park', 'Serengeti National Park', or 'Mwiba Wildlife Reserve'
+-- NOT 'Tanzania'
+```
 
 ---
 
-### Step 4: Register LocationMappings and update cascade
-
-4a. Verify LocationMappings global is accessible:
-```
-GET /api/globals/location-mappings
-Expected: 200 OK, { mappings: [] }
-```
-
-4b. Seed the Serengeti Mobile mapping via Payload API:
-```bash
-curl -X PATCH /api/globals/location-mappings \
-  -H "Authorization: users API-Key <PAYLOAD_API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "mappings": [{
-      "externalString": "Serengeti Mobile",
-      "sourceSystem": "itrvl",
-      "resolvedAs": "destination",
-      "destination": <serengeti_national_park_id>,
-      "notes": "Serengeti Mobile is Nyasi Tented Camps mobile camp concept. The actual destination is Serengeti National Park."
-    }]
-  }'
-```
-
-4c. Update `content-system/cascade/destination-resolver.ts` per Section 12.
-
----
-
-### Step 5: Update scraper (transform.js and handler.js)
-
-Implement all changes from Sections 10 and 11. This is the largest code change. The complete function call sequence in `transform()` must match Section 10.5 exactly.
-
----
-
-### Step 6: Deploy
-
-Deploy the updated Next.js app (schema changes) to Vercel. This triggers the production migration. Deploy the updated Lambda functions (transform.js, handler.js).
-
----
-
-### Step 7: Test scrape and verify
-
-Scrape one test itinerary through the full pipeline. Then run all verification queries from Section 14.
-
----
-
-## 14. Ungameable Verification Queries
-
-These queries verify specific named entities and values, not just row counts. Run after Step 7.
-
-### V1: Property hierarchy is correct
-
-```sql
-SELECT p.name AS property, d.name AS destination, d.type AS dest_type
-FROM properties p
-JOIN destinations d ON p.destination_id = d.id
-ORDER BY p.name;
-```
-
-**Expected — exact values, not just counts:**
-```
-Legendary Lodge     | Arusha                  | destination
-Little Chem Chem    | Tarangire National Park  | destination
-Mwiba Lodge         | Mwiba Wildlife Reserve   | destination
-Nyasi Tented Camp   | Serengeti National Park  | destination
-```
-
-Any row showing `dest_type = 'country'` is a failure.
-
-### V2: Wrong destination record deleted
-
-```sql
-SELECT id, name FROM destinations WHERE name = 'Serengeti Mobile';
-```
-
-Expected: 0 rows. If 1 row, Step 1c failed.
-
-### V3: Activity records are correct
-
-```sql
-SELECT name, type, observation_count FROM activities ORDER BY name;
-```
-
-Expected minimum: Serengeti Balloon Safari with type=balloon_flight and observation_count=1 (not 2) after ONE scrape.  
-Any row with type='other' is a failure.  
-Any row with observation_count=2 after a single scrape is a failure (the observationCount bug).
-
-### V4: ServiceItems exist with correct names and categories
-
-```sql
-SELECT name, category, service_level FROM service_items ORDER BY name;
-```
-
-Expected: rows matching the service segments from the test itinerary, with correct categories. Example expected rows (names must match the iTrvl segment names exactly):
-```
-Meet and Assist - Kilimanjaro Int Airport Arrival    | airport_service | premium
-Meet and Assist - Kilimanjaro Int Airport Departure  | airport_service | premium
-Serengeti Camping Fee                                | park_fee        | standard
-Serengeti National Park Fee                          | park_fee        | standard
-VIP Lounge - ... Arrival                             | airport_service | ultra_premium
-VIP Lounge - ... Departure                           | airport_service | ultra_premium
-```
-
-Any ServiceItem with category='other' that matches one of the above names is a failure.
-
-### V5: Airports created with correct data
-
-```sql
-SELECT name, iata_code, type AS airport_type,
-       d.name AS country_name, d.type AS country_type
-FROM airports a
-JOIN destinations d ON a.country_id = d.id
-ORDER BY a.name;
-```
-
-Expected: at least one airport row. Each row must have:
-- `country_type = 'country'` (not 'destination')
-- `iata_code` populated where iTrvl provided `locationCode`
-- `airport_type` is one of: international, domestic, airstrip
-
-### V6: TransferRoutes have fromDestination and toDestination at correct level
-
-```sql
-SELECT tr.from, tr.to,
-       fd.name AS from_dest, fd.type AS from_type,
-       td.name AS to_dest, td.type AS to_type
-FROM transfer_routes tr
-LEFT JOIN destinations fd ON tr.from_destination_id = fd.id
-LEFT JOIN destinations td ON tr.to_destination_id = td.id
-ORDER BY tr.from;
-```
-
-Expected: `from_type` and `to_type` where not null must be 'destination', not 'country'.  
-Expected: `to_dest` is now populated (was always null before).
-
-### V7: ItineraryPatterns has regions (destination-level, not country-level)
-
-```sql
-SELECT ip.id,
-       d_countries.name AS country_name, d_countries.type AS country_type,
-       d_regions.name AS region_name, d_regions.type AS region_type
-FROM itinerary_patterns ip
-LEFT JOIN itinerary_patterns_rels ipr_c ON ipr_c.parent_id = ip.id AND ipr_c.path = 'countries'
-LEFT JOIN destinations d_countries ON d_countries.id = ipr_c.destinations_id
-LEFT JOIN itinerary_patterns_rels ipr_r ON ipr_r.parent_id = ip.id AND ipr_r.path = 'regions'
-LEFT JOIN destinations d_regions ON d_regions.id = ipr_r.destinations_id
-ORDER BY ip.id;
-```
-
-Expected: at least one `region_type = 'destination'` row (e.g. Serengeti National Park).  
-Expected: `countries` path rows have `country_type = 'country'`.
-
-### V8: LocationMappings global is seeded
-
-```
-GET /api/globals/location-mappings
-Expected: { mappings: [{ externalString: "Serengeti Mobile", resolvedAs: "destination", ... }] }
-```
-
-### V9: No enum remnants
-
-```sql
-SELECT enumlabel FROM pg_enum e
-JOIN pg_type t ON e.enumtypid = t.oid
-WHERE t.typname LIKE '%activ%' AND enumlabel = 'other';
-```
-
-Expected: 0 rows.
-
-### V10: Properties.seasonalityData is populated
-
-```sql
-SELECT p.name, ps.month, ps.observation_count
-FROM properties p
-JOIN properties_accumulated_data_seasonality_data ps ON ps._parent_id = p.id
-ORDER BY p.name, ps.month;
-```
-
-Expected: at least one row per scraped property, with correct month number matching the test itinerary's travel month.
-
----
-
-## 15. What This Document Does Not Change
+## 21. What This Document Does Not Change
 
 - V7 two-field editorial pattern on Itineraries — unchanged
-- Destinations collection structure (countries and destinations in same table with type discriminator) — unchanged and correct
+- Destinations collection structure (country/destination in same table with type discriminator) — unchanged
 - PropertyNameMappings global — unchanged
-- Content cascade orchestration logic — only destination-resolver.ts changes (global slug reference)
-- KIULI_AGENTIC_VISION.md — this document implements what that vision specifies
+- Content cascade orchestration logic — unchanged; only destination resolver source changes
+- ItineraryPatterns `countries` field — unchanged; `regions` is additive
+- KIULI_AGENTIC_VISION.md — this document implements it; does not override it
 
 ---
 
 *KIULI CANONICAL SCHEMA SPECIFICATION — Version 2.0*  
-*"Slow is smooth. Smooth is fast."*
+*"Verify data content, not structure. Structure can be faked. Data cannot."*

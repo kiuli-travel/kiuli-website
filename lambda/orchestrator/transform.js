@@ -478,6 +478,7 @@ async function linkActivities(segments, propertyMap, destinationCache) {
   const activityMap = new Map();
   const slugCache = new Map();
   const activityPropertyLinks = new Map(); // slug → Set<propertyId>
+  const pendingActivityObs = []; // Collected here, written in handler.js with itineraryId
 
   let currentPropertyId = null;
   let currentCountry = null;
@@ -543,13 +544,13 @@ async function linkActivities(segments, propertyMap, destinationCache) {
             method: 'PATCH',
             headers,
             body: JSON.stringify({
-              observationCount: (existingActivity.observationCount || 0) + 1,
               destinations: updatedDestinations,
               properties: updatedProperties,
             }),
           });
-          console.log(`[linkActivities] UPDATED: ${activityName} (${(existingActivity.observationCount || 0) + 1} observations)`);
+          console.log(`[linkActivities] UPDATED: ${activityName} (destinations/properties updated; observationCount deferred to handler.js)`);
           activityPropertyLinks.set(slug, new Set([currentPropertyId].filter(Boolean)));
+          pendingActivityObs.push({ activityId, slug: activityName });
 
         } else {
           const createRes = await fetch(`${PAYLOAD_API_URL}/api/activities`, {
@@ -569,8 +570,9 @@ async function linkActivities(segments, propertyMap, destinationCache) {
             const created = await createRes.json();
             activityId = created.doc?.id || created.id;
             activityMap.set(slug, activityId);
-            console.log(`[linkActivities] CREATED: ${activityName} → ${activityId}`);
             activityPropertyLinks.set(slug, new Set([currentPropertyId].filter(Boolean)));
+            pendingActivityObs.push({ activityId, slug: activityName });
+            console.log(`[linkActivities] CREATED: ${activityName} → ${activityId}`);
           } else {
             const errText = await createRes.text();
             if (createRes.status === 400 && errText.includes('unique')) {
@@ -584,6 +586,7 @@ async function linkActivities(segments, propertyMap, destinationCache) {
                   activityId = retryData.docs[0].id;
                   activityMap.set(slug, activityId);
                   activityPropertyLinks.set(slug, new Set([currentPropertyId].filter(Boolean)));
+                  pendingActivityObs.push({ activityId, slug: activityName });
                   console.log(`[linkActivities] LINKED (after conflict): ${activityName}`);
                 }
               }
@@ -635,7 +638,7 @@ async function linkActivities(segments, propertyMap, destinationCache) {
   }
 
   console.log(`[linkActivities] Total activities: ${activityMap.size}`);
-  return activityMap;
+  return { activityMap, pendingActivityObs };
 }
 
 /**
@@ -956,7 +959,7 @@ function mapSegmentToBlock(segment, mediaMapping = {}, propertyMap) {
     blockType = 'stay';
   } else if (type === 'service' || type === 'activity') {
     blockType = 'activity';
-  } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat' || type === 'entry' || type === 'exit' || type === 'point') {
+  } else if (type === 'flight' || type === 'road' || type === 'transfer' || type === 'boat' || type === 'helicopter' || type === 'entry' || type === 'exit' || type === 'point') {
     blockType = 'transfer';
   } else {
     // Log unknown segment types for debugging
@@ -1028,6 +1031,7 @@ function mapSegmentToBlock(segment, mediaMapping = {}, propertyMap) {
     let transferType = 'road';
     if (type === 'flight') transferType = 'flight';
     if (type === 'boat') transferType = 'boat';
+    if (type === 'helicopter') transferType = 'helicopter';
     if (type === 'entry') transferType = 'entry';
     if (type === 'exit') transferType = 'exit';
     if (type === 'point') transferType = 'point';
@@ -1271,7 +1275,7 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
 
   // Link transfer routes and activities
   const { routeMap: transferRouteMap, transferSequence, pendingTransferObs } = await linkTransferRoutes(segments, destinationCache);
-  const activityMap = await linkActivities(segments, propertyMap, destinationCache);
+  const { activityMap, pendingActivityObs: pendingActivityObsList } = await linkActivities(segments, propertyMap, destinationCache);
 
   // Extract pax counts from the itinerary-level data
   const adultsCount = itinerary.adults ?? null;
@@ -1303,6 +1307,7 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     propertySequence,
     transferSequence,
     pendingTransferObs,
+    pendingActivityObs: pendingActivityObsList,
     activityIds: [...activityMap.values()],
     adultsCount,
     childrenCount,

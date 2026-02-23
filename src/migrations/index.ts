@@ -55,6 +55,7 @@ import * as migration_20260219_fix_version_table_columns from './20260219_fix_ve
 import * as migration_20260222_143340 from './20260222_143340';
 import * as migration_20260222_190335 from './20260222_190335';
 import * as migration_20260222_190422 from './20260222_190422';
+import * as migration_20260223_074555 from './20260223_074555';
 
 export const migrations = [
   {
@@ -340,6 +341,11 @@ export const migrations = [
   {
     up: migration_20260222_190422.up,
     down: migration_20260222_190422.down,
-    name: '20260222_190422'
+    name: '20260222_190422',
+  },
+  {
+    up: migration_20260223_074555.up,
+    down: migration_20260223_074555.down,
+    name: '20260223_074555'
   },
 ];

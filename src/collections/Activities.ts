@@ -136,5 +136,15 @@ export const Activities: CollectionConfig = {
         description: 'How many scraped itineraries include this activity',
       },
     },
+    {
+      name: 'observedInItineraries',
+      type: 'relationship',
+      relationTo: 'itineraries',
+      hasMany: true,
+      admin: {
+        readOnly: true,
+        description: 'Itineraries that have contributed to observationCount — used for dedup on re-scrape',
+      },
+    },
   ],
 }

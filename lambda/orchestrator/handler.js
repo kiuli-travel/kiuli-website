@@ -373,6 +373,36 @@ exports.handler = async (event) => {
     }
 
     // ============================================================
+    // KNOWLEDGE BASE: Activity observation dedup
+    // ============================================================
+    const pendingActivityObs = kb.pendingActivityObs || [];
+    if (pendingActivityObs.length > 0) {
+      console.log(`[Orchestrator] Processing ${pendingActivityObs.length} activity observations`);
+      for (const obs of pendingActivityObs) {
+        try {
+          const activity = await payload.getById('activities', obs.activityId, { depth: 0 });
+          const existingObserved = (activity.observedInItineraries || [])
+            .map(id => typeof id === 'object' ? id.id : id)
+            .map(String);
+
+          if (existingObserved.includes(String(payloadItinerary.id))) {
+            console.log(`[Orchestrator] Activity already observed for itinerary ${payloadItinerary.id}: ${obs.slug} — skipping`);
+            continue;
+          }
+
+          await payload.update('activities', obs.activityId, {
+            observationCount: (activity.observationCount || 0) + 1,
+            observedInItineraries: [...existingObserved, String(payloadItinerary.id)],
+          });
+          console.log(`[Orchestrator] Activity obs recorded: ${obs.slug} (count: ${(activity.observationCount || 0) + 1})`);
+        } catch (err) {
+          console.error(`[Orchestrator] Activity obs failed for ${obs.activityId}: ${err.message}`);
+          // Non-fatal — continue
+        }
+      }
+    }
+
+    // ============================================================
     // KNOWLEDGE BASE: accumulatedData updates
     // ============================================================
     const orderedPropertyIds = kb.orderedPropertyIds || [];

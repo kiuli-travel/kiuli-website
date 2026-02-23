@@ -688,6 +688,168 @@ srv.tool(
   }
 );
 
+// -- lambda_status ----------------------------------------------------------
+// Read-only. Queries AWS for the deployed configuration of each Lambda.
+// The Description field is stamped with "git:<hash> deployed:<timestamp>"
+// by deploy.sh. Comparing deployedGitHash against currentHead is the
+// definitive proof that source code == deployed code.
+srv.tool(
+  "lambda_status",
+  "Get deployed status for Kiuli Lambda functions from AWS. Returns State, LastModified, CodeSize, and the git hash stamped in Description by deploy.sh. syncStatus shows CURRENT/BEHIND/NO_HASH_STAMPED for each function. This is the authoritative check — source code in git means nothing until this shows CURRENT.",
+  {
+    function: z
+      .enum(["all", "scraper", "orchestrator", "image-processor", "labeler", "finalizer"])
+      .default("all")
+      .describe("Which function to check. Default: all"),
+  },
+  async ({ function: fn }) => {
+    const FUNCTION_MAP = {
+      scraper:           "kiuli-scraper",
+      orchestrator:      "kiuli-v6-orchestrator",
+      "image-processor": "kiuli-v6-image-processor",
+      labeler:           "kiuli-v6-labeler",
+      finalizer:         "kiuli-v6-finalizer",
+    };
+
+    const targets = fn === "all"
+      ? Object.entries(FUNCTION_MAP)
+      : [[fn, FUNCTION_MAP[fn]]];
+
+    const results = {};
+    for (const [key, name] of targets) {
+      try {
+        const { stdout } = await execAsync(
+          `aws lambda get-function-configuration --function-name ${name} --region eu-north-1 ` +
+          `--query '{State:State,LastModified:LastModified,CodeSize:CodeSize,Description:Description}' --output json`,
+          { timeout: 20000 }
+        );
+        const data = JSON.parse(stdout.trim());
+        // Extract git hash from description (format: "git:abc1234 deployed:...")
+        const hashMatch = (data.Description || "").match(/git:([a-f0-9]+)/);
+        data.deployedGitHash = hashMatch ? hashMatch[1] : null;
+        results[key] = data;
+      } catch (err) {
+        results[key] = {
+          error: ((err.stdout || "") + " " + (err.stderr || err.message || "")).trim(),
+        };
+      }
+    }
+
+    // Get current HEAD for comparison
+    const headResult = await runGit(["log", "-1", "--format=%h %s"]);
+    const currentHash = await runGit(["rev-parse", "--short", "HEAD"]);
+
+    // Build sync status summary
+    const syncStatus = {};
+    for (const [key, data] of Object.entries(results)) {
+      if (data.error) {
+        syncStatus[key] = "ERROR";
+      } else if (!data.deployedGitHash) {
+        syncStatus[key] = "NO_HASH_STAMPED — run deploy.sh to stamp";
+      } else if (data.deployedGitHash === currentHash.stdout) {
+        syncStatus[key] = "CURRENT";
+      } else {
+        syncStatus[key] = `BEHIND — deployed: ${data.deployedGitHash}, head: ${currentHash.stdout}`;
+      }
+    }
+
+    const allCurrent = Object.values(syncStatus).every(s => s === "CURRENT");
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          currentHead: currentHash.stdout,
+          currentCommit: headResult.stdout,
+          allCurrent,
+          syncStatus,
+          functions: results,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// -- lambda_logs ------------------------------------------------------------
+// Read-only. Tails CloudWatch logs for a Lambda function.
+// Use this after a test scrape to confirm new code actually executed.
+// The log messages are specific to each code path — if you see
+// "[Orchestrator] Writing N TransferRoute observations" it means that block ran.
+srv.tool(
+  "lambda_logs",
+  "Tail recent CloudWatch logs for a Kiuli Lambda function. Use after a test scrape to confirm new code executed. Filter by keyword to find specific log lines — e.g. filter='TransferRoute obs' to confirm that code path ran.",
+  {
+    function: z
+      .enum(["scraper", "orchestrator", "image-processor", "labeler", "finalizer"])
+      .describe("Which Lambda function's logs to retrieve"),
+    since: z
+      .string()
+      .default("10m")
+      .describe("How far back to look. Examples: '5m', '30m', '1h'. Default: 10m"),
+    filter: z
+      .string()
+      .optional()
+      .describe("Optional keyword to filter log lines. Case-insensitive. Use this to confirm specific code paths ran."),
+  },
+  async ({ function: fn, since, filter }) => {
+    const FUNCTION_MAP = {
+      scraper:           "kiuli-scraper",
+      orchestrator:      "kiuli-v6-orchestrator",
+      "image-processor": "kiuli-v6-image-processor",
+      labeler:           "kiuli-v6-labeler",
+      finalizer:         "kiuli-v6-finalizer",
+    };
+
+    const name = FUNCTION_MAP[fn];
+    const logGroup = `/aws/lambda/${name}`;
+
+    // Build command — pipe through grep if filter supplied
+    let cmd = `aws logs tail ${logGroup} --since ${since} --region eu-north-1 --format short 2>&1`;
+    if (filter) {
+      // Use grep -i for case-insensitive; || true so non-zero exit on no match doesn't throw
+      cmd += ` | grep -i ${JSON.stringify(filter)} || true`;
+    }
+
+    try {
+      const { stdout } = await execAsync(cmd, {
+        timeout: 30000,
+        maxBuffer: 1024 * 1024 * 2, // 2MB
+      });
+      const output = stdout.trim();
+      const lines = output ? output.split("\n") : [];
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            function: name,
+            logGroup,
+            since,
+            filter: filter || null,
+            lineCount: lines.length,
+            output: output || "(no logs in this time window)",
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      const output = ((err.stdout || "") + (err.stderr || "")).trim();
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            function: name,
+            logGroup,
+            since,
+            filter: filter || null,
+            lineCount: 0,
+            output: output || "(error retrieving logs)",
+            error: err.message,
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
 } // end registerTools
 
 // ---------------------------------------------------------------------------

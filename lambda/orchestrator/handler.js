@@ -382,17 +382,17 @@ exports.handler = async (event) => {
         try {
           const activity = await payload.getById('activities', obs.activityId, { depth: 0 });
           const existingObserved = (activity.observedInItineraries || [])
-            .map(id => typeof id === 'object' ? id.id : id)
-            .map(String);
+            .map(id => typeof id === 'object' ? id?.id : id)
+            .filter(id => id != null && id !== 0 && id !== '0');
 
-          if (existingObserved.includes(String(payloadItinerary.id))) {
+          if (existingObserved.some(id => String(id) === String(payloadItinerary.id))) {
             console.log(`[Orchestrator] Activity already observed for itinerary ${payloadItinerary.id}: ${obs.slug} — skipping`);
             continue;
           }
 
           await payload.update('activities', obs.activityId, {
             observationCount: (activity.observationCount || 0) + 1,
-            observedInItineraries: [...existingObserved, String(payloadItinerary.id)],
+            observedInItineraries: [...existingObserved, payloadItinerary.id],
           });
           console.log(`[Orchestrator] Activity obs recorded: ${obs.slug} (count: ${(activity.observationCount || 0) + 1})`);
         } catch (err) {

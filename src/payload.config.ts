@@ -26,6 +26,8 @@ import { Properties } from './collections/Properties'
 import { Activities } from './collections/Activities'
 import { TransferRoutes } from './collections/TransferRoutes'
 import { ItineraryPatterns } from './collections/ItineraryPatterns'
+import { Airports } from './collections/Airports'
+import { ServiceItems } from './collections/ServiceItems'
 import { ContentProjects } from './collections/ContentProjects'
 import { ContentJobs } from './collections/ContentJobs'
 import { SourceRegistry } from './collections/SourceRegistry'
@@ -34,7 +36,7 @@ import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { PropertyNameMappings } from './globals/PropertyNameMappings'
 import { ContentSystemSettings } from './globals/ContentSystemSettings'
-import { DestinationNameMappings } from './globals/DestinationNameMappings'
+import { LocationMappings } from './globals/LocationMappings'
 import { BrandVoice } from './globals/BrandVoice'
 import { plugins } from './plugins'
 import { defaultLexical } from '@/fields/defaultLexical'
@@ -90,9 +92,9 @@ export default buildConfig({
     },
     push: false, // Disable schema push - use migrations only
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, Activities, TransferRoutes, ItineraryPatterns, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, Activities, TransferRoutes, ItineraryPatterns, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives, Airports, ServiceItems],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, DestinationNameMappings, BrandVoice],
+  globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, LocationMappings, BrandVoice],
   plugins: [
     makeS3StoragePlugin(),
     ...plugins,

@@ -34,7 +34,7 @@ export async function resolveDestinations(
 
   // Load alias mappings once
   const mappings = (await payload.findGlobal({
-    slug: 'destination-name-mappings',
+    slug: 'location-mappings',
   })) as unknown as MappingsGlobal
   const aliasMap = buildAliasMap(mappings)
 

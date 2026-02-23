@@ -48,6 +48,18 @@ export const TransferRoutes: CollectionConfig = {
       admin: { description: 'Destination region containing the arrival point' },
     },
     {
+      name: 'fromAirport',
+      type: 'relationship',
+      relationTo: 'airports',
+      admin: { description: 'Origin airport — if origin point is an Airport record. In addition to fromDestination.' },
+    },
+    {
+      name: 'toAirport',
+      type: 'relationship',
+      relationTo: 'airports',
+      admin: { description: 'Destination airport — if destination point is an Airport record. In addition to toDestination.' },
+    },
+    {
       name: 'fromProperty',
       type: 'relationship',
       relationTo: 'properties',

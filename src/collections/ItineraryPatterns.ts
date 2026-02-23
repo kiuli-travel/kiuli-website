@@ -36,6 +36,15 @@ export const ItineraryPatterns: CollectionConfig = {
       admin: { description: 'Countries covered by this itinerary' },
     },
     {
+      name: 'regions',
+      type: 'relationship',
+      relationTo: 'destinations',
+      hasMany: true,
+      admin: {
+        description: 'Specific destinations visited (not countries) — e.g. Serengeti National Park, Masai Mara. Derived from property destinations.',
+      },
+    },
+    {
       name: 'totalNights',
       type: 'number',
       admin: { description: 'Total nights across all stays' },
@@ -111,6 +120,15 @@ export const ItineraryPatterns: CollectionConfig = {
           admin: { description: 'Segment type from iTrvl: flight, road, boat' },
         },
       ],
+    },
+    {
+      name: 'serviceItems',
+      type: 'relationship',
+      relationTo: 'service-items',
+      hasMany: true,
+      admin: {
+        description: 'Service items observed in this itinerary — park fees, airport services, supplements. Accumulated from service segments.',
+      },
     },
     {
       name: 'priceTotal',

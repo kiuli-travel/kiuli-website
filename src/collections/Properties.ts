@@ -428,6 +428,26 @@ export const Properties: CollectionConfig = {
             },
           ],
         },
+        {
+          name: 'seasonalityData',
+          type: 'array',
+          admin: {
+            description: 'Monthly observation counts — how many itineraries feature this property per month',
+          },
+          fields: [
+            {
+              name: 'month',
+              type: 'number',
+              required: true,
+              admin: { description: '1 = January, 12 = December' },
+            },
+            {
+              name: 'observationCount',
+              type: 'number',
+              defaultValue: 0,
+            },
+          ],
+        },
       ],
     },
 

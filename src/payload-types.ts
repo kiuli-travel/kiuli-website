@@ -91,6 +91,8 @@ export interface Config {
     'content-jobs': ContentJob;
     'source-registry': SourceRegistry;
     'editorial-directives': EditorialDirective;
+    airports: Airport;
+    'service-items': ServiceItem;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -132,6 +134,8 @@ export interface Config {
     'content-jobs': ContentJobsSelect<false> | ContentJobsSelect<true>;
     'source-registry': SourceRegistrySelect<false> | SourceRegistrySelect<true>;
     'editorial-directives': EditorialDirectivesSelect<false> | EditorialDirectivesSelect<true>;
+    airports: AirportsSelect<false> | AirportsSelect<true>;
+    'service-items': ServiceItemsSelect<false> | ServiceItemsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -152,7 +156,7 @@ export interface Config {
     footer: Footer;
     'property-name-mappings': PropertyNameMapping;
     'content-system-settings': ContentSystemSetting;
-    'destination-name-mappings': DestinationNameMapping;
+    'location-mappings': LocationMapping;
     'brand-voice': BrandVoice;
   };
   globalsSelect: {
@@ -160,7 +164,7 @@ export interface Config {
     footer: FooterSelect<false> | FooterSelect<true>;
     'property-name-mappings': PropertyNameMappingsSelect<false> | PropertyNameMappingsSelect<true>;
     'content-system-settings': ContentSystemSettingsSelect<false> | ContentSystemSettingsSelect<true>;
-    'destination-name-mappings': DestinationNameMappingsSelect<false> | DestinationNameMappingsSelect<true>;
+    'location-mappings': LocationMappingsSelect<false> | LocationMappingsSelect<true>;
     'brand-voice': BrandVoiceSelect<false> | BrandVoiceSelect<true>;
   };
   locale: null;
@@ -2115,6 +2119,19 @@ export interface Property {
           id?: string | null;
         }[]
       | null;
+    /**
+     * Monthly observation counts — how many itineraries feature this property per month
+     */
+    seasonalityData?:
+      | {
+          /**
+           * 1 = January, 12 = December
+           */
+          month: number;
+          observationCount?: number | null;
+          id?: string | null;
+        }[]
+      | null;
   };
   /**
    * Availability integration status
@@ -3459,6 +3476,35 @@ export interface Activity {
   minimumAge?: number | null;
   fitnessLevel?: ('low' | 'moderate' | 'high') | null;
   /**
+   * Booking and availability characteristics — defines how the agentic builder treats this activity
+   */
+  bookingBehaviour?: {
+    /**
+     * Must be reserved in advance. True for: gorilla trekking, balloon safaris, helicopter flights, chimp trekking, white water rafting. False for: game drives, walking safaris, sundowners.
+     */
+    requiresAdvanceBooking?: boolean | null;
+    /**
+     * How this activity is structured at the property. Determines how the agentic builder includes it in itineraries.
+     */
+    availability?: ('always_included' | 'on_demand' | 'scheduled' | 'seasonal' | 'optional_extra') | null;
+    /**
+     * Minimum days advance booking required. 0 = same day. Null = not applicable. Examples: gorilla permit = typically 1 (minimum) but recommend 90+; balloon = 1 day minimum, recommend weeks ahead.
+     */
+    minimumLeadDays?: number | null;
+    /**
+     * Maximum group size for this activity. Null = no practical limit. Examples: gorilla trekking = 8 (government regulation); some helicopter flights = 3–4.
+     */
+    maximumGroupSize?: number | null;
+    /**
+     * Is this activity typically included in the standard property tariff? False for: gorilla permits, balloon safaris at most properties, helicopter excursions.
+     */
+    isIncludedInTariff?: boolean | null;
+    /**
+     * Human-readable additional cost estimate if not included. Examples: "~$600pp gorilla permit", "~$750pp balloon flight (Serengeti)", "~$450pp helicopter excursion". Leave empty if included in tariff.
+     */
+    typicalAdditionalCost?: string | null;
+  };
+  /**
    * Wetu content entity ID (Phase 2)
    */
   wetuContentEntityId?: number | null;
@@ -3499,6 +3545,14 @@ export interface TransferRoute {
    * Destination region containing the arrival point
    */
   toDestination?: (number | null) | Destination;
+  /**
+   * Origin airport — if origin point is an Airport record. In addition to fromDestination.
+   */
+  fromAirport?: (number | null) | Airport;
+  /**
+   * Destination airport — if destination point is an Airport record. In addition to toDestination.
+   */
+  toAirport?: (number | null) | Airport;
   /**
    * Property at origin, if applicable
    */
@@ -3573,6 +3627,73 @@ export interface TransferRoute {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "airports".
+ */
+export interface Airport {
+  id: number;
+  /**
+   * e.g. "Wilson Airport", "Kilimanjaro International Airport", "Mara North Airstrip"
+   */
+  name: string;
+  slug: string;
+  /**
+   * e.g. "WIL", "JRO", "MRE" — nullable for bush airstrips without scheduled service
+   */
+  iataCode?: string | null;
+  /**
+   * e.g. "HKWL" — nullable
+   */
+  icaoCode?: string | null;
+  /**
+   * international = major international gateway; domestic = scheduled domestic service; airstrip = bush airstrip, no scheduled service
+   */
+  type: 'international' | 'domestic' | 'airstrip';
+  /**
+   * e.g. "Nairobi", "Arusha"
+   */
+  city?: string | null;
+  /**
+   * Parent country — must be a Destination record with type="country"
+   */
+  country: number | Destination;
+  /**
+   * Primary safari destination this airport primarily serves — nullable; e.g. Mara North Airstrip → Masai Mara
+   */
+  nearestDestination?: (number | null) | Destination;
+  /**
+   * Other airports in the same city or area serving different purposes. Critical for routing intelligence. Example: Wilson Airport (WIL) and JKIA (NBO) are both Nairobi — international guests arrive at JKIA then transfer to Wilson for domestic safari flights. Set this relationship on both airports bidirectionally.
+   */
+  relatedAirports?: (number | Airport)[] | null;
+  /**
+   * Aviation capabilities of this airport — set manually, not derived from observations
+   */
+  services?: {
+    /**
+     * Handles international scheduled airline arrivals and departures. True for: JKIA (NBO), Kilimanjaro (JRO), Entebbe (EBB), Kigali (KGL), OR Tambo (JNB), Cape Town (CPT). False for: Wilson (WIL), Arusha (ARK), all bush airstrips.
+     */
+    hasInternationalFlights?: boolean | null;
+    /**
+     * Has scheduled domestic commercial flights (Safarilink, AirKenya, Coastal, Auric Air type services). True for: Wilson (WIL), Arusha (ARK), many domestic airports. False for: pure bush airstrips (charter-only).
+     */
+    hasDomesticScheduledFlights?: boolean | null;
+    /**
+     * Charter and private flights only — no scheduled commercial service. True for most bush airstrips: Mara North (MRE), Keekorok, most camp-adjacent airstrips.
+     */
+    charterOnly?: boolean | null;
+  };
+  coordinates?: {
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  /**
+   * How many scraped itineraries transit this airport
+   */
+  observationCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "itinerary-patterns".
  */
 export interface ItineraryPattern {
@@ -3586,6 +3707,10 @@ export interface ItineraryPattern {
    * Countries covered by this itinerary
    */
   countries?: (number | Destination)[] | null;
+  /**
+   * Specific destinations visited (not countries) — e.g. Serengeti National Park, Masai Mara. Derived from property destinations.
+   */
+  regions?: (number | Destination)[] | null;
   /**
    * Total nights across all stays
    */
@@ -3638,6 +3763,10 @@ export interface ItineraryPattern {
       }[]
     | null;
   /**
+   * Service items observed in this itinerary — park fees, airport services, supplements. Accumulated from service segments.
+   */
+  serviceItems?: (number | ServiceItem)[] | null;
+  /**
    * Total itinerary price in USD
    */
   priceTotal?: number | null;
@@ -3655,6 +3784,52 @@ export interface ItineraryPattern {
    * From itinerary start date
    */
   travelYear?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-items".
+ */
+export interface ServiceItem {
+  id: number;
+  /**
+   * e.g. "Meet and Assist - Kilimanjaro Int Airport Arrival"
+   */
+  name: string;
+  /**
+   * Deduplication key — generated from name
+   */
+  slug: string;
+  category:
+    | 'airport_service'
+    | 'park_fee'
+    | 'conservation_fee'
+    | 'departure_tax'
+    | 'accommodation_supplement'
+    | 'other';
+  /**
+   * For airport_service category: whether this service is for arriving or departing guests. Not applicable for park fees, taxes, etc.
+   */
+  serviceDirection: 'arrival' | 'departure' | 'both' | 'na';
+  serviceLevel: 'standard' | 'premium' | 'ultra_premium';
+  /**
+   * Required for airport_service category — which airport provides this service
+   */
+  associatedAirport?: (number | null) | Airport;
+  /**
+   * For park_fee and conservation_fee categories — which destination charges this fee
+   */
+  associatedDestination?: (number | null) | Destination;
+  /**
+   * True if presence of this item in an itinerary indicates it is included in the price
+   */
+  isInclusionIndicator?: boolean | null;
+  /**
+   * How many scraped itineraries include this service item
+   */
+  observationCount?: number | null;
+  observedInItineraries?: (number | Itinerary)[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -4640,6 +4815,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'editorial-directives';
         value: number | EditorialDirective;
+      } | null)
+    | ({
+        relationTo: 'airports';
+        value: number | Airport;
+      } | null)
+    | ({
+        relationTo: 'service-items';
+        value: number | ServiceItem;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -5732,6 +5915,13 @@ export interface PropertiesSelect<T extends boolean = true> {
               count?: T;
               id?: T;
             };
+        seasonalityData?:
+          | T
+          | {
+              month?: T;
+              observationCount?: T;
+              id?: T;
+            };
       };
   availability?:
     | T
@@ -5758,6 +5948,16 @@ export interface ActivitiesSelect<T extends boolean = true> {
   suitability?: T;
   minimumAge?: T;
   fitnessLevel?: T;
+  bookingBehaviour?:
+    | T
+    | {
+        requiresAdvanceBooking?: T;
+        availability?: T;
+        minimumLeadDays?: T;
+        maximumGroupSize?: T;
+        isIncludedInTariff?: T;
+        typicalAdditionalCost?: T;
+      };
   wetuContentEntityId?: T;
   observationCount?: T;
   observedInItineraries?: T;
@@ -5774,6 +5974,8 @@ export interface TransferRoutesSelect<T extends boolean = true> {
   slug?: T;
   fromDestination?: T;
   toDestination?: T;
+  fromAirport?: T;
+  toAirport?: T;
   fromProperty?: T;
   toProperty?: T;
   mode?: T;
@@ -5822,6 +6024,7 @@ export interface ItineraryPatternsSelect<T extends boolean = true> {
   sourceItinerary?: T;
   extractedAt?: T;
   countries?: T;
+  regions?: T;
   totalNights?: T;
   paxType?: T;
   adults?: T;
@@ -5843,6 +6046,7 @@ export interface ItineraryPatternsSelect<T extends boolean = true> {
         mode?: T;
         id?: T;
       };
+  serviceItems?: T;
   priceTotal?: T;
   currency?: T;
   pricePerNightAvg?: T;
@@ -6026,6 +6230,55 @@ export interface EditorialDirectivesSelect<T extends boolean = true> {
   filterCount30d?: T;
   originProject?: T;
   originRejectionReason?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "airports_select".
+ */
+export interface AirportsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  iataCode?: T;
+  icaoCode?: T;
+  type?: T;
+  city?: T;
+  country?: T;
+  nearestDestination?: T;
+  relatedAirports?: T;
+  services?:
+    | T
+    | {
+        hasInternationalFlights?: T;
+        hasDomesticScheduledFlights?: T;
+        charterOnly?: T;
+      };
+  coordinates?:
+    | T
+    | {
+        latitude?: T;
+        longitude?: T;
+      };
+  observationCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-items_select".
+ */
+export interface ServiceItemsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  category?: T;
+  serviceDirection?: T;
+  serviceLevel?: T;
+  associatedAirport?: T;
+  associatedDestination?: T;
+  isInclusionIndicator?: T;
+  observationCount?: T;
+  observedInItineraries?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -6443,32 +6696,34 @@ export interface ContentSystemSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "destination-name-mappings".
+ * via the `definition` "location-mappings".
  */
-export interface DestinationNameMapping {
+export interface LocationMapping {
   id: number;
-  /**
-   * Maps alternative destination names to canonical Destinations records
-   */
   mappings?:
     | {
         /**
-         * Name used in Destinations collection
+         * Exact string from the source system, e.g. "Serengeti Mobile"
          */
-        canonical: string;
+        externalString: string;
+        sourceSystem: 'itrvl' | 'wetu' | 'expert_africa' | 'any' | 'manual';
+        resolvedAs: 'destination' | 'property' | 'airport' | 'ignore';
         /**
-         * JSON array of alternative names, e.g. ["Serengeti NP", "Serengeti National Park", "The Serengeti"]
+         * Required when resolvedAs = destination
          */
-        aliases?:
-          | {
-              [k: string]: unknown;
-            }
-          | unknown[]
-          | string
-          | number
-          | boolean
-          | null;
-        destination: number | Destination;
+        destination?: (number | null) | Destination;
+        /**
+         * Required when resolvedAs = property
+         */
+        property?: (number | null) | Property;
+        /**
+         * Required when resolvedAs = airport
+         */
+        airport?: (number | null) | Airport;
+        /**
+         * Why this mapping exists
+         */
+        notes?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -6790,15 +7045,19 @@ export interface ContentSystemSettingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "destination-name-mappings_select".
+ * via the `definition` "location-mappings_select".
  */
-export interface DestinationNameMappingsSelect<T extends boolean = true> {
+export interface LocationMappingsSelect<T extends boolean = true> {
   mappings?:
     | T
     | {
-        canonical?: T;
-        aliases?: T;
+        externalString?: T;
+        sourceSystem?: T;
+        resolvedAs?: T;
         destination?: T;
+        property?: T;
+        airport?: T;
+        notes?: T;
         id?: T;
       };
   updatedAt?: T;

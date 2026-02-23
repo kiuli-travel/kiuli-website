@@ -77,6 +77,7 @@ async function linkProperties(segments, destinationIds, destinationCache) {
 
   const propertyMap = new Map(); // accommodationName → propertyId
   const slugMap = new Map(); // slug → propertyId (dedup within this run)
+  const createdThisRun = new Set(); // Track IDs created in this run — no backfill needed
 
   if (!PAYLOAD_API_KEY) {
     console.error('[linkProperties] PAYLOAD_API_KEY not set');
@@ -191,6 +192,7 @@ async function linkProperties(segments, destinationIds, destinationCache) {
         if (createRes.ok) {
           const created = await createRes.json();
           propertyId = created.doc?.id || created.id;
+          createdThisRun.add(propertyId);
           console.log(`[linkProperties] CREATED: ${accommodationName} -> ${propertyId}`);
         } else {
           const errText = await createRes.text();
@@ -215,7 +217,7 @@ async function linkProperties(segments, destinationIds, destinationCache) {
       }
 
       // 4. Backfill supplierCode on existing records without it
-      if (propertyId && !propertyId.__backfilled) {
+      if (propertyId && !createdThisRun.has(propertyId)) {
         try {
           const existingRes = await fetch(
             `${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=0`,
@@ -292,10 +294,11 @@ async function linkTransferRoutes(segments, destinationCache) {
   const routeMap = new Map();
   const slugLookupCache = new Map();
   const transferSequence = [];
+  const pendingTransferObs = [];
 
   let propertyOrderIndex = 0;
 
-  const transferTypes = new Set(['flight', 'road', 'boat']);
+  const transferTypes = new Set(['flight', 'road', 'boat', 'helicopter']);
 
   for (const segment of segments) {
     const type = segment.type?.toLowerCase();
@@ -317,6 +320,7 @@ async function linkTransferRoutes(segments, destinationCache) {
     let mode = 'road';
     if (type === 'flight') mode = 'flight';
     if (type === 'boat') mode = 'boat';
+    if (type === 'helicopter') mode = 'helicopter';
 
     const fromCountry = segment.country || segment.countryName || null;
     const fromDestinationId = fromCountry
@@ -344,7 +348,6 @@ async function linkTransferRoutes(segments, destinationCache) {
           routeId = existingRoute.id;
           routeMap.set(slug, routeId);
 
-          const existingObs = existingRoute.observations || [];
           const existingAirlines = existingRoute.airlines || [];
           const airlineName = segment.airline || null;
           const airlineAlreadyPresent = airlineName &&
@@ -357,26 +360,26 @@ async function linkTransferRoutes(segments, destinationCache) {
                 ...(airlineName ? [{ name: airlineName, go7Airline: false, duffelAirline: false }] : []),
               ];
 
-          const newObs = {
-            departureTime: segment.departureTime || null,
-            arrivalTime: segment.arrivalTime || null,
-            airline: airlineName,
-            dateObserved: new Date().toISOString().slice(0, 10),
-          };
-
           await fetch(`${PAYLOAD_API_URL}/api/transfer-routes/${routeId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({
-              observations: [...existingObs, newObs],
-              observationCount: existingObs.length + 1,
               airlines: updatedAirlines,
               ...(fromDestinationId && !existingRoute.fromDestination
                 ? { fromDestination: fromDestinationId }
                 : {}),
             }),
           });
-          console.log(`[linkTransferRoutes] UPDATED: ${from} → ${to} (${existingObs.length + 1} observations)`);
+          console.log(`[linkTransferRoutes] UPDATED airlines: ${from} → ${to}`);
+
+          pendingTransferObs.push({
+            routeId,
+            slug,
+            departureTime: segment.departureTime || null,
+            arrivalTime: segment.arrivalTime || null,
+            airline: segment.airline || null,
+            dateObserved: new Date().toISOString().slice(0, 10),
+          });
 
         } else {
           const airlineName = segment.airline || null;
@@ -390,13 +393,8 @@ async function linkTransferRoutes(segments, destinationCache) {
               mode,
               fromDestination: fromDestinationId,
               airlines: airlineName ? [{ name: airlineName, go7Airline: false, duffelAirline: false }] : [],
-              observations: [{
-                departureTime: segment.departureTime || null,
-                arrivalTime: segment.arrivalTime || null,
-                airline: airlineName,
-                dateObserved: new Date().toISOString().slice(0, 10),
-              }],
-              observationCount: 1,
+              observations: [],
+              observationCount: 0,
             }),
           });
 
@@ -405,6 +403,14 @@ async function linkTransferRoutes(segments, destinationCache) {
             routeId = created.doc?.id || created.id;
             routeMap.set(slug, routeId);
             console.log(`[linkTransferRoutes] CREATED: ${from} → ${to} (${routeId})`);
+            pendingTransferObs.push({
+              routeId,
+              slug,
+              departureTime: segment.departureTime || null,
+              arrivalTime: segment.arrivalTime || null,
+              airline: segment.airline || null,
+              dateObserved: new Date().toISOString().slice(0, 10),
+            });
           } else {
             const errText = await createRes.text();
             if (createRes.status === 400 && errText.includes('unique')) {
@@ -417,6 +423,14 @@ async function linkTransferRoutes(segments, destinationCache) {
                 if (retryData.docs?.[0]?.id) {
                   routeId = retryData.docs[0].id;
                   routeMap.set(slug, routeId);
+                  pendingTransferObs.push({
+                    routeId,
+                    slug,
+                    departureTime: segment.departureTime || null,
+                    arrivalTime: segment.arrivalTime || null,
+                    airline: segment.airline || null,
+                    dateObserved: new Date().toISOString().slice(0, 10),
+                  });
                   console.log(`[linkTransferRoutes] LINKED (after conflict): ${from} → ${to}`);
                 }
               }
@@ -441,8 +455,8 @@ async function linkTransferRoutes(segments, destinationCache) {
     }
   }
 
-  console.log(`[linkTransferRoutes] Total routes: ${routeMap.size}, transfers in sequence: ${transferSequence.length}`);
-  return { routeMap, transferSequence };
+  console.log(`[linkTransferRoutes] Total routes: ${routeMap.size}, pending obs: ${pendingTransferObs.length}`);
+  return { routeMap, transferSequence, pendingTransferObs };
 }
 
 /**
@@ -463,6 +477,7 @@ async function linkActivities(segments, propertyMap, destinationCache) {
 
   const activityMap = new Map();
   const slugCache = new Map();
+  const activityPropertyLinks = new Map(); // slug → Set<propertyId>
 
   let currentPropertyId = null;
   let currentCountry = null;
@@ -534,6 +549,7 @@ async function linkActivities(segments, propertyMap, destinationCache) {
             }),
           });
           console.log(`[linkActivities] UPDATED: ${activityName} (${(existingActivity.observationCount || 0) + 1} observations)`);
+          activityPropertyLinks.set(slug, new Set([currentPropertyId].filter(Boolean)));
 
         } else {
           const createRes = await fetch(`${PAYLOAD_API_URL}/api/activities`, {
@@ -554,6 +570,7 @@ async function linkActivities(segments, propertyMap, destinationCache) {
             activityId = created.doc?.id || created.id;
             activityMap.set(slug, activityId);
             console.log(`[linkActivities] CREATED: ${activityName} → ${activityId}`);
+            activityPropertyLinks.set(slug, new Set([currentPropertyId].filter(Boolean)));
           } else {
             const errText = await createRes.text();
             if (createRes.status === 400 && errText.includes('unique')) {
@@ -566,12 +583,47 @@ async function linkActivities(segments, propertyMap, destinationCache) {
                 if (retryData.docs?.[0]?.id) {
                   activityId = retryData.docs[0].id;
                   activityMap.set(slug, activityId);
+                  activityPropertyLinks.set(slug, new Set([currentPropertyId].filter(Boolean)));
                   console.log(`[linkActivities] LINKED (after conflict): ${activityName}`);
                 }
               }
             }
             if (!activityId) {
               console.error(`[linkActivities] Failed to create ${activityName}: ${createRes.status}`);
+            }
+          }
+        }
+
+      } else {
+        // Activity already seen in this itinerary. Check if currentPropertyId needs linking.
+        if (currentPropertyId) {
+          const linked = activityPropertyLinks.get(slug) || new Set();
+          if (!linked.has(currentPropertyId)) {
+            try {
+              const actRes = await fetch(
+                `${PAYLOAD_API_URL}/api/activities/${activityId}?depth=0`,
+                { headers }
+              );
+              if (actRes.ok) {
+                const existingActivity = await actRes.json();
+                const existingProperties = (existingActivity.properties || [])
+                  .map(p => typeof p === 'object' ? p.id : p);
+                if (!existingProperties.includes(currentPropertyId)) {
+                  await fetch(`${PAYLOAD_API_URL}/api/activities/${activityId}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({
+                      properties: [...existingProperties, currentPropertyId],
+                    }),
+                  });
+                  console.log(`[linkActivities] LINKED additional property ${currentPropertyId} → activity ${activityId} (${activityName})`);
+                }
+                linked.add(currentPropertyId);
+                activityPropertyLinks.set(slug, linked);
+              }
+            } catch (err) {
+              console.error(`[linkActivities] Failed to link additional property for ${activityName}: ${err.message}`);
+              // Non-fatal
             }
           }
         }
@@ -1218,7 +1270,7 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
   const propertyMap = await linkProperties(segments, destinationIds, destinationCache);
 
   // Link transfer routes and activities
-  const { routeMap: transferRouteMap, transferSequence } = await linkTransferRoutes(segments, destinationCache);
+  const { routeMap: transferRouteMap, transferSequence, pendingTransferObs } = await linkTransferRoutes(segments, destinationCache);
   const activityMap = await linkActivities(segments, propertyMap, destinationCache);
 
   // Extract pax counts from the itinerary-level data
@@ -1250,6 +1302,7 @@ async function transform(rawData, mediaMapping = {}, itrvlUrl) {
     orderedPropertyIds: propertySequence.map(p => p.property),
     propertySequence,
     transferSequence,
+    pendingTransferObs,
     activityIds: [...activityMap.values()],
     adultsCount,
     childrenCount,

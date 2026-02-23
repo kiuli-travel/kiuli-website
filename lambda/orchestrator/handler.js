@@ -317,9 +317,64 @@ exports.handler = async (event) => {
     }
 
     // ============================================================
-    // KNOWLEDGE BASE: accumulatedData updates
+    // KNOWLEDGE BASE
     // ============================================================
     const kb = transformedData._knowledgeBase || {};
+
+    // ============================================================
+    // KNOWLEDGE BASE: TransferRoute observations with itineraryId
+    // ============================================================
+    const pendingTransferObs = kb.pendingTransferObs || [];
+    if (pendingTransferObs.length > 0) {
+      console.log(`[Orchestrator] Writing ${pendingTransferObs.length} TransferRoute observations`);
+      for (const obs of pendingTransferObs) {
+        try {
+          const route = await payload.getById('transfer-routes', obs.routeId, { depth: 0 });
+          const existingObs = route.observations || [];
+          const existingAirlines = route.airlines || [];
+
+          // Dedup: skip if an observation for this itinerary already exists
+          const alreadyRecorded = existingObs.some(o => {
+            const id = typeof o.itineraryId === 'object' ? o.itineraryId?.id : o.itineraryId;
+            return String(id) === String(payloadItinerary.id);
+          });
+          if (alreadyRecorded) {
+            console.log(`[Orchestrator] TransferRoute obs already exists for route ${obs.routeId}, itinerary ${payloadItinerary.id} — skipping`);
+            continue;
+          }
+
+          // Dedup airline
+          const airlineName = obs.airline || null;
+          const airlineAlreadyPresent = airlineName && existingAirlines.some(a => a.name === airlineName);
+          const updatedAirlines = airlineAlreadyPresent
+            ? existingAirlines
+            : [
+                ...existingAirlines,
+                ...(airlineName ? [{ name: airlineName, go7Airline: false, duffelAirline: false }] : []),
+              ];
+
+          await payload.update('transfer-routes', obs.routeId, {
+            observations: [...existingObs, {
+              itineraryId: payloadItinerary.id,
+              departureTime: obs.departureTime,
+              arrivalTime: obs.arrivalTime,
+              airline: obs.airline,
+              dateObserved: obs.dateObserved,
+            }],
+            observationCount: existingObs.length + 1,
+            airlines: updatedAirlines,
+          });
+          console.log(`[Orchestrator] TransferRoute obs saved: ${obs.slug} (itinerary ${payloadItinerary.id})`);
+        } catch (err) {
+          console.error(`[Orchestrator] TransferRoute obs failed for route ${obs.routeId}: ${err.message}`);
+          // Non-fatal — continue
+        }
+      }
+    }
+
+    // ============================================================
+    // KNOWLEDGE BASE: accumulatedData updates
+    // ============================================================
     const orderedPropertyIds = kb.orderedPropertyIds || [];
     const priceTotal = transformedData.investmentLevel?.fromPrice || null;
     const totalNights = transformedData.overview?.nights || 0;
@@ -333,6 +388,17 @@ exports.handler = async (event) => {
         const propertyId = orderedPropertyIds[i];
         try {
           const existingProperty = await payload.getById('properties', propertyId, { depth: 0 });
+
+          // === Dedup check: skip if this itinerary's data is already recorded ===
+          const existingObsCheck = existingProperty.accumulatedData?.pricePositioning?.observations || [];
+          const alreadyRecorded = existingObsCheck.some(obs => {
+            const id = typeof obs.itineraryId === 'object' ? obs.itineraryId?.id : obs.itineraryId;
+            return String(id) === String(payloadItinerary.id);
+          });
+          if (alreadyRecorded) {
+            console.log(`[Orchestrator] accumulatedData already recorded for property ${propertyId}, itinerary ${payloadItinerary.id} — skipping`);
+            continue;
+          }
 
           // === Price observation ===
           const existingObs = existingProperty.accumulatedData?.pricePositioning?.observations || [];

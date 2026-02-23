@@ -2,14 +2,27 @@ import type { Payload } from 'payload'
 import type { CountryEntity, LocationEntity, ResolutionResult } from './types'
 import { slugify, normalize } from './utils'
 
+// ---------------------------------------------------------------------------
+// LocationMappings global structure — matches src/globals/LocationMappings.ts
+// ---------------------------------------------------------------------------
 interface MappingEntry {
-  canonical: string
-  aliases: string[] | string | null
-  destination: unknown
+  externalString: string
+  sourceSystem: 'itrvl' | 'wetu' | 'expert_africa' | 'any' | 'manual'
+  resolvedAs: 'destination' | 'property' | 'airport' | 'ignore'
+  destination?: unknown // Payload relationship — populated object or ID when resolvedAs=destination
+  property?: unknown    // Payload relationship — populated object or ID when resolvedAs=property
+  airport?: unknown     // Payload relationship — populated object or ID when resolvedAs=airport
+  notes?: string
 }
 
 interface MappingsGlobal {
   mappings?: MappingEntry[] | null
+}
+
+// Internal index built from LocationMappings
+interface MappingResolution {
+  resolvedAs: 'destination' | 'property' | 'airport' | 'ignore'
+  destinationId: number | null // Only set when resolvedAs=destination
 }
 
 interface DestinationDoc {
@@ -21,8 +34,14 @@ interface DestinationDoc {
 
 /**
  * Resolve countries and locations into Destination records.
- * Countries: look up existing (all 10 should exist). Warn if missing.
- * Locations: check aliases first, then query by name. Create if not found.
+ *
+ * Resolution order for locations:
+ *   1. LocationMappings index (externalString match)
+ *      - resolvedAs=destination → use the mapped destination ID
+ *      - resolvedAs=ignore      → skip, do not create
+ *      - resolvedAs=property/airport → skip destination resolution (not a destination)
+ *   2. Direct name query (type=destination)
+ *   3. Auto-create as draft destination (unless dryRun)
  */
 export async function resolveDestinations(
   payload: Payload,
@@ -32,11 +51,11 @@ export async function resolveDestinations(
 ): Promise<ResolutionResult[]> {
   const results: ResolutionResult[] = []
 
-  // Load alias mappings once
-  const mappings = (await payload.findGlobal({
+  // Load LocationMappings global and build index once
+  const mappingsGlobal = (await payload.findGlobal({
     slug: 'location-mappings',
   })) as unknown as MappingsGlobal
-  const aliasMap = buildAliasMap(mappings)
+  const mappingIndex = buildMappingIndex(mappingsGlobal)
 
   // Build country name → ID map as we resolve them
   const countryIdMap = new Map<string, number>()
@@ -67,21 +86,48 @@ export async function resolveDestinations(
 
   // --- Resolve locations ---
   for (const location of locations) {
-    // Check alias mappings first
-    const aliasMatch = aliasMap.get(normalize(location.name))
-    if (aliasMatch) {
+    const normalizedName = normalize(location.name)
+    const mapping = mappingIndex.get(normalizedName)
+
+    // Step 1: LocationMappings index
+    if (mapping) {
+      if (mapping.resolvedAs === 'destination' && mapping.destinationId !== null) {
+        results.push({
+          entityName: location.name,
+          entityType: 'destination',
+          action: 'found',
+          payloadId: mapping.destinationId,
+          collection: 'destinations',
+          note: 'Matched via LocationMappings',
+        })
+        continue
+      }
+
+      if (mapping.resolvedAs === 'ignore') {
+        results.push({
+          entityName: location.name,
+          entityType: 'destination',
+          action: 'skipped',
+          payloadId: null,
+          collection: 'destinations',
+          note: 'Mapped as ignore in LocationMappings — not a destination',
+        })
+        continue
+      }
+
+      // resolvedAs=property or resolvedAs=airport — not a destination, skip creation
       results.push({
         entityName: location.name,
         entityType: 'destination',
-        action: 'found',
-        payloadId: aliasMatch,
+        action: 'skipped',
+        payloadId: null,
         collection: 'destinations',
-        note: 'Matched via alias',
+        note: `Mapped as ${mapping.resolvedAs} in LocationMappings — not resolving as destination`,
       })
       continue
     }
 
-    // Query by name + type=destination
+    // Step 2: Direct name query
     const found = await queryDestination(payload, location.name, 'destination')
     if (found) {
       results.push({
@@ -94,7 +140,7 @@ export async function resolveDestinations(
       continue
     }
 
-    // Not found — create if not dry run
+    // Step 3: Auto-create
     if (dryRun) {
       results.push({
         entityName: location.name,
@@ -132,28 +178,39 @@ export async function resolveDestinations(
   return results
 }
 
-/** Build normalized-alias → destination ID map from the global config. */
-function buildAliasMap(mappings: MappingsGlobal): Map<string, number> {
-  const map = new Map<string, number>()
-  for (const entry of mappings.mappings || []) {
-    const destId = extractDestinationId(entry.destination)
-    if (!destId) continue
+/**
+ * Build a normalized-externalString → MappingResolution index from LocationMappings.
+ *
+ * Only indexes entries where resolvedAs=destination (with a valid destination ID),
+ * resolvedAs=ignore, resolvedAs=property, and resolvedAs=airport. All four are
+ * meaningful signals — ignore and non-destination types prevent incorrect auto-creation.
+ */
+function buildMappingIndex(mappingsGlobal: MappingsGlobal): Map<string, MappingResolution> {
+  const index = new Map<string, MappingResolution>()
 
-    // Map the canonical name too
-    map.set(normalize(entry.canonical), destId)
+  for (const entry of mappingsGlobal.mappings || []) {
+    if (!entry.externalString?.trim()) continue
 
-    // Map each alias
-    const aliases = Array.isArray(entry.aliases) ? entry.aliases : []
-    for (const alias of aliases) {
-      if (typeof alias === 'string' && alias.trim()) {
-        map.set(normalize(alias), destId)
+    const key = normalize(entry.externalString)
+
+    if (entry.resolvedAs === 'destination') {
+      const destinationId = extractId(entry.destination)
+      if (destinationId === null) {
+        // Misconfigured entry — destination relationship not set. Skip silently.
+        // This will fall through to direct name lookup, which is the correct fallback.
+        continue
       }
+      index.set(key, { resolvedAs: 'destination', destinationId })
+    } else {
+      // ignore | property | airport — record the signal, destinationId is not applicable
+      index.set(key, { resolvedAs: entry.resolvedAs, destinationId: null })
     }
   }
-  return map
+
+  return index
 }
 
-function extractDestinationId(ref: unknown): number | null {
+function extractId(ref: unknown): number | null {
   if (typeof ref === 'number') return ref
   if (ref && typeof ref === 'object' && 'id' in (ref as Record<string, unknown>)) {
     const id = (ref as Record<string, unknown>).id
@@ -177,7 +234,7 @@ async function queryDestination(
     },
     limit: 1,
     depth: 0,
-    draft: true, // Include draft destinations (created without heroImage)
+    draft: true,
   })
   return (result.docs[0] as unknown as DestinationDoc) ?? null
 }
@@ -192,7 +249,7 @@ async function createDestination(
   try {
     const created = await payload.create({
       collection: 'destinations',
-      draft: true, // Bypasses required heroImage
+      draft: true,
       data: {
         name,
         slug,

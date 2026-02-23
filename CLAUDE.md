@@ -65,7 +65,7 @@ kiuli-website/
 │   │       │   └── inquiry/         # Inquiry submission
 │   │       └── admin/
 │   │           └── content-engine/  # Custom admin views (dashboard, workspace)
-│   ├── collections/                 # 21 Payload collections
+│   ├── collections/                 # 21 Payload collections + 4 knowledge base collections
 │   ├── globals/                     # 6 Payload globals
 │   ├── services/enhancer.ts         # iTrvl enhancement (legacy path — see note below)
 │   ├── components/content-system/   # Content Engine UI components
@@ -105,13 +105,26 @@ Orchestrate → ProcessImageChunk ⟲ → ProcessVideos → LabelBatch ⟲ → F
 
 State machine ARN: `arn:aws:states:eu-north-1:405531875262:stateMachine:kiuli-scraper-pipeline`
 
-7 itineraries processed, 650 media items, zero failures. Needs schema evolution before production run — see KIULI_LAUNCH_ROADMAP.md M2.
+7 itineraries processed, 650 media items, zero failures. M2 Phase 1 (schema evolution + knowledge base foundation) complete. M2 Phase 2 fixes required before production scrape — see KIULI_LAUNCH_ROADMAP.md.
+
+### Knowledge Base Collections (M2 Phase 1 — Live)
+
+Every itinerary scrape now populates four knowledge base collections that accumulate intelligence across all scraped itineraries:
+
+| Collection | Purpose |
+|-----------|---------|
+| Properties | Lodge/camp records with externalIds, canonicalContent, accumulatedData, availability |
+| TransferRoutes | Air/road transfer patterns with observations and airline intelligence |
+| Activities | Safari activities linked to properties and destinations |
+| ItineraryPatterns | Complete property+transfer sequences extracted from each itinerary |
+
+Plus `availability_cache` direct SQL table for ResConnect responses (Phase 3).
 
 ### Content Engine — ALL 15 PHASES COMPLETE
 
 Schema → Vector Store → Embeddings → OpenRouter → Cascade → Ideation → Dashboard → Research → Conversation → Workspace → Drafting+BrandVoice → Consistency Checking → Publishing → Image Pipeline → Quality Gates
 
-1 article published end-to-end (Project 79 → Post 22). 60 content projects exist. Zero production content run yet.
+4 articles published end-to-end (Projects 79, 27, 53, 87 → Posts 22–25). 60 content projects exist. Zero production content run yet.
 
 ### Inquiry Funnel — COMPLETE
 
@@ -128,9 +141,9 @@ Both use BrandVoice via the voice loader, but through different code paths. Know
 
 ## 4. Payload CMS Schema
 
-### Collections (21)
+### Collections (25 total: 21 original + 4 knowledge base)
 
-Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration (LEGACY), Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, **ContentProjects**, **ContentJobs**, **SourceRegistry**, **EditorialDirectives**
+Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration (LEGACY), Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, **ContentProjects**, **ContentJobs**, **SourceRegistry**, **EditorialDirectives**, **Properties** (KB), **TransferRoutes** (KB), **Activities** (KB), **ItineraryPatterns** (KB)
 
 ### Globals (6)
 
@@ -226,7 +239,11 @@ When admin panel shows errors:
 
 ### Rule 9: Schema Evolution Before Production Scraping
 
-Do not scrape 100 itineraries into the current schema. M2 (schema evolution per KIULI_AGENTIC_VISION.md) must complete first. Fields and collections added now save migrations later.
+Do not scrape 100 itineraries until M2 Phase 2 is complete (activity noise filter, observationCount bug, toDestination, seasonalityData schema, ItineraryPatterns regions field). Every gap creates pollution at scale.
+
+### Rule 10: Knowledge Base Accumulation Is the Product
+
+The scraper is not just a content pipeline — it is an intelligence accumulator. Every itinerary scrape makes the knowledge base richer. Every schema compromise degrades that intelligence. Treat the knowledge base with the same care as production content.
 
 ---
 
@@ -280,7 +297,7 @@ These files are in the Claude.ai project knowledge and are the authoritative ref
 | File | Purpose |
 |------|---------|
 | KIULI_PROJECT_STATE.md | Complete current state — read first in every conversation |
-| KIULI_LAUNCH_ROADMAP.md | Sequenced plan from current state to launch (M1–M7) |
+| KIULI_LAUNCH_ROADMAP.md | Sequenced plan from current state to launch and beyond (M1–M12) |
 | KIULI_AGENTIC_VISION.md | WebMCP itinerary builder architecture and schema requirements |
 | KIULI_CONTENT_SYSTEM_V6.md | Content Engine specification |
 | KIULI_FUNNEL_SPECIFICATION_V2.md | Complete inquiry funnel reference |
@@ -294,6 +311,7 @@ These files are in the Claude.ai project knowledge and are the authoritative ref
 | File | Purpose |
 |------|---------|
 | CLAUDE.md | This file |
+| KIULI_LAUNCH_ROADMAP.md | Sequenced plan (also in project knowledge — keep in sync) |
 | KIULI_LAMBDA_ARCHITECTURE.md | Detailed scraper pipeline documentation |
 | SYSTEM_ARCHITECTURE.md | System overview |
 | DEPLOYMENT_CHECKLIST.md | Pre/post deployment procedures |
@@ -321,19 +339,28 @@ Aesthetic: understated luxury, editorial magazine feel, generous whitespace, no 
 
 ## 12. Current Launch Status
 
-All Content Engine phases (1–15) are complete. The scraper pipeline works. The inquiry funnel works. Zero production content exists.
+All Content Engine phases (1–15) are complete. The scraper pipeline works. The inquiry funnel works. The knowledge base collections are live and accumulating from every scrape. Zero production content exists.
 
-The launch roadmap (KIULI_LAUNCH_ROADMAP.md) defines 7 milestones:
-1. **M1: Pipeline Validation** ✅ COMPLETE — ghost bug fixed, 4 articles published end-to-end (posts 22–25), target_record_id bug fixed, quality gates migration applied
-2. **M2: Schema Evolution & Scraper Upgrade** — future-proof for agentic vision (BLOCKED: requires KIULI_AGENTIC_VISION.md in project knowledge)
-3. **M3: Frontend Development** — all pages to Awwwards standard (requires M2 + test content)
-4. **M4: Admin UI Overhaul** — integrated workflow
-5. **M5: Integration Test Cycle** — delete all test data, re-scrape 6 test itineraries, full pipeline
-6. **M6: Production Content Run** — 75-100 itineraries
-7. **M7: Launch**
+The launch roadmap (KIULI_LAUNCH_ROADMAP.md) defines milestones:
 
-M2 is the critical path. Everything downstream depends on getting the schema right.
+| Milestone | Status |
+|-----------|--------|
+| M1: Pipeline Validation | ✅ COMPLETE |
+| M2 Phase 1: Schema Evolution + Knowledge Base | ✅ COMPLETE |
+| M2 Phase 2: Scraper Fixes (activity filter, observationCount, toDestination, seasonalityData, regions) | Not started |
+| M3: Frontend Development | Not started |
+| M4: Admin UI Overhaul | Not started |
+| M5: Integration Test Cycle | Not started |
+| M6: Production Content Run | Not started |
+| M7: Launch | Not started |
+| M8: Wetu Integration | Post-launch |
+| M9: ResConnect Live Availability | Post-launch |
+| M10: Flight Integration | Post-launch |
+| M11: WebMCP plan_safari() | Post-launch |
+| M12: Speech Agent | Post-launch |
+
+M2 Phase 2 fixes are required before any production scraping. Everything downstream depends on a clean knowledge base.
 
 ---
 
-*Last updated: February 22, 2026*
+*Last updated: February 23, 2026*

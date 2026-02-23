@@ -3466,6 +3466,10 @@ export interface Activity {
    * How many scraped itineraries include this activity
    */
   observationCount?: number | null;
+  /**
+   * Itineraries that have contributed to observationCount — used for dedup on re-scrape
+   */
+  observedInItineraries?: (number | Itinerary)[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -5756,6 +5760,7 @@ export interface ActivitiesSelect<T extends boolean = true> {
   fitnessLevel?: T;
   wetuContentEntityId?: T;
   observationCount?: T;
+  observedInItineraries?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -650,6 +650,85 @@ srv.tool(
   }
 );
 
+// -- db_exec ----------------------------------------------------------------
+srv.tool(
+  "db_exec",
+  "Run a WRITE SQL statement against the database. Supports INSERT, UPDATE, DELETE, CREATE TABLE, ALTER TABLE, DROP TABLE. Use db_query for SELECT. Requires confirm='EXECUTE' to prevent accidents.",
+  {
+    sql: z.string().describe("SQL statement to execute (INSERT, UPDATE, DELETE, CREATE, ALTER, DROP)"),
+    confirm: z.string().describe("Must be exactly 'EXECUTE' to proceed — prevents accidental writes"),
+  },
+  async ({ sql, confirm }) => {
+    if (confirm !== "EXECUTE") {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            executed: false,
+            error: "confirm must be exactly 'EXECUTE'. Got: " + confirm,
+          }),
+        }],
+      };
+    }
+
+    const dbUrl = process.env.DATABASE_URL_UNPOOLED || process.env.POSTGRES_URL;
+    if (!dbUrl) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            error: "No database URL configured (DATABASE_URL_UNPOOLED or POSTGRES_URL)",
+          }),
+        }],
+      };
+    }
+
+    // Block SELECT — use db_query for reads
+    const trimmed = sql.trim().toUpperCase();
+    if (trimmed.startsWith("SELECT") || trimmed.startsWith("WITH") || trimmed.startsWith("EXPLAIN")) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            executed: false,
+            error: "Use db_query for SELECT/WITH/EXPLAIN statements",
+          }),
+        }],
+      };
+    }
+
+    try {
+      const { stdout, stderr } = await execAsync(
+        `psql "${dbUrl}" -c ${JSON.stringify(sql)}`,
+        {
+          cwd: PROJECT_ROOT,
+          timeout: 30000,
+          maxBuffer: 1024 * 1024,
+        }
+      );
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            executed: true,
+            output: (stdout + "\n" + stderr).trim(),
+          }),
+        }],
+      };
+    } catch (err) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            executed: false,
+            output: ((err.stdout || "") + "\n" + (err.stderr || err.message || "")).trim(),
+          }),
+        }],
+      };
+    }
+  }
+);
+
 // -- vercel_env_list --------------------------------------------------------
 srv.tool(
   "vercel_env_list",
@@ -689,10 +768,6 @@ srv.tool(
 );
 
 // -- lambda_status ----------------------------------------------------------
-// Read-only. Queries AWS for the deployed configuration of each Lambda.
-// The Description field is stamped with "git:<hash> deployed:<timestamp>"
-// by deploy.sh. Comparing deployedGitHash against currentHead is the
-// definitive proof that source code == deployed code.
 srv.tool(
   "lambda_status",
   "Get deployed status for Kiuli Lambda functions from AWS. Returns State, LastModified, CodeSize, and the git hash stamped in Description by deploy.sh. syncStatus shows CURRENT/BEHIND/NO_HASH_STAMPED for each function. This is the authoritative check — source code in git means nothing until this shows CURRENT.",
@@ -724,7 +799,6 @@ srv.tool(
           { timeout: 20000 }
         );
         const data = JSON.parse(stdout.trim());
-        // Extract git hash from description (format: "git:abc1234 deployed:...")
         const hashMatch = (data.Description || "").match(/git:([a-f0-9]+)/);
         data.deployedGitHash = hashMatch ? hashMatch[1] : null;
         results[key] = data;
@@ -735,11 +809,9 @@ srv.tool(
       }
     }
 
-    // Get current HEAD for comparison
     const headResult = await runGit(["log", "-1", "--format=%h %s"]);
     const currentHash = await runGit(["rev-parse", "--short", "HEAD"]);
 
-    // Build sync status summary
     const syncStatus = {};
     for (const [key, data] of Object.entries(results)) {
       if (data.error) {
@@ -771,13 +843,9 @@ srv.tool(
 );
 
 // -- lambda_logs ------------------------------------------------------------
-// Read-only. Tails CloudWatch logs for a Lambda function.
-// Use this after a test scrape to confirm new code actually executed.
-// The log messages are specific to each code path — if you see
-// "[Orchestrator] Writing N TransferRoute observations" it means that block ran.
 srv.tool(
   "lambda_logs",
-  "Tail recent CloudWatch logs for a Kiuli Lambda function. Use after a test scrape to confirm new code executed. Filter by keyword to find specific log lines — e.g. filter='TransferRoute obs' to confirm that code path ran.",
+  "Tail recent CloudWatch logs for a Kiuli Lambda function. Use after a test scrape to confirm new code executed. Filter by keyword to find specific log lines.",
   {
     function: z
       .enum(["scraper", "orchestrator", "image-processor", "labeler", "finalizer"])
@@ -789,7 +857,7 @@ srv.tool(
     filter: z
       .string()
       .optional()
-      .describe("Optional keyword to filter log lines. Case-insensitive. Use this to confirm specific code paths ran."),
+      .describe("Optional keyword to filter log lines. Case-insensitive."),
   },
   async ({ function: fn, since, filter }) => {
     const FUNCTION_MAP = {
@@ -803,17 +871,15 @@ srv.tool(
     const name = FUNCTION_MAP[fn];
     const logGroup = `/aws/lambda/${name}`;
 
-    // Build command — pipe through grep if filter supplied
     let cmd = `aws logs tail ${logGroup} --since ${since} --region eu-north-1 --format short 2>&1`;
     if (filter) {
-      // Use grep -i for case-insensitive; || true so non-zero exit on no match doesn't throw
       cmd += ` | grep -i ${JSON.stringify(filter)} || true`;
     }
 
     try {
       const { stdout } = await execAsync(cmd, {
         timeout: 30000,
-        maxBuffer: 1024 * 1024 * 2, // 2MB
+        maxBuffer: 1024 * 1024 * 2,
       });
       const output = stdout.trim();
       const lines = output ? output.split("\n") : [];
@@ -860,18 +926,15 @@ app.use(express.json());
 
 const sessions = {}; // sessionId → { transport, server }
 
-// POST /mcp — main MCP endpoint (initialize + all JSON-RPC messages)
 app.post(`${BASE_PATH}/mcp`, async (req, res) => {
   const sessionId = req.headers["mcp-session-id"];
 
   try {
-    // Existing session — route to its transport
     if (sessionId && sessions[sessionId]) {
       await sessions[sessionId].transport.handleRequest(req, res, req.body);
       return;
     }
 
-    // New session — must be an InitializeRequest
     if (!sessionId && isInitializeRequest(req.body)) {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
@@ -896,7 +959,6 @@ app.post(`${BASE_PATH}/mcp`, async (req, res) => {
       return;
     }
 
-    // Bad request — no session and not an initialize
     res.status(400).json({
       jsonrpc: "2.0",
       error: { code: -32000, message: "Bad Request: No valid session ID provided" },
@@ -914,7 +976,6 @@ app.post(`${BASE_PATH}/mcp`, async (req, res) => {
   }
 });
 
-// GET /mcp — SSE stream for server-initiated messages
 app.get(`${BASE_PATH}/mcp`, async (req, res) => {
   const sessionId = req.headers["mcp-session-id"];
   if (!sessionId || !sessions[sessionId]) {
@@ -928,7 +989,6 @@ app.get(`${BASE_PATH}/mcp`, async (req, res) => {
   await sessions[sessionId].transport.handleRequest(req, res);
 });
 
-// DELETE /mcp — session termination
 app.delete(`${BASE_PATH}/mcp`, async (req, res) => {
   const sessionId = req.headers["mcp-session-id"];
   if (!sessionId || !sessions[sessionId]) {
@@ -942,7 +1002,6 @@ app.delete(`${BASE_PATH}/mcp`, async (req, res) => {
   await sessions[sessionId].transport.handleRequest(req, res);
 });
 
-// Health check
 app.get(`${BASE_PATH}/health`, (_req, res) => {
   res.json({
     status: "ok",

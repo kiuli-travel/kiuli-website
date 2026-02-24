@@ -1174,6 +1174,12 @@ async function linkAirports(segments, headers, PAYLOAD_API_URL) {
       const airportType = classifyAirportType(airportName, iataCode);
       const serviceDefaults = getAirportServicesDefaults(airportType);
 
+      // Resolve nearest destination from location string
+      const locationForResolution = segment.location || segment.city || null;
+      const nearestDestId = locationForResolution
+        ? await resolveLocationToDestination(locationForResolution, countryId, headers, PAYLOAD_API_URL)
+        : countryId;
+
       try {
         const createRes = await fetch(`${PAYLOAD_API_URL}/api/airports`, {
           method: 'POST',
@@ -1185,7 +1191,7 @@ async function linkAirports(segments, headers, PAYLOAD_API_URL) {
             type: airportType,
             city: segment.location || null,
             country: countryId,
-            nearestDestination: null,
+            nearestDestination: nearestDestId,
             services: serviceDefaults,
             observationCount: 1,
           }),
@@ -1220,7 +1226,16 @@ async function linkAirports(segments, headers, PAYLOAD_API_URL) {
       }
     }
 
-    if (airportId) airportMap.set(lookupKey, airportId);
+    if (airportId) {
+      airportMap.set(lookupKey, airportId);
+      // Also store under slug key when primary key is IATA, so transfer route lookups by name work
+      if (iataCode) {
+        const slugKey = generateSlug(airportName);
+        if (slugKey !== lookupKey) {
+          airportMap.set(slugKey, airportId);
+        }
+      }
+    }
   }
 
   console.log(`[linkAirports] Total airports: ${airportMap.size}`);

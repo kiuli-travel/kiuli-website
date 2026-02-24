@@ -16,7 +16,7 @@ export const Properties: CollectionConfig = {
     create: authenticated,
     update: authenticated,
     delete: authenticated,
-    read: () => true, // Public read — property pages are public
+    read: () => true,
   },
   hooks: {
     beforeChange: [updateLastModified],
@@ -275,12 +275,22 @@ export const Properties: CollectionConfig = {
               type: 'text',
               admin: { description: 'e.g. "Bush Suite", "Tent"' },
             },
+            {
+              name: 'wetuContentEntityItemId',
+              type: 'text',
+              admin: { description: 'Cross-reference to Wetu room type ID (Phase 2)' },
+            },
           ],
         },
         {
           name: 'wetuContentEntityId',
           type: 'number',
           admin: { description: 'Wetu content entity ID (Phase 2 — Wetu integration)' },
+        },
+        {
+          name: 'wetuContentRating',
+          type: 'number',
+          admin: { description: 'Wetu content completeness score as percentage (Phase 2)' },
         },
       ],
     },
@@ -290,9 +300,32 @@ export const Properties: CollectionConfig = {
       name: 'canonicalContent',
       type: 'group',
       admin: {
-        description: 'Canonical content — partially from iTrvl, enriched via Wetu in Phase 2',
+        description: 'Canonical content — partially from iTrvl scraper, enriched via Wetu in Phase 2',
       },
       fields: [
+        {
+          name: 'source',
+          type: 'select',
+          defaultValue: 'scraper',
+          options: [
+            { label: 'Scraper (iTrvl)', value: 'scraper' },
+            { label: 'Wetu', value: 'wetu' },
+            { label: 'Manual', value: 'manual' },
+          ],
+          admin: { description: 'Which source provided this canonical content — determines trust level' },
+        },
+        {
+          name: 'lastSynced',
+          type: 'date',
+          admin: { description: 'When canonical content was last synced from its source' },
+        },
+        {
+          name: 'description',
+          type: 'richText',
+          admin: {
+            description: 'Canonical property description — supplier-authoritative text from Wetu, or scraper content before Wetu integration',
+          },
+        },
         {
           name: 'coordinates',
           type: 'group',
@@ -301,6 +334,11 @@ export const Properties: CollectionConfig = {
             { name: 'latitude', type: 'number' },
             { name: 'longitude', type: 'number' },
           ],
+        },
+        {
+          name: 'address',
+          type: 'text',
+          admin: { description: 'Physical address or postal address of the property' },
         },
         {
           name: 'contactEmail',
@@ -312,6 +350,21 @@ export const Properties: CollectionConfig = {
           type: 'text',
           admin: { description: 'Property contact phone from iTrvl notes.contactNumber' },
         },
+        {
+          name: 'website',
+          type: 'text',
+          admin: { description: "Property website URL from canonical source (Wetu preferred)" },
+        },
+        {
+          name: 'starRating',
+          type: 'number',
+          admin: { description: 'Star rating (1–5) where applicable' },
+        },
+        {
+          name: 'totalRooms',
+          type: 'number',
+          admin: { description: 'Total number of rooms / tents / suites at this property' },
+        },
       ],
     },
 
@@ -319,7 +372,7 @@ export const Properties: CollectionConfig = {
     {
       name: 'roomTypes',
       type: 'array',
-      admin: { description: 'Room types — populated from Wetu in Phase 2, manual entry before that' },
+      admin: { description: 'Room types observed in scraped itineraries — enriched via Wetu in Phase 2' },
       fields: [
         {
           name: 'name',
@@ -328,15 +381,70 @@ export const Properties: CollectionConfig = {
           admin: { description: 'e.g. "Bush Suite", "Family Tent"' },
         },
         {
-          name: 'maxPax',
-          type: 'number',
-          admin: { description: 'Maximum occupancy' },
+          name: 'resRequestId',
+          type: 'text',
+          admin: { description: 'ResRequest accommodation type ID (Phase 3)' },
         },
         {
-          name: 'image',
-          type: 'upload',
-          relationTo: 'media',
-          admin: { description: 'Room type image' },
+          name: 'wetuItemId',
+          type: 'text',
+          admin: { description: 'Wetu accommodation item ID (Phase 2)' },
+        },
+        {
+          name: 'description',
+          type: 'richText',
+          admin: { description: 'Room type description — from Wetu in Phase 2' },
+        },
+        {
+          name: 'maxOccupancy',
+          type: 'number',
+          admin: { description: 'Maximum occupancy for this room type' },
+        },
+        {
+          name: 'images',
+          type: 'array',
+          admin: { description: 'Room type images — from Wetu in Phase 2' },
+          fields: [
+            {
+              name: 'image',
+              type: 'upload',
+              relationTo: 'media',
+              required: true,
+            },
+          ],
+        },
+        {
+          name: 'observations',
+          type: 'array',
+          dbName: 'prop_room_obs',
+          admin: { description: 'Price observations for this room type from scraped itineraries' },
+          fields: [
+            {
+              name: 'itineraryId',
+              type: 'relationship',
+              relationTo: 'itineraries',
+              admin: { description: 'Source itinerary' },
+            },
+            {
+              name: 'nightsBooked',
+              type: 'number',
+              admin: { description: 'Nights booked in this room type' },
+            },
+            {
+              name: 'priceObserved',
+              type: 'number',
+              admin: { description: 'Price observed for this stay in source currency' },
+            },
+            {
+              name: 'currency',
+              type: 'text',
+              defaultValue: 'USD',
+            },
+            {
+              name: 'dateObserved',
+              type: 'date',
+            },
+          ],
         },
       ],
     },
@@ -346,13 +454,71 @@ export const Properties: CollectionConfig = {
       name: 'accumulatedData',
       type: 'group',
       admin: {
-        description: 'Accumulated intelligence from scraped itineraries — grows with each scrape',
+        description: 'Accumulated intelligence from scraped itineraries — grows with each scrape. Powers plan_safari() matching.',
       },
       fields: [
+        {
+          name: 'observationCount',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true,
+            description: 'Total number of scraped itineraries featuring this property',
+          },
+        },
+        {
+          name: 'lastObservedAt',
+          type: 'date',
+          admin: {
+            readOnly: true,
+            description: 'Date of most recent scrape that included this property',
+          },
+        },
+        {
+          name: 'typicalNights',
+          type: 'group',
+          admin: { description: 'Typical stay length across all observations — used by itinerary builder' },
+          fields: [
+            {
+              name: 'median',
+              type: 'number',
+              admin: { description: 'Median nights per stay' },
+            },
+            {
+              name: 'min',
+              type: 'number',
+              admin: { description: 'Minimum nights observed' },
+            },
+            {
+              name: 'max',
+              type: 'number',
+              admin: { description: 'Maximum nights observed' },
+            },
+          ],
+        },
         {
           name: 'pricePositioning',
           type: 'group',
           fields: [
+            {
+              name: 'band',
+              type: 'select',
+              dbName: 'prop_pp_band',
+              options: [
+                { label: 'Ultra Premium', value: 'ultra_premium' },
+                { label: 'Premium', value: 'premium' },
+                { label: 'Mid Luxury', value: 'mid_luxury' },
+                { label: 'Accessible Luxury', value: 'accessible_luxury' },
+              ],
+              admin: {
+                description: 'Price band derived from observations — used by plan_safari() for tier matching',
+              },
+            },
+            {
+              name: 'avgPerNightUsd',
+              type: 'number',
+              admin: { description: 'Average price per night in USD across all observations' },
+            },
             {
               name: 'observations',
               type: 'array',
@@ -364,6 +530,11 @@ export const Properties: CollectionConfig = {
                   type: 'relationship',
                   relationTo: 'itineraries',
                   admin: { description: 'Source itinerary' },
+                },
+                {
+                  name: 'source',
+                  type: 'text',
+                  admin: { description: 'Itinerary slug — for traceability' },
                 },
                 {
                   name: 'pricePerNight',
@@ -382,6 +553,24 @@ export const Properties: CollectionConfig = {
                   ],
                 },
                 {
+                  name: 'paxType',
+                  type: 'select',
+                  dbName: 'prop_obs_pax_type',
+                  options: [
+                    { label: 'Family', value: 'family' },
+                    { label: 'Couple', value: 'couple' },
+                    { label: 'Group', value: 'group' },
+                    { label: 'Solo', value: 'solo' },
+                    { label: 'Unknown', value: 'unknown' },
+                  ],
+                  admin: { description: 'Pax configuration observed in this itinerary' },
+                },
+                {
+                  name: 'roomType',
+                  type: 'text',
+                  admin: { description: 'Room type booked in this observation' },
+                },
+                {
                   name: 'observedAt',
                   type: 'date',
                 },
@@ -394,6 +583,30 @@ export const Properties: CollectionConfig = {
               admin: { readOnly: true, description: 'Total number of price observations' },
             },
           ],
+        },
+        {
+          name: 'inclusionPatterns',
+          type: 'richText',
+          admin: {
+            description: 'What is typically included in the rate at this property — from scraper observations and manual review',
+          },
+        },
+        {
+          name: 'suitability',
+          type: 'select',
+          hasMany: true,
+          options: [
+            { label: 'Family', value: 'family' },
+            { label: 'Couples', value: 'couples' },
+            { label: 'Honeymoon', value: 'honeymoon' },
+            { label: 'Group', value: 'group' },
+            { label: 'Solo', value: 'solo' },
+            { label: 'Multigenerational', value: 'multigenerational' },
+            { label: 'Accessible', value: 'accessible' },
+          ],
+          admin: {
+            description: 'Who this property is suited for — used by plan_safari() for trip type matching',
+          },
         },
         {
           name: 'commonPairings',
@@ -417,7 +630,7 @@ export const Properties: CollectionConfig = {
                 { label: 'After', value: 'after' },
               ],
               admin: {
-                description: 'Whether the paired property appears before or after this one in the itinerary',
+                description: 'Whether the paired property appears before or after this one',
               },
             },
             {
@@ -448,6 +661,27 @@ export const Properties: CollectionConfig = {
             },
           ],
         },
+        {
+          name: 'activityPatterns',
+          type: 'array',
+          admin: {
+            description: 'Activities observed at this property across scraped itineraries — used by plan_safari() to describe inclusions',
+          },
+          fields: [
+            {
+              name: 'activity',
+              type: 'text',
+              required: true,
+              admin: { description: 'e.g. "game drive", "walking safari", "gorilla trek"' },
+            },
+            {
+              name: 'frequency',
+              type: 'number',
+              defaultValue: 1,
+              admin: { description: 'How many times this activity has been observed at this property' },
+            },
+          ],
+        },
       ],
     },
 
@@ -456,7 +690,7 @@ export const Properties: CollectionConfig = {
       name: 'availability',
       type: 'group',
       admin: {
-        description: 'Availability integration status',
+        description: 'Availability integration status — defaults to none until ResConnect live (Phase 3)',
       },
       fields: [
         {
@@ -469,6 +703,53 @@ export const Properties: CollectionConfig = {
             { label: 'Direct', value: 'direct' },
           ],
           admin: { description: 'Which source provides live availability for this property' },
+        },
+        {
+          name: 'lastChecked',
+          type: 'date',
+          admin: { description: 'When availability was last checked via the active source' },
+        },
+        {
+          name: 'agentRelationship',
+          type: 'select',
+          defaultValue: 'none',
+          options: [
+            { label: 'Contracted', value: 'contracted' },
+            { label: 'Registered', value: 'registered' },
+            { label: 'None', value: 'none' },
+          ],
+          admin: { description: "Kiuli's commercial relationship with this property for booking purposes" },
+        },
+        {
+          name: 'rateVisibility',
+          type: 'select',
+          defaultValue: 'unknown',
+          options: [
+            { label: 'Net', value: 'net' },
+            { label: 'Rack', value: 'rack' },
+            { label: 'Special', value: 'special' },
+            { label: 'Unknown', value: 'unknown' },
+          ],
+          admin: { description: 'What rate type is visible via ResConnect for this property' },
+        },
+        {
+          name: 'cachePolicy',
+          type: 'group',
+          admin: { description: 'How long to cache availability results from this property' },
+          fields: [
+            {
+              name: 'ttlMinutes',
+              type: 'number',
+              defaultValue: 60,
+              admin: { description: 'Cache time-to-live in minutes (default: 60)' },
+            },
+            {
+              name: 'checkOnDraft',
+              type: 'checkbox',
+              defaultValue: false,
+              admin: { description: 'Whether to check availability when generating a draft itinerary (vs only on confirm)' },
+            },
+          ],
         },
       ],
     },

@@ -468,8 +468,18 @@ exports.handler = async (event) => {
           }
 
           // PATCH — send complete accumulatedData group to avoid partial overwrite
+          const propertySeqEntry = (kb.propertySequence || []).find(p => p.property === propertyId);
+          const nightsAtProperty = propertySeqEntry?.nights || 0;
+
           await payload.update('properties', propertyId, {
             accumulatedData: {
+              observationCount: (existingProperty.accumulatedData?.observationCount || 0) + 1,
+              lastObservedAt: new Date().toISOString(),
+              typicalNights: {
+                median: nightsAtProperty,
+                min: nightsAtProperty,
+                max: nightsAtProperty,
+              },
               pricePositioning: {
                 observations: updatedObs,
                 observationCount: updatedObs.length,
@@ -508,6 +518,8 @@ exports.handler = async (event) => {
         priceTier: priceTierValue,
         travelMonth: startDate ? parseInt(startDate.slice(5, 7)) : null,
         travelYear: startDate ? parseInt(startDate.slice(0, 4)) : null,
+        regions: kb.regionIds || [],
+        serviceItems: kb.serviceItemIds || [],
       };
 
       // Upsert: check if a pattern already exists for this itinerary (handles re-scrape)

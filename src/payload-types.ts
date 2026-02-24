@@ -2024,17 +2024,51 @@ export interface Property {
            * e.g. "Bush Suite", "Tent"
            */
           name?: string | null;
+          /**
+           * Cross-reference to Wetu room type ID (Phase 2)
+           */
+          wetuContentEntityItemId?: string | null;
         }[]
       | null;
     /**
      * Wetu content entity ID (Phase 2 — Wetu integration)
      */
     wetuContentEntityId?: number | null;
+    /**
+     * Wetu content completeness score as percentage (Phase 2)
+     */
+    wetuContentRating?: number | null;
   };
   /**
-   * Canonical content — partially from iTrvl, enriched via Wetu in Phase 2
+   * Canonical content — partially from iTrvl scraper, enriched via Wetu in Phase 2
    */
   canonicalContent?: {
+    /**
+     * Which source provided this canonical content — determines trust level
+     */
+    source?: ('scraper' | 'wetu' | 'manual') | null;
+    /**
+     * When canonical content was last synced from its source
+     */
+    lastSynced?: string | null;
+    /**
+     * Canonical property description — supplier-authoritative text from Wetu, or scraper content before Wetu integration
+     */
+    description?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
     /**
      * GPS coordinates — from iTrvl where available, Wetu sync in Phase 2
      */
@@ -2043,6 +2077,10 @@ export interface Property {
       longitude?: number | null;
     };
     /**
+     * Physical address or postal address of the property
+     */
+    address?: string | null;
+    /**
      * Property contact email from iTrvl notes.contactEmail
      */
     contactEmail?: string | null;
@@ -2050,9 +2088,21 @@ export interface Property {
      * Property contact phone from iTrvl notes.contactNumber
      */
     contactPhone?: string | null;
+    /**
+     * Property website URL from canonical source (Wetu preferred)
+     */
+    website?: string | null;
+    /**
+     * Star rating (1–5) where applicable
+     */
+    starRating?: number | null;
+    /**
+     * Total number of rooms / tents / suites at this property
+     */
+    totalRooms?: number | null;
   };
   /**
-   * Room types — populated from Wetu in Phase 2, manual entry before that
+   * Room types observed in scraped itineraries — enriched via Wetu in Phase 2
    */
   roomTypes?:
     | {
@@ -2061,21 +2111,107 @@ export interface Property {
          */
         name: string;
         /**
-         * Maximum occupancy
+         * ResRequest accommodation type ID (Phase 3)
          */
-        maxPax?: number | null;
+        resRequestId?: string | null;
         /**
-         * Room type image
+         * Wetu accommodation item ID (Phase 2)
          */
-        image?: (number | null) | Media;
+        wetuItemId?: string | null;
+        /**
+         * Room type description — from Wetu in Phase 2
+         */
+        description?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        /**
+         * Maximum occupancy for this room type
+         */
+        maxOccupancy?: number | null;
+        /**
+         * Room type images — from Wetu in Phase 2
+         */
+        images?:
+          | {
+              image: number | Media;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * Price observations for this room type from scraped itineraries
+         */
+        observations?:
+          | {
+              /**
+               * Source itinerary
+               */
+              itineraryId?: (number | null) | Itinerary;
+              /**
+               * Nights booked in this room type
+               */
+              nightsBooked?: number | null;
+              /**
+               * Price observed for this stay in source currency
+               */
+              priceObserved?: number | null;
+              currency?: string | null;
+              dateObserved?: string | null;
+              id?: string | null;
+            }[]
+          | null;
         id?: string | null;
       }[]
     | null;
   /**
-   * Accumulated intelligence from scraped itineraries — grows with each scrape
+   * Accumulated intelligence from scraped itineraries — grows with each scrape. Powers plan_safari() matching.
    */
   accumulatedData?: {
+    /**
+     * Total number of scraped itineraries featuring this property
+     */
+    observationCount?: number | null;
+    /**
+     * Date of most recent scrape that included this property
+     */
+    lastObservedAt?: string | null;
+    /**
+     * Typical stay length across all observations — used by itinerary builder
+     */
+    typicalNights?: {
+      /**
+       * Median nights per stay
+       */
+      median?: number | null;
+      /**
+       * Minimum nights observed
+       */
+      min?: number | null;
+      /**
+       * Maximum nights observed
+       */
+      max?: number | null;
+    };
     pricePositioning?: {
+      /**
+       * Price band derived from observations — used by plan_safari() for tier matching
+       */
+      band?: ('ultra_premium' | 'premium' | 'mid_luxury' | 'accessible_luxury') | null;
+      /**
+       * Average price per night in USD across all observations
+       */
+      avgPerNightUsd?: number | null;
       /**
        * One entry per scraped itinerary that features this property
        */
@@ -2086,10 +2222,22 @@ export interface Property {
              */
             itineraryId?: (number | null) | Itinerary;
             /**
+             * Itinerary slug — for traceability
+             */
+            source?: string | null;
+            /**
              * USD — total itinerary price divided by total nights
              */
             pricePerNight?: number | null;
             priceTier?: ('ultra_premium' | 'premium' | 'mid_luxury' | 'accessible_luxury') | null;
+            /**
+             * Pax configuration observed in this itinerary
+             */
+            paxType?: ('family' | 'couple' | 'group' | 'solo' | 'unknown') | null;
+            /**
+             * Room type booked in this observation
+             */
+            roomType?: string | null;
             observedAt?: string | null;
             id?: string | null;
           }[]
@@ -2100,6 +2248,28 @@ export interface Property {
       observationCount?: number | null;
     };
     /**
+     * What is typically included in the rate at this property — from scraper observations and manual review
+     */
+    inclusionPatterns?: {
+      root: {
+        type: string;
+        children: {
+          type: any;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    /**
+     * Who this property is suited for — used by plan_safari() for trip type matching
+     */
+    suitability?: ('family' | 'couples' | 'honeymoon' | 'group' | 'solo' | 'multigenerational' | 'accessible')[] | null;
+    /**
      * Properties that appear immediately before or after this one across scraped itineraries
      */
     commonPairings?:
@@ -2109,7 +2279,7 @@ export interface Property {
            */
           property?: (number | null) | Property;
           /**
-           * Whether the paired property appears before or after this one in the itinerary
+           * Whether the paired property appears before or after this one
            */
           position?: ('before' | 'after') | null;
           /**
@@ -2132,15 +2302,56 @@ export interface Property {
           id?: string | null;
         }[]
       | null;
+    /**
+     * Activities observed at this property across scraped itineraries — used by plan_safari() to describe inclusions
+     */
+    activityPatterns?:
+      | {
+          /**
+           * e.g. "game drive", "walking safari", "gorilla trek"
+           */
+          activity: string;
+          /**
+           * How many times this activity has been observed at this property
+           */
+          frequency?: number | null;
+          id?: string | null;
+        }[]
+      | null;
   };
   /**
-   * Availability integration status
+   * Availability integration status — defaults to none until ResConnect live (Phase 3)
    */
   availability?: {
     /**
      * Which source provides live availability for this property
      */
     source?: ('none' | 'resconnect' | 'direct') | null;
+    /**
+     * When availability was last checked via the active source
+     */
+    lastChecked?: string | null;
+    /**
+     * Kiuli's commercial relationship with this property for booking purposes
+     */
+    agentRelationship?: ('contracted' | 'registered' | 'none') | null;
+    /**
+     * What rate type is visible via ResConnect for this property
+     */
+    rateVisibility?: ('net' | 'rack' | 'special' | 'unknown') | null;
+    /**
+     * How long to cache availability results from this property
+     */
+    cachePolicy?: {
+      /**
+       * Cache time-to-live in minutes (default: 60)
+       */
+      ttlMinutes?: number | null;
+      /**
+       * Whether to check availability when generating a draft itinerary (vs only on confirm)
+       */
+      checkOnDraft?: boolean | null;
+    };
   };
   updatedAt: string;
   createdAt: string;
@@ -3432,7 +3643,6 @@ export interface Activity {
         | 'conservation_experience'
         | 'community_visit'
         | 'helicopter_flight'
-        | 'other'
       )
     | null;
   /**
@@ -3488,11 +3698,11 @@ export interface Activity {
      */
     availability?: ('always_included' | 'on_demand' | 'scheduled' | 'seasonal' | 'optional_extra') | null;
     /**
-     * Minimum days advance booking required. 0 = same day. Null = not applicable. Examples: gorilla permit = typically 1 (minimum) but recommend 90+; balloon = 1 day minimum, recommend weeks ahead.
+     * Minimum days advance booking required. 0 = same day. Null = not applicable.
      */
     minimumLeadDays?: number | null;
     /**
-     * Maximum group size for this activity. Null = no practical limit. Examples: gorilla trekking = 8 (government regulation); some helicopter flights = 3–4.
+     * Maximum group size for this activity. Null = no practical limit.
      */
     maximumGroupSize?: number | null;
     /**
@@ -3500,7 +3710,7 @@ export interface Activity {
      */
     isIncludedInTariff?: boolean | null;
     /**
-     * Human-readable additional cost estimate if not included. Examples: "~$600pp gorilla permit", "~$750pp balloon flight (Serengeti)", "~$450pp helicopter excursion". Leave empty if included in tariff.
+     * Human-readable additional cost estimate if not included. Leave empty if included in tariff.
      */
     typicalAdditionalCost?: string | null;
   };
@@ -5867,46 +6077,89 @@ export interface PropertiesSelect<T extends boolean = true> {
           | {
               id?: T;
               name?: T;
+              wetuContentEntityItemId?: T;
             };
         wetuContentEntityId?: T;
+        wetuContentRating?: T;
       };
   canonicalContent?:
     | T
     | {
+        source?: T;
+        lastSynced?: T;
+        description?: T;
         coordinates?:
           | T
           | {
               latitude?: T;
               longitude?: T;
             };
+        address?: T;
         contactEmail?: T;
         contactPhone?: T;
+        website?: T;
+        starRating?: T;
+        totalRooms?: T;
       };
   roomTypes?:
     | T
     | {
         name?: T;
-        maxPax?: T;
-        image?: T;
+        resRequestId?: T;
+        wetuItemId?: T;
+        description?: T;
+        maxOccupancy?: T;
+        images?:
+          | T
+          | {
+              image?: T;
+              id?: T;
+            };
+        observations?:
+          | T
+          | {
+              itineraryId?: T;
+              nightsBooked?: T;
+              priceObserved?: T;
+              currency?: T;
+              dateObserved?: T;
+              id?: T;
+            };
         id?: T;
       };
   accumulatedData?:
     | T
     | {
+        observationCount?: T;
+        lastObservedAt?: T;
+        typicalNights?:
+          | T
+          | {
+              median?: T;
+              min?: T;
+              max?: T;
+            };
         pricePositioning?:
           | T
           | {
+              band?: T;
+              avgPerNightUsd?: T;
               observations?:
                 | T
                 | {
                     itineraryId?: T;
+                    source?: T;
                     pricePerNight?: T;
                     priceTier?: T;
+                    paxType?: T;
+                    roomType?: T;
                     observedAt?: T;
                     id?: T;
                   };
               observationCount?: T;
             };
+        inclusionPatterns?: T;
+        suitability?: T;
         commonPairings?:
           | T
           | {
@@ -5922,11 +6175,27 @@ export interface PropertiesSelect<T extends boolean = true> {
               observationCount?: T;
               id?: T;
             };
+        activityPatterns?:
+          | T
+          | {
+              activity?: T;
+              frequency?: T;
+              id?: T;
+            };
       };
   availability?:
     | T
     | {
         source?: T;
+        lastChecked?: T;
+        agentRelationship?: T;
+        rateVisibility?: T;
+        cachePolicy?:
+          | T
+          | {
+              ttlMinutes?: T;
+              checkOnDraft?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;

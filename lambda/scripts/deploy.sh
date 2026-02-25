@@ -14,7 +14,7 @@
 # What this script does:
 #   1. Verifies AWS credentials are valid
 #   2. Syncs shared modules to all Lambda directories
-#   3. Installs dependencies (npm ci)
+#   3. Installs dependencies (npm ci --platform=linux --arch=x64)
 #   4. Packages the function into a zip
 #   5. Deploys to AWS Lambda
 #   6. Waits for the update to complete (aws lambda wait)
@@ -25,6 +25,12 @@
 #
 # The git hash stamp in the Description is the verification mechanism.
 # It lets Claude (Strategic) confirm what's deployed by calling lambda_status.
+#
+# Note on --platform=linux --arch=x64:
+#   Native modules (Sharp, etc.) ship architecture-specific prebuilt binaries.
+#   npm ci without platform flags installs host-native binaries (e.g. darwin-arm64
+#   on macOS Apple Silicon), which fail on Lambda (linux-x64). These flags force
+#   npm to install the correct Lambda-compatible binaries regardless of host OS.
 #
 # =============================================================================
 
@@ -167,10 +173,16 @@ ok "Shared modules in sync"
 # Step 4: Install dependencies
 # ---------------------------------------------------------------------------
 
-step 4 "Installing dependencies (npm ci)..."
+step 4 "Installing dependencies (npm ci --platform=linux --arch=x64)..."
 cd "$FUNC_DIR"
-npm ci --silent 2>&1 || fail "npm ci failed in $FUNC_DIR"
-ok "Dependencies installed"
+# Force linux-x64 so native modules (e.g. Sharp) install Lambda-compatible
+# binaries regardless of host architecture (macOS ARM, macOS Intel, etc.).
+npm ci --silent \
+  --platform=linux \
+  --arch=x64 \
+  --libc=glibc \
+  2>&1 || fail "npm ci failed in $FUNC_DIR"
+ok "Dependencies installed (linux-x64)"
 
 # ---------------------------------------------------------------------------
 # Step 5: Package

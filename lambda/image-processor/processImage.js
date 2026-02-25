@@ -181,7 +181,26 @@ async function createMediaRecord(buffer, sourceS3Key, s3Key, itineraryId, conten
   }
 
   const media = await response.json();
-  return media.doc?.id || media.id;
+  const mediaId = media.doc?.id || media.id;
+
+  // Verify the record actually exists before returning the ID.
+  // Payload can return a 200 with an ID and then delete the record if the storage
+  // backend persistence fails (e.g. local filesystem write on Vercel serverless).
+  // Without this check, phantom IDs propagate into ImageStatus and cause the
+  // finalizer's PATCH to fail with a 500 on relationship validation.
+  const verifyRes = await fetch(
+    `${payload.PAYLOAD_API_URL}/api/media/${mediaId}?depth=0`,
+    { headers: { 'Authorization': `users API-Key ${payload.PAYLOAD_API_KEY}` } }
+  );
+  if (!verifyRes.ok) {
+    throw new Error(
+      `[createMediaRecord] Phantom ID detected: media ${mediaId} was not persisted ` +
+      `(verification GET returned ${verifyRes.status}). Storage backend likely failed.`
+    );
+  }
+
+  console.log(`[createMediaRecord] Verified: media ${mediaId} exists`);
+  return mediaId;
 }
 
 module.exports = { processImage };

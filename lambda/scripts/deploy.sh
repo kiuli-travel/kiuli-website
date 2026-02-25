@@ -173,16 +173,17 @@ ok "Shared modules in sync"
 # Step 4: Install dependencies
 # ---------------------------------------------------------------------------
 
-step 4 "Installing dependencies (npm ci --platform=linux --arch=x64)..."
+step 4 "Installing dependencies (npm ci --force for linux-x64 native modules)..."
 cd "$FUNC_DIR"
-# Force linux-x64 so native modules (e.g. Sharp) install Lambda-compatible
-# binaries regardless of host architecture (macOS ARM, macOS Intel, etc.).
-npm ci --silent \
-  --platform=linux \
-  --arch=x64 \
-  --libc=glibc \
+# npm 11 dropped --platform/--arch CLI flags. Native modules like Sharp ship
+# platform-specific optional dependencies with os/cpu restrictions in their
+# package.json. The linux-x64 packages are listed as direct dependencies
+# (not optional) so npm will install them, but EBADPLATFORM blocks install
+# on macOS without --force. This is safe: we explicitly want linux-x64
+# binaries for Lambda regardless of host OS.
+npm ci --silent --force \
   2>&1 || fail "npm ci failed in $FUNC_DIR"
-ok "Dependencies installed (linux-x64)"
+ok "Dependencies installed (linux-x64 via --force)"
 
 # ---------------------------------------------------------------------------
 # Step 5: Package

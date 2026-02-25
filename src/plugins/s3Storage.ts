@@ -5,7 +5,20 @@ export const makeS3StoragePlugin = () =>
   s3Storage({
     // Apply S3 to your media collection. The slug must match your collection.
     collections: {
-      media: true,
+      media: {
+        // Disable local filesystem storage entirely.
+        // Without this, Payload attempts to write to the local filesystem before S3.
+        // On Vercel serverless the local write fails intermittently, triggering
+        // Payload's internal cleanup which deletes the just-committed DB row while
+        // the API response (containing the ID) has already been sent to the caller.
+        // Result: phantom media IDs that exist in ImageStatus but not in the DB.
+        disableLocalStorage: true,
+        generateFileURL: ({ filename }: { filename: string }) => {
+          const bucket = process.env.S3_BUCKET
+          const region = process.env.S3_REGION
+          return `https://${bucket}.s3.${region}.amazonaws.com/media/${filename}`
+        },
+      },
     },
     // Your S3 bucket name
     bucket: process.env.S3_BUCKET as string,
@@ -17,6 +30,4 @@ export const makeS3StoragePlugin = () =>
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
       },
     },
-    // Optional features exist, for example signed downloads and clientUploads.
-    // We will leave them off until we verify basic upload works.
   })

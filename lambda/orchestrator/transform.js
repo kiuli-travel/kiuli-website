@@ -282,7 +282,7 @@ async function resolveLocationToDestination(locationString, countryId, headers, 
   // Step 3: Auto-create Destination as draft
   const slug = generateSlug(locationString);
   try {
-    const createRes = await fetch(`${PAYLOAD_API_URL}/api/destinations`, {
+    const createRes = await fetch(`${PAYLOAD_API_URL}/api/destinations?draft=true`, {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({

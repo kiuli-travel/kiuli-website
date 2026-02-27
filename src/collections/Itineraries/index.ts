@@ -503,6 +503,22 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
             description: 'Includes text has been reviewed',
           },
         },
+        {
+          name: 'calloutItrvl',
+          type: 'text',
+          admin: { description: 'Original iTrvl investment callout text. Leave empty if iTrvl does not provide one.' },
+        },
+        {
+          name: 'calloutEnhanced',
+          type: 'text',
+          admin: { description: 'Investment callout shown to prospect on the itinerary page. 1-2 sentences.' },
+        },
+        {
+          name: 'calloutReviewed',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: { description: 'Investment callout content has been reviewed' },
+        },
       ],
     },
 

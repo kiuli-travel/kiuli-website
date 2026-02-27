@@ -27,6 +27,9 @@ const VOICE_CONFIG_TO_SECTION_KEY: Record<string, string> = {
   'faq-answer': 'faq_answer',
   'investment-includes': 'investment_includes',
   'why-kiuli': 'why_kiuli',
+  'itinerary-title': 'itinerary_title',
+  'meta-title': 'meta_title',
+  'meta-description': 'meta_description',
 }
 
 /**

@@ -926,6 +926,18 @@ export interface Itinerary {
      * Includes text has been reviewed
      */
     includesReviewed?: boolean | null;
+    /**
+     * Original iTrvl investment callout text. Leave empty if iTrvl does not provide one.
+     */
+    calloutItrvl?: string | null;
+    /**
+     * Investment callout shown to prospect on the itinerary page. 1-2 sentences.
+     */
+    calloutEnhanced?: string | null;
+    /**
+     * Investment callout content has been reviewed
+     */
+    calloutReviewed?: boolean | null;
   };
   /**
    * Day-by-day itinerary
@@ -5584,6 +5596,9 @@ export interface ItinerariesSelect<T extends boolean = true> {
         includesItrvl?: T;
         includesEnhanced?: T;
         includesReviewed?: T;
+        calloutItrvl?: T;
+        calloutEnhanced?: T;
+        calloutReviewed?: T;
       };
   days?:
     | T

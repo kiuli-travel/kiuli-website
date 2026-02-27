@@ -54,6 +54,7 @@ export default buildConfig({
         '@/components/admin/ImportItineraryLink#ImportItineraryLink',
         '@/components/admin/ContentEngineLink#ContentEngineLink',
         '@/components/admin/ImageLibraryLink#ImageLibraryLink',
+        '@/components/admin/ItineraryEditorNavLink#ItineraryEditorNavLink',
         '@/components/admin/NotificationBell#NotificationBell',
       ],
     },

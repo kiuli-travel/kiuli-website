@@ -772,7 +772,7 @@ export default function ItineraryEditorPage() {
     metaDescEnhanced, metaDescReviewed, selectedTripTypes, answerCapsule,
     answerCapsuleReviewed, focusKeyword, focusKeywordReviewed, selectedTier,
     inclusionsEnhanced, inclusionsReviewed, calloutEnhanced, calloutReviewed,
-    isImageLocked, isImageReviewed, isVideoLocked, isVideoReviewed, showHeroVideo,
+    heroImageId, isImageLocked, isImageReviewed, isVideoLocked, isVideoReviewed, showHeroVideo,
     days, faqItems,
   ])
 

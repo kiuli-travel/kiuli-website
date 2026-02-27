@@ -336,6 +336,10 @@ export default function ItineraryEditorPage() {
           fetch("/api/trip-types?limit=100&depth=0", { credentials: "include" }),
         ])
 
+        if (itinRes.status === 401 || itinRes.status === 403) {
+          router.replace(`/admin?redirect=/admin/itinerary-editor/${id}`)
+          return
+        }
         if (!itinRes.ok) throw new Error(`Failed to load itinerary: ${itinRes.status}`)
         const doc = (await itinRes.json()) as Doc
         setRawDoc(doc)
@@ -427,6 +431,17 @@ export default function ItineraryEditorPage() {
     load()
   }, [id])
 
+  // ── Markdown stripping ──
+  function stripMarkdown(text: string): string {
+    return text
+      .replace(/^#{1,6}\s+/gm, '')      // remove heading markers
+      .replace(/\*\*(.+?)\*\*/g, '$1')  // remove bold
+      .replace(/\*(.+?)\*/g, '$1')      // remove italic
+      .replace(/`(.+?)`/g, '$1')        // remove inline code
+      .replace(/^\s*[-*+]\s+/gm, '')    // remove list markers
+      .trim()
+  }
+
   // ── Enhance handler ──
   const handleEnhance = useCallback(
     async (fieldPath: string) => {
@@ -441,7 +456,8 @@ export default function ItineraryEditorPage() {
         const data = (await res.json()) as { success: boolean; enhanced: unknown; error?: string }
         if (!data.success) throw new Error(data.error || "Enhancement failed")
 
-        const enhanced = typeof data.enhanced === "string" ? data.enhanced : richTextToString(data.enhanced)
+        const rawEnhanced = typeof data.enhanced === "string" ? data.enhanced : richTextToString(data.enhanced)
+        const enhanced = stripMarkdown(rawEnhanced)
 
         if (fieldPath === "title") setTitleEnhanced(enhanced)
         else if (fieldPath === "metaTitle") setMetaTitleEnhanced(enhanced)

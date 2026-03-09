@@ -15,11 +15,8 @@ interface HeroPanelProps {
 
   heroVideoUrl: string | null
   heroVideoName: string
-  isVideoLocked: boolean
   isVideoReviewed: boolean
   showHeroVideo: boolean
-  onSelectVideo: () => void
-  onVideoLockedChange: (v: boolean) => void
   onVideoReviewedChange: (v: boolean) => void
   onShowHeroVideoChange: (v: boolean) => void
 
@@ -116,11 +113,8 @@ export default function HeroPanel({
   onImageReviewedChange,
   heroVideoUrl,
   heroVideoName,
-  isVideoLocked,
   isVideoReviewed,
   showHeroVideo,
-  onSelectVideo,
-  onVideoLockedChange,
   onVideoReviewedChange,
   onShowHeroVideoChange,
   className,
@@ -177,6 +171,16 @@ export default function HeroPanel({
                   backgroundColor: "#C8C0B0",
                 }}
               >
+                <img
+                  src={heroImageUrl!}
+                  alt={heroImageAlt}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
                 {isImageLocked && (
                   <div
                     className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full px-1.5 py-0.5"
@@ -332,7 +336,7 @@ export default function HeroPanel({
             </span>
           </div>
           <span className="text-xs" style={{ color: "#888" }}>
-            {hasVideo ? heroVideoName : "No video selected"}
+            {hasVideo ? heroVideoName : "No video from iTrvl"}
           </span>
         </button>
 
@@ -373,42 +377,13 @@ export default function HeroPanel({
                     style={{ width: 24, height: 24, color: "#DADADA" }}
                   />
                   <span style={{ fontSize: 11, color: "#DADADA" }}>
-                    No video selected
+                    No video from iTrvl
                   </span>
                 </div>
               )}
 
-              {/* Select Video Button */}
-              <div>
-                <button
-                  type="button"
-                  onClick={onSelectVideo}
-                  className="cursor-pointer rounded-md px-3.5 py-1.5 text-xs font-medium transition-colors"
-                  style={{
-                    border: "1px solid #486A6A",
-                    color: "#486A6A",
-                    backgroundColor: "#FFFFFF",
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#F0F5F5")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#FFFFFF")
-                  }
-                >
-                  Select Video
-                </button>
-              </div>
-
               {/* Checkboxes */}
               <div className="flex flex-col gap-2">
-                <Checkbox
-                  id="video-locked"
-                  checked={isVideoLocked}
-                  onChange={onVideoLockedChange}
-                  label="Hero Video Locked"
-                  helperText="Lock to prevent auto-replacement on re-scrape"
-                />
                 <Checkbox
                   id="video-reviewed"
                   checked={isVideoReviewed}

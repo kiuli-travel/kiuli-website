@@ -21,7 +21,6 @@ import BlockersPanel from "@/components/admin/editorial/BlockersPanel"
 import type { Blocker } from "@/components/admin/editorial/BlockersPanel"
 import type { StripImage } from "@/components/admin/editorial/ImageStrip"
 import { ImageSelectionModal } from "@/components/admin/ImageSelectionModal"
-import { VideoSelectionModal } from "@/components/admin/VideoSelectionModal"
 
 // ─── Generic Helpers ────────────────────────────────────────────────
 
@@ -324,7 +323,6 @@ export default function ItineraryEditorPage() {
 
   // ── Image modal ──
   const [imageModalOpen, setImageModalOpen] = useState(false)
-  const [videoModalOpen, setVideoModalOpen] = useState(false)
 
   // ── Status ──
   const [status, setStatus] = useState<"draft" | "published">("draft")
@@ -643,7 +641,7 @@ export default function ItineraryEditorPage() {
     metaDescEnhanced, metaDescReviewed, selectedTripTypes, tripTypeNameToId,
     answerCapsule, answerCapsuleReviewed, focusKeyword, focusKeywordReviewed,
     selectedTier, inclusionsEnhanced, inclusionsReviewed,
-    isImageLocked, isImageReviewed, isVideoLocked, isVideoReviewed, showHeroVideo,
+    isImageLocked, isImageReviewed, isVideoReviewed, showHeroVideo,
     days, faqItems,
   ])
 
@@ -897,11 +895,8 @@ export default function ItineraryEditorPage() {
               onImageReviewedChange={setIsImageReviewed}
               heroVideoUrl={heroVideoUrl}
               heroVideoName={heroVideoName}
-              isVideoLocked={isVideoLocked}
               isVideoReviewed={isVideoReviewed}
               showHeroVideo={showHeroVideo}
-              onSelectVideo={() => setVideoModalOpen(true)}
-              onVideoLockedChange={setIsVideoLocked}
               onVideoReviewedChange={setIsVideoReviewed}
               onShowHeroVideoChange={setShowHeroVideo}
             />
@@ -918,21 +913,6 @@ export default function ItineraryEditorPage() {
                 setHeroImageAlt(typeof media.alt === 'string' ? media.alt : typeof media.filename === 'string' ? media.filename : '')
                 setHeroImageId(mediaIds[0])
                 setImageModalOpen(false)
-              }}
-            />
-            <VideoSelectionModal
-              isOpen={videoModalOpen}
-              onClose={() => setVideoModalOpen(false)}
-              currentlySelected={heroVideoId ? [heroVideoId] : []}
-              onSelect={async (mediaIds) => {
-                if (mediaIds.length === 0) return
-                const res = await fetch(`/api/media/${mediaIds[0]}`, { credentials: 'include' })
-                if (!res.ok) return
-                const doc = await res.json()
-                setHeroVideoId(mediaIds[0])
-                setHeroVideoUrl(mediaUrl(doc))
-                setHeroVideoName(doc.alt || doc.filename || `Video #${mediaIds[0]}`)
-                setVideoModalOpen(false)
               }}
             />
           </div>

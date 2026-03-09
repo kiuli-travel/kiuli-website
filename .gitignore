@@ -51,3 +51,4 @@ tsconfig.tsbuildinfo
 
 # Env check file (contains secrets)
 .env.vercel-check
+__pycache__/

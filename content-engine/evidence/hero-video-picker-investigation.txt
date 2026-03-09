@@ -1,0 +1,41 @@
+=== Investigation ===
+
+--- onSelectVideo ---
+903:              onSelectVideo={() => setVideoModalOpen(true)}
+
+--- heroVideo in PATCH ---
+614:      heroVideo: heroVideoId,
+
+--- heroVideoId state ---
+308:  const [heroVideoId, setHeroVideoId] = useState<number | null>(null)
+614:      heroVideo: heroVideoId,
+800:    heroImageId, heroVideoId, isImageLocked, isImageReviewed, isVideoLocked, isVideoReviewed, showHeroVideo,
+926:              currentlySelected={heroVideoId ? [heroVideoId] : []}
+
+--- setHeroVideoUrl/Name ---
+313:  const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null)
+314:  const [heroVideoName, setHeroVideoName] = useState("")
+399:        setHeroVideoUrl(mediaUrl(doc.heroVideo))
+400:        setHeroVideoName(mediaAlt(doc.heroVideo))
+933:                setHeroVideoUrl(mediaUrl(doc))
+934:                setHeroVideoName(doc.alt || doc.filename || `Video #${mediaIds[0]}`)
+
+--- heroImageId pattern ---
+307:  const [heroImageId, setHeroImageId] = useState<number | null>(null)
+385:        const rawHeroId = doc.heroImage
+386:        if (rawHeroId && typeof rawHeroId === 'object' && (rawHeroId as any).id) {
+387:          setHeroImageId(Number((rawHeroId as any).id))
+388:        } else if (typeof rawHeroId === 'number') {
+389:          setHeroImageId(rawHeroId)
+919:                setHeroImageId(mediaIds[0])
+
+--- ImageSelectionModal/imageModalOpen ---
+23:import { ImageSelectionModal } from "@/components/admin/ImageSelectionModal"
+326:  const [imageModalOpen, setImageModalOpen] = useState(false)
+908:            <ImageSelectionModal
+909:              isOpen={imageModalOpen}
+911:              currentlySelected={heroImageId ? [heroImageId] : []}
+926:              currentlySelected={heroVideoId ? [heroVideoId] : []}
+
+--- VideoSelectionModal exists? ---
+src/components/admin/VideoSelectionModal.tsx

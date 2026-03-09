@@ -1,0 +1,21 @@
+
+
+> with-vercel-website@1.0.0 postbuild
+> next-sitemap --config next-sitemap.config.cjs
+
+✨ [next-sitemap] Loading next-sitemap config: file:///Users/grahamwallington/Projects/kiuli-website/next-sitemap.config.cjs
+✅ [next-sitemap] Generation completed
+┌───────────────┬────────┐
+│ (index)       │ Values │
+├───────────────┼────────┤
+│ indexSitemaps │ 1      │
+│ sitemaps      │ 0      │
+└───────────────┴────────┘
+-----------------------------------------------------
+ SITEMAP INDICES 
+-----------------------------------------------------
+
+   ○ https://kiuli.com/sitemap.xml
+
+
+BUILD EXIT: 

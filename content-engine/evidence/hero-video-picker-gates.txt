@@ -1,0 +1,56 @@
+=== Gate 2: VideoSelectionModal ===
+-rw-r--r--  1 grahamwallington  staff  12038  9 Mar 15:59 src/components/admin/VideoSelectionModal.tsx
+11:  mediaType?: string
+54:        'where[mediaType][equals]': 'video',
+15:  isOpen: boolean
+16:  onClose: () => void
+17:  onSelect: (mediaIds: number[]) => void
+18:  currentlySelected: number[]
+24:  isOpen,
+25:  onClose,
+26:  onSelect,
+27:  currentlySelected,
+31:    currentlySelected.length > 0 ? currentlySelected[0] : null,
+42:    if (isOpen) {
+43:      setSelectedId(currentlySelected.length > 0 ? currentlySelected[0] : null)
+45:  }, [isOpen, currentlySelected])
+94:    if (isOpen) {
+98:  }, [isOpen, fetchVideos])
+102:    if (!isOpen) return
+118:  }, [searchQuery, isOpen, fetchVideos])
+128:      onSelect([selectedId])
+130:    onClose()
+138:  if (!isOpen) return null
+155:      onClick={(e) => e.target === e.currentTarget && onClose()}
+183:            onClick={onClose}
+376:            onClick={onClose}
+
+=== Gate 3: heroVideoId state ===
+308:  const [heroVideoId, setHeroVideoId] = useState<number | null>(null)
+614:      heroVideo: heroVideoId,
+800:    heroImageId, heroVideoId, isImageLocked, isImageReviewed, isVideoLocked, isVideoReviewed, showHeroVideo,
+926:              currentlySelected={heroVideoId ? [heroVideoId] : []}
+
+=== Gate 4: PATCH body ===
+614:      heroVideo: heroVideoId,
+
+=== Gate 5: onSelectVideo ===
+327:  const [videoModalOpen, setVideoModalOpen] = useState(false)
+903:              onSelectVideo={() => setVideoModalOpen(true)}
+924:              isOpen={videoModalOpen}
+
+=== Gate 6: onSelect setters ===
+308:  const [heroVideoId, setHeroVideoId] = useState<number | null>(null)
+313:  const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null)
+314:  const [heroVideoName, setHeroVideoName] = useState("")
+395:          setHeroVideoId(Number((rawVideoId as any).id))
+397:          setHeroVideoId(rawVideoId)
+399:        setHeroVideoUrl(mediaUrl(doc.heroVideo))
+400:        setHeroVideoName(mediaAlt(doc.heroVideo))
+932:                setHeroVideoId(mediaIds[0])
+933:                setHeroVideoUrl(mediaUrl(doc))
+934:                setHeroVideoName(doc.alt || doc.filename || `Video #${mediaIds[0]}`)
+
+=== Gate 7: TypeScript ===
+npm warn Unknown project config "enable-pre-post-scripts". This will stop working in the next major version of npm.
+TSC EXIT: 

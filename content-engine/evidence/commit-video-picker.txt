@@ -1,0 +1,18 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	content-engine/evidence/commit-video-picker.txt
+	content-engine/evidence/hero-video-picker-build.txt
+	content-engine/evidence/hero-video-picker-gates.txt
+	content-engine/evidence/hero-video-picker-investigation.txt
+	content-engine/prompts/commit-video-picker.md
+	content-engine/prompts/fix-hero-video-picker.md
+	tools/mcp-server/__pycache__/
+
+nothing added to commit but untracked files present (use "git add" to track)
+5d4b1d4 chore(mcp): MCP server audit reports and oauth provider
+2783882 fix(editor): implement hero video picker, heroVideoId state tracking
+fce7ea9 fix(admin): strip markdown from enhance output, redirect 403 to login, seed title voice guidance
+GIT STATUS EXIT: 0

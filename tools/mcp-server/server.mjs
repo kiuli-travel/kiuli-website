@@ -918,6 +918,345 @@ srv.tool(
   }
 );
 
+// -- deploy_lambda ----------------------------------------------------------
+srv.tool(
+  "deploy_lambda",
+  "Deploy a Kiuli Lambda function using deploy.sh. Syncs shared modules, installs deps, packages, uploads (S3 for large zips), stamps git hash, and verifies. Returns full output.",
+  {
+    function: z
+      .enum(["scraper", "orchestrator", "image-processor", "labeler", "finalizer", "video-processor"])
+      .describe("Which Lambda function to deploy"),
+  },
+  async ({ function: fn }) => {
+    const scriptPath = path.join(PROJECT_ROOT, "lambda", "scripts", "deploy.sh");
+    try {
+      const { stdout, stderr } = await execAsync(`bash ${scriptPath} ${fn} 2>&1`, {
+        cwd: PROJECT_ROOT,
+        timeout: 300000, // 5 minutes — npm ci + zip + upload takes time
+        maxBuffer: 1024 * 1024 * 5,
+        env: { ...process.env, PATH: process.env.PATH },
+      });
+      const output = (stdout + "\n" + stderr).trim();
+      const success = output.includes("DEPLOYMENT SUCCESSFUL");
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ function: fn, success, output }, null, 2),
+        }],
+      };
+    } catch (err) {
+      const output = ((err.stdout || "") + "\n" + (err.stderr || err.message || "")).trim();
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            function: fn,
+            success: false,
+            output,
+            exit_code: err.code,
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
+// -- verify_lambdas ---------------------------------------------------------
+srv.tool(
+  "verify_lambdas",
+  "Run verify.sh to check all 6 Lambda functions are deployed at current git HEAD. Returns CURRENT/BEHIND/ERROR for each.",
+  {},
+  async () => {
+    const scriptPath = path.join(PROJECT_ROOT, "lambda", "scripts", "verify.sh");
+    try {
+      const { stdout, stderr } = await execAsync(`bash ${scriptPath} 2>&1`, {
+        cwd: PROJECT_ROOT,
+        timeout: 60000,
+        maxBuffer: 1024 * 1024,
+        env: { ...process.env, PATH: process.env.PATH },
+      });
+      const output = (stdout + "\n" + stderr).trim();
+      const allCurrent = output.includes("All functions verified at HEAD");
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ allCurrent, output }, null, 2),
+        }],
+      };
+    } catch (err) {
+      const output = ((err.stdout || "") + "\n" + (err.stderr || err.message || "")).trim();
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ allCurrent: false, output, exit_code: err.code }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
+// -- trigger_pipeline -------------------------------------------------------
+srv.tool(
+  "trigger_pipeline",
+  "Start the Kiuli scraper Step Functions pipeline for an iTrvl URL. Returns the execution ARN for tracking with pipeline_status.",
+  {
+    itrvl_url: z.string().describe("Full iTrvl itinerary URL to scrape"),
+    execution_name: z.string().optional().describe("Optional custom execution name. Auto-generated if omitted."),
+  },
+  async ({ itrvl_url, execution_name }) => {
+    const STATE_MACHINE_ARN = "arn:aws:states:eu-north-1:405531875262:stateMachine:kiuli-scraper-pipeline";
+    const name = execution_name || `scrape-${Date.now()}`;
+    const input = JSON.stringify({ itrvlUrl: itrvl_url });
+
+    try {
+      const { stdout } = await execAsync(
+        `aws stepfunctions start-execution ` +
+        `--state-machine-arn ${STATE_MACHINE_ARN} ` +
+        `--name ${JSON.stringify(name)} ` +
+        `--input ${JSON.stringify(input)} ` +
+        `--region eu-north-1 --output json`,
+        { timeout: 30000 }
+      );
+      const result = JSON.parse(stdout.trim());
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            started: true,
+            executionArn: result.executionArn,
+            startDate: result.startDate,
+            name,
+            itrvlUrl: itrvl_url,
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            started: false,
+            error: ((err.stdout || "") + " " + (err.stderr || err.message || "")).trim(),
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
+// -- pipeline_status --------------------------------------------------------
+srv.tool(
+  "pipeline_status",
+  "Check status of a Step Functions pipeline execution. Use after trigger_pipeline to monitor progress. Also lists recent executions if no ARN provided.",
+  {
+    execution_arn: z.string().optional().describe("Execution ARN from trigger_pipeline. If omitted, lists recent executions."),
+  },
+  async ({ execution_arn }) => {
+    const STATE_MACHINE_ARN = "arn:aws:states:eu-north-1:405531875262:stateMachine:kiuli-scraper-pipeline";
+
+    if (!execution_arn) {
+      // List recent executions
+      try {
+        const { stdout } = await execAsync(
+          `aws stepfunctions list-executions ` +
+          `--state-machine-arn ${STATE_MACHINE_ARN} ` +
+          `--max-results 10 ` +
+          `--region eu-north-1 --output json`,
+          { timeout: 30000 }
+        );
+        const data = JSON.parse(stdout.trim());
+        const executions = (data.executions || []).map(e => ({
+          name: e.name,
+          status: e.status,
+          startDate: e.startDate,
+          stopDate: e.stopDate || null,
+          executionArn: e.executionArn,
+        }));
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({ mode: "list", executions }, null, 2),
+          }],
+        };
+      } catch (err) {
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              mode: "list",
+              error: ((err.stdout || "") + " " + (err.stderr || err.message || "")).trim(),
+            }, null, 2),
+          }],
+        };
+      }
+    }
+
+    // Describe specific execution
+    try {
+      const { stdout } = await execAsync(
+        `aws stepfunctions describe-execution ` +
+        `--execution-arn ${JSON.stringify(execution_arn)} ` +
+        `--region eu-north-1 --output json`,
+        { timeout: 30000 }
+      );
+      const data = JSON.parse(stdout.trim());
+
+      // Also get execution history for the last few events
+      let recentEvents = [];
+      try {
+        const { stdout: histStdout } = await execAsync(
+          `aws stepfunctions get-execution-history ` +
+          `--execution-arn ${JSON.stringify(execution_arn)} ` +
+          `--reverse-order --max-results 10 ` +
+          `--region eu-north-1 --output json`,
+          { timeout: 30000 }
+        );
+        const histData = JSON.parse(histStdout.trim());
+        recentEvents = (histData.events || []).map(e => ({
+          type: e.type,
+          timestamp: e.timestamp,
+          id: e.id,
+        }));
+      } catch { /* history optional */ }
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            mode: "detail",
+            name: data.name,
+            status: data.status,
+            startDate: data.startDate,
+            stopDate: data.stopDate || null,
+            input: data.input ? JSON.parse(data.input) : null,
+            output: data.output ? JSON.parse(data.output) : null,
+            error: data.error || null,
+            cause: data.cause || null,
+            recentEvents,
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            mode: "detail",
+            error: ((err.stdout || "") + " " + (err.stderr || err.message || "")).trim(),
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
+// -- vercel_deploy ----------------------------------------------------------
+srv.tool(
+  "vercel_deploy",
+  "Deploy Kiuli website to Vercel production. Runs 'vercel --prod' and returns the deployment URL. Always run run_build first to catch errors locally.",
+  {
+    confirm: z.string().describe("Must be exactly 'DEPLOY' to proceed — prevents accidental deployments"),
+  },
+  async ({ confirm }) => {
+    if (confirm !== "DEPLOY") {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            deployed: false,
+            error: "confirm must be exactly 'DEPLOY'. Got: " + confirm,
+          }),
+        }],
+      };
+    }
+
+    try {
+      const { stdout, stderr } = await execAsync("vercel --prod --yes 2>&1", {
+        cwd: PROJECT_ROOT,
+        timeout: 600000, // 10 minutes
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      const output = (stdout + "\n" + stderr).trim();
+      // Extract deployment URL from output
+      const urlMatch = output.match(/https:\/\/[^\s]+\.vercel\.app/);
+      const prodMatch = output.match(/Production:\s+(https:\/\/[^\s]+)/);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            deployed: true,
+            url: prodMatch ? prodMatch[1] : (urlMatch ? urlMatch[0] : null),
+            output,
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      const output = ((err.stdout || "") + "\n" + (err.stderr || err.message || "")).trim();
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            deployed: false,
+            output,
+            exit_code: err.code,
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
+// -- vercel_logs ------------------------------------------------------------
+srv.tool(
+  "vercel_logs",
+  "Fetch recent Vercel production logs. Use after deployment or when debugging production issues.",
+  {
+    since: z.string().default("1h").describe("How far back. Examples: '30m', '1h', '6h'. Default: 1h"),
+    filter: z.string().optional().describe("Optional keyword to filter (e.g. 'error', '500', 'api/scrape')"),
+  },
+  async ({ since, filter }) => {
+    let cmd = `vercel logs production --since ${since} 2>&1`;
+    if (filter) {
+      cmd += ` | grep -i ${JSON.stringify(filter)} || true`;
+    }
+
+    try {
+      const { stdout } = await execAsync(cmd, {
+        cwd: PROJECT_ROOT,
+        timeout: 30000,
+        maxBuffer: 1024 * 1024 * 2,
+      });
+      const output = stdout.trim();
+      const lines = output ? output.split("\n") : [];
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            since,
+            filter: filter || null,
+            lineCount: lines.length,
+            output: output || "(no logs in this time window)",
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      const output = ((err.stdout || "") + (err.stderr || "")).trim();
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            since,
+            filter: filter || null,
+            lineCount: 0,
+            output: output || "(error retrieving logs)",
+            error: err.message,
+          }, null, 2),
+        }],
+      };
+    }
+  }
+);
+
 } // end registerTools
 
 // ---------------------------------------------------------------------------

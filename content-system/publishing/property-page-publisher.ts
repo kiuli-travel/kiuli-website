@@ -21,24 +21,38 @@ export async function publishPropertyPage(projectId: number): Promise<PublishRes
     throw new Error('Cannot publish: sections.overview is empty')
   }
 
-  // Resolve property
-  const properties = Array.isArray(project.properties) ? (project.properties as string[]) : []
-  if (properties.length === 0) {
-    throw new Error('Cannot publish: no property name on content project')
+  // Resolve property — prefer targetRecordId (set by cascade), fall back to properties[] name
+  let property: Record<string, unknown> | null = null
+
+  const targetRecordId = project.targetRecordId as string | null
+  if (targetRecordId && (project.targetCollection as string) === 'properties') {
+    const doc = await payload.findByID({
+      collection: 'properties',
+      id: Number(targetRecordId),
+      depth: 0,
+    }).catch(() => null)
+    if (doc) property = doc as unknown as Record<string, unknown>
   }
 
-  const propResult = await payload.find({
-    collection: 'properties',
-    where: { name: { equals: properties[0] } },
-    limit: 1,
-    depth: 0,
-  })
+  if (!property) {
+    const properties = Array.isArray(project.properties) ? (project.properties as string[]) : []
+    if (properties.length === 0) {
+      throw new Error('Cannot publish: no property name or targetRecordId on content project')
+    }
 
-  if (propResult.docs.length === 0) {
-    throw new Error(`Cannot publish: property "${properties[0]}" not found in properties collection`)
+    const propResult = await payload.find({
+      collection: 'properties',
+      where: { name: { equals: properties[0] } },
+      limit: 1,
+      depth: 0,
+    })
+
+    if (propResult.docs.length === 0) {
+      throw new Error(`Cannot publish: property "${properties[0]}" not found in properties collection`)
+    }
+
+    property = propResult.docs[0] as unknown as Record<string, unknown>
   }
-
-  const property = propResult.docs[0] as unknown as Record<string, unknown>
   const propertyId = property.id as number
   const baselineUpdatedAt = property.updatedAt as string
 

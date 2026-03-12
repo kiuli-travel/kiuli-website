@@ -32,26 +32,40 @@ export async function publishDestinationPage(projectId: number): Promise<Publish
     throw new Error('Cannot publish: sections is empty')
   }
 
-  // Resolve destination
-  const destinations = Array.isArray(project.destinations)
-    ? (project.destinations as string[])
-    : []
-  if (destinations.length === 0) {
-    throw new Error('Cannot publish: no destination name on content project')
+  // Resolve destination — prefer targetRecordId (set by cascade), fall back to destinations[] name
+  let destination: Record<string, unknown> | null = null
+
+  const targetRecordId = project.targetRecordId as string | null
+  if (targetRecordId && (project.targetCollection as string) === 'destinations') {
+    const doc = await payload.findByID({
+      collection: 'destinations',
+      id: Number(targetRecordId),
+      depth: 0,
+    }).catch(() => null)
+    if (doc) destination = doc as unknown as Record<string, unknown>
   }
 
-  const destResult = await payload.find({
-    collection: 'destinations',
-    where: { name: { equals: destinations[0] } },
-    limit: 1,
-    depth: 0,
-  })
+  if (!destination) {
+    const destinations = Array.isArray(project.destinations)
+      ? (project.destinations as string[])
+      : []
+    if (destinations.length === 0) {
+      throw new Error('Cannot publish: no destination name or targetRecordId on content project')
+    }
 
-  if (destResult.docs.length === 0) {
-    throw new Error(`Cannot publish: destination "${destinations[0]}" not found in destinations collection`)
+    const destResult = await payload.find({
+      collection: 'destinations',
+      where: { name: { equals: destinations[0] } },
+      limit: 1,
+      depth: 0,
+    })
+
+    if (destResult.docs.length === 0) {
+      throw new Error(`Cannot publish: destination "${destinations[0]}" not found in destinations collection`)
+    }
+
+    destination = destResult.docs[0] as unknown as Record<string, unknown>
   }
-
-  const destination = destResult.docs[0] as unknown as Record<string, unknown>
   const destinationId = destination.id as number
   const baselineUpdatedAt = destination.updatedAt as string
 

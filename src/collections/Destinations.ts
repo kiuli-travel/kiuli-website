@@ -73,9 +73,8 @@ export const Destinations: CollectionConfig = {
       name: 'heroImage',
       type: 'upload',
       relationTo: 'media',
-      required: true,
       admin: {
-        description: 'Hero image for destination landing page (required)',
+        description: 'Hero image for destination landing page',
       },
     },
     {

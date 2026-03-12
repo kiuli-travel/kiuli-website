@@ -105,7 +105,6 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
     const updated = await payload.update({
       collection: 'posts',
       id: existingPost.id as number,
-      draft: true,
       data: postData as any,
     })
     postId = updated.id as number
@@ -114,7 +113,6 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const created = await payload.create({
       collection: 'posts',
-      draft: true,
       data: postData as any,
       overrideAccess: true,
       context: { skipSearchSync: true },

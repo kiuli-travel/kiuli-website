@@ -702,6 +702,7 @@ export const Properties: CollectionConfig = {
             { label: 'None', value: 'none' },
             { label: 'ResConnect', value: 'resconnect' },
             { label: 'Direct', value: 'direct' },
+            { label: 'Manual', value: 'manual' },
           ],
           admin: { description: 'Which source provides live availability for this property' },
         },

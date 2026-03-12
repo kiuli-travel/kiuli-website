@@ -471,6 +471,22 @@ exports.handler = async (event) => {
           const propertySeqEntry = (kb.propertySequence || []).find(p => p.property === propertyId);
           const nightsAtProperty = propertySeqEntry?.nights || 0;
 
+          // === Seasonality data: increment monthly observation count ===
+          const travelMonth = kb.startDate ? parseInt(kb.startDate.slice(5, 7)) : null;
+          const existingSeasonality = existingProperty.accumulatedData?.seasonalityData || [];
+          let updatedSeasonality = [...existingSeasonality];
+          if (travelMonth && travelMonth >= 1 && travelMonth <= 12) {
+            const monthIdx = updatedSeasonality.findIndex(s => s.month === travelMonth);
+            if (monthIdx >= 0) {
+              updatedSeasonality[monthIdx] = {
+                ...updatedSeasonality[monthIdx],
+                observationCount: (updatedSeasonality[monthIdx].observationCount || 0) + 1,
+              };
+            } else {
+              updatedSeasonality.push({ month: travelMonth, observationCount: 1 });
+            }
+          }
+
           await payload.update('properties', propertyId, {
             accumulatedData: {
               observationCount: (existingProperty.accumulatedData?.observationCount || 0) + 1,
@@ -485,9 +501,10 @@ exports.handler = async (event) => {
                 observationCount: updatedObs.length,
               },
               commonPairings: mergedPairings,
+              seasonalityData: updatedSeasonality,
             },
           });
-          console.log(`[Orchestrator] Updated accumulatedData for property ${propertyId} (${updatedObs.length} obs)`);
+          console.log(`[Orchestrator] Updated accumulatedData for property ${propertyId} (${updatedObs.length} obs, month: ${travelMonth || 'unknown'})`);
 
         } catch (err) {
           console.error(`[Orchestrator] accumulatedData update failed for property ${propertyId}: ${err.message}`);

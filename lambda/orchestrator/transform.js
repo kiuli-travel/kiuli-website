@@ -742,9 +742,31 @@ async function linkTransferRoutes(segments, destinationCache, propertyMap, airpo
       ? await resolveEndpointDestination(from)
       : (fromCountry ? await lookupDestinationByCountry(fromCountry, destinationCache, headers, PAYLOAD_API_URL) : null);
 
-    const toDestinationId = (toPropertyId || toAirportId)
-      ? await resolveEndpointDestination(to)
-      : null;
+    // Resolve toDestination: try property/airport first, then look ahead to next stay segment
+    let toDestinationId = null;
+    if (toPropertyId || toAirportId) {
+      toDestinationId = await resolveEndpointDestination(to);
+    }
+    if (!toDestinationId) {
+      // Look ahead: find the next stay segment after this transfer to derive toDestination
+      const currentIdx = segments.indexOf(segment);
+      for (let j = currentIdx + 1; j < segments.length; j++) {
+        const nextType = segments[j].type?.toLowerCase();
+        if (nextType === 'stay' || nextType === 'accommodation') {
+          const nextCountry = segments[j].country || segments[j].countryName || null;
+          const nextLocation = segments[j].location || segments[j].locationName || null;
+          if (nextLocation && nextCountry) {
+            const nextCountryId = await lookupDestinationByCountry(nextCountry, destinationCache, headers, PAYLOAD_API_URL);
+            if (nextCountryId) {
+              toDestinationId = await resolveLocationToDestination(nextLocation, nextCountryId, headers, PAYLOAD_API_URL);
+            }
+          } else if (nextCountry) {
+            toDestinationId = await lookupDestinationByCountry(nextCountry, destinationCache, headers, PAYLOAD_API_URL);
+          }
+          break;
+        }
+      }
+    }
 
     const slug = generateSlug(from + '-to-' + to);
 

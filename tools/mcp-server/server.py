@@ -668,31 +668,43 @@ def verify_lambdas():
 # ---------------------------------------------------------------------------
 
 @mcp.tool()
-def trigger_pipeline(itrvl_url: str, execution_name: str = ""):
-    """Start the Kiuli scraper Step Functions pipeline for an iTrvl URL. Returns execution ARN."""
+def trigger_pipeline(itrvl_url: str, mode: str = "update"):
+    """Start the Kiuli scraper pipeline for an iTrvl URL via the website API. Creates a job record and triggers Step Functions. mode: 'create' or 'update' (default: update)."""
     try:
         import json as _json
-        arn = "arn:aws:states:eu-north-1:405531875262:stateMachine:kiuli-scraper-pipeline"
-        name = execution_name or f"scrape-{int(__import__('time').time())}"
-        inp = _json.dumps({"itrvlUrl": itrvl_url})
-        r = subprocess.run(
-            ["aws", "stepfunctions", "start-execution",
-             "--state-machine-arn", arn,
-             "--name", name,
-             "--input", inp,
-             "--region", "eu-north-1", "--output", "json"],
-            capture_output=True, text=True, timeout=30,
+        import urllib.request
+        api_key = os.environ.get("SCRAPER_API_KEY", "") or os.environ.get("PAYLOAD_API_KEY", "")
+        api_key = api_key.strip().replace("\\n", "")
+        if not api_key:
+            return {"error": "SCRAPER_API_KEY / PAYLOAD_API_KEY not set in environment"}
+        payload = _json.dumps({"itrvlUrl": itrvl_url, "mode": mode}).encode()
+        req = urllib.request.Request(
+            "https://kiuli.com/api/scrape-itinerary",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+            method="POST",
         )
-        if r.returncode == 0:
-            data = _json.loads(r.stdout.strip())
-            return {
-                "started": True,
-                "executionArn": data.get("executionArn"),
-                "startDate": data.get("startDate"),
-                "name": name,
-                "itrvlUrl": itrvl_url,
-            }
-        return {"started": False, "error": r.stderr.strip()}
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = _json.loads(resp.read().decode())
+        return {
+            "started": data.get("success", False),
+            "jobId": data.get("jobId"),
+            "itineraryId": data.get("itineraryId"),
+            "mode": data.get("mode"),
+            "message": data.get("message"),
+            "itrvlUrl": itrvl_url,
+        }
+    except urllib.error.HTTPError as e:
+        import json as _json
+        body = e.read().decode() if e.fp else ""
+        try:
+            err_data = _json.loads(body)
+        except Exception:
+            err_data = {"raw": body}
+        return {"started": False, "status": e.code, "error": err_data}
     except Exception as e:
         return {"error": str(e)}
 

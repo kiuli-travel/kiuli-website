@@ -10,7 +10,6 @@ import PropertyCard from '@/components/PropertyCard'
 import { InquiryCTA } from '@/components/itinerary/InquiryCTA'
 
 export const revalidate = 600
-export const dynamic = 'force-static'
 
 // Helper: Get hero image URL
 function getHeroImageUrl(property: Property): string | undefined {

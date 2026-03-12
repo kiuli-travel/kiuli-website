@@ -11,7 +11,6 @@ import ItineraryGrid from '@/components/ItineraryGrid'
 import { InquiryCTA } from '@/components/itinerary/InquiryCTA'
 
 export const revalidate = 600
-export const dynamic = 'force-static'
 
 // Helper: Get hero image data
 function getHeroImage(destination: Destination): { imgixUrl: string; alt: string } | null {

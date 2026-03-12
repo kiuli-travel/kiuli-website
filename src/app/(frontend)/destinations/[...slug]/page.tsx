@@ -21,7 +21,6 @@ import RichText from '@/components/RichText'
 import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 export const revalidate = 600
-export const dynamic = 'force-static'
 
 type Args = {
   params: Promise<{

@@ -378,7 +378,8 @@ export default function ItineraryEditorPage() {
         setInclusionsReviewed(bool(inv.includesReviewed))
         setCalloutItrvl(str(inv.calloutItrvl) || str(inv.callout) || "")
 
-        setHeroImageUrl(mediaUrl(doc.heroImage))
+        const heroImgObj = doc.heroImage && typeof doc.heroImage === 'object' ? doc.heroImage as Doc : null
+        setHeroImageUrl(heroImgObj ? (str(heroImgObj.imgixUrl) || str(heroImgObj.url) || null) : null)
         setHeroImageAlt(mediaAlt(doc.heroImage))
         const rawHeroId = doc.heroImage
         if (rawHeroId && typeof rawHeroId === 'object' && (rawHeroId as any).id) {
@@ -909,7 +910,7 @@ export default function ItineraryEditorPage() {
                 const res = await fetch(`/api/media/${mediaIds[0]}`, { credentials: 'include' })
                 if (!res.ok) return
                 const media = await res.json()
-                setHeroImageUrl(typeof media.url === 'string' ? media.url : null)
+                setHeroImageUrl(typeof media.imgixUrl === 'string' ? media.imgixUrl : typeof media.url === 'string' ? media.url : null)
                 setHeroImageAlt(typeof media.alt === 'string' ? media.alt : typeof media.filename === 'string' ? media.filename : '')
                 setHeroImageId(mediaIds[0])
                 setImageModalOpen(false)

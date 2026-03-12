@@ -1,19 +1,15 @@
-# M2 Phase 2 — Sharp Fix v2 + Retry
+# Restart server.py + Deploy Image-Processor + Vercel + Verify
 
 **Date:** 2026-03-12
-**Prerequisite:** deploy.sh fix v2 committed and pushed (combines `npm_config_os/cpu` + `--force` + strips non-linux binaries)
-**Scope:** Redeploy image-processor, deploy Vercel, run verification scrape, verify all 3 M2 Phase 2 fixes.
+**Scope:** Restart the real MCP server (server.py, NOT server.mjs), deploy image-processor Lambda with sharp fix, deploy to Vercel, run verification scrape.
 
 ---
 
 ## Context
 
-v1 fix (`npm_config_os/cpu` without `--force`) failed with EBADPLATFORM because the linux-x64 sharp packages are direct dependencies, not optional. npm still enforces platform checks on direct deps regardless of npm_config env vars.
+The Kiuli MCP server is `tools/mcp-server/server.py` — a Python FastMCP server on port 8420. NOT server.mjs (which has never been the running server). server.py was just killed. It needs restarting with the 6 new tools that were added to it (deploy_lambda, verify_lambdas, trigger_pipeline, pipeline_status, vercel_deploy, vercel_logs).
 
-v2 fix uses all three mechanisms:
-1. `npm_config_os=linux npm_config_cpu=x64` — resolution picks linux-x64 optional deps
-2. `--force` — bypasses EBADPLATFORM on direct deps
-3. Post-install cleanup — `rm -rf` of any darwin/win32/linuxmusl binaries that `--force` may have pulled as transitive deps
+The image-processor Lambda also needs redeploying because previous deploys used macOS-native sharp binaries. deploy.sh has been fixed.
 
 ---
 
@@ -25,11 +21,44 @@ git pull origin main
 git log --oneline -3
 ```
 
-Must show the deploy.sh v2 fix at HEAD.
+---
+
+## Step 2: Restart server.py
+
+The previous prompt killed it. Start it back up:
+
+```bash
+cd ~/Projects/kiuli-website/tools/mcp-server
+
+# Confirm nothing is on 8420
+lsof -i :8420 || echo "Port 8420 free"
+
+# Start server.py with its required environment
+source ~/Projects/kiuli-website/.env.local 2>/dev/null || source ~/Projects/kiuli-website/.env.vercel-prod 2>/dev/null || true
+export PROJECT_ROOT=~/Projects/kiuli-website
+
+nohup python3 server.py > server.log 2> server-error.log &
+disown
+sleep 3
+```
+
+Verify it's running:
+
+```bash
+lsof -i :8420
+```
+
+Must show a Python process listening on 8420. If it's not running, check the error log:
+
+```bash
+cat ~/Projects/kiuli-website/tools/mcp-server/server-error.log
+```
+
+**STOP if server.py fails to start. Report the error log contents.**
 
 ---
 
-## Step 2: Redeploy image-processor
+## Step 3: Deploy image-processor Lambda
 
 ```bash
 cd ~/Projects/kiuli-website/lambda/scripts
@@ -38,20 +67,19 @@ cd ~/Projects/kiuli-website/lambda/scripts
 
 Must complete with `DEPLOYMENT SUCCESSFUL`.
 
-After deployment, verify no darwin binaries made it into the package. This is informational — the rm step in deploy.sh should have handled it, but confirm:
+After deployment, confirm only linux binaries exist:
 
 ```bash
-cd ~/Projects/kiuli-website/lambda/image-processor
-ls node_modules/@img/ 2>/dev/null
+ls ~/Projects/kiuli-website/lambda/image-processor/node_modules/@img/ 2>/dev/null
 ```
 
-Should show only `sharp-linux-x64` and `sharp-libvips-linux-x64`. If darwin or win32 directories exist, the cleanup step failed — report it.
+Should show only `sharp-linux-x64` and `sharp-libvips-linux-x64`. No darwin directories.
 
-**STOP if deploy.sh fails.**
+**STOP if deploy fails.**
 
 ---
 
-## Step 3: Deploy Vercel
+## Step 4: Deploy to Vercel
 
 ```bash
 cd ~/Projects/kiuli-website
@@ -70,7 +98,7 @@ Required: `VERCEL EXIT: 0`. **STOP if either fails.**
 
 ---
 
-## Step 4: Run verification scrape (Tanzania)
+## Step 5: Run verification scrape (Tanzania)
 
 ```bash
 cd ~/Projects/kiuli-website
@@ -97,7 +125,7 @@ while true; do
 done
 ```
 
-**If failed:** tail both Lambda logs and report:
+**If failed:**
 ```bash
 aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 30m --region eu-north-1 | tail -50
 aws logs tail /aws/lambda/kiuli-v6-image-processor --since 30m --region eu-north-1 | tail -50
@@ -107,23 +135,20 @@ aws logs tail /aws/lambda/kiuli-v6-image-processor --since 30m --region eu-north
 
 ---
 
-## Step 5: Verify Fix 1 — toDestination
+## Step 6: Verify M2 Phase 2 fixes
 
 ```bash
 source .env.vercel-prod 2>/dev/null || source .env.local
+
+# Fix 1: toDestination populated
 psql "$POSTGRES_URL" -c "
 SELECT slug, \"fromDestination_id\", \"toDestination_id\", \"observationCount\"
 FROM transfer_routes
 ORDER BY \"updatedAt\" DESC
 LIMIT 15;
 "
-```
 
----
-
-## Step 6: Verify Fix 2 — seasonalityData
-
-```bash
+# Fix 2: seasonalityData populated
 psql "$POSTGRES_URL" -c "
 SELECT p.name, p.\"accumulatedData\"
 FROM properties p
@@ -133,21 +158,35 @@ LIMIT 5;
 "
 ```
 
-Look for `seasonalityData` array with `month` and `observationCount`.
+---
+
+## Step 7: Commit and push server.py changes
+
+The server.py file was updated with 6 new tools. Commit it:
+
+```bash
+cd ~/Projects/kiuli-website
+git add tools/mcp-server/server.py
+git commit -m "feat(mcp): add deploy_lambda, verify_lambdas, trigger_pipeline, pipeline_status, vercel_deploy, vercel_logs to server.py"
+git push origin main
+```
 
 ---
 
 ## Report Format
 
 ```
-M2 PHASE 2 SHARP FIX v2 REPORT
-================================
+SERVER.PY RESTART + M2 PHASE 2 REPORT
+=======================================
 
-IMAGE-PROCESSOR REDEPLOYMENT
+MCP SERVER
+  server.py started: YES/NO
+  Listening on port 8420: YES/NO
+
+IMAGE-PROCESSOR DEPLOYMENT
   deploy.sh completed: YES/NO
   node_modules/@img/ contents: [list]
   Deployed hash: [hash]
-  Match HEAD: YES/NO
 
 VERCEL
   Build: PASS/FAIL
@@ -166,6 +205,9 @@ FIX 2: seasonalityData
   seasonalityData present: YES/NO
   Sample: [data]
 
+GIT
+  server.py committed and pushed: YES/NO
+
 BLOCKERS
 [Exact errors if any]
 
@@ -178,4 +220,4 @@ STATUS: ALL PASS / PARTIAL FAIL / BLOCKED
 
 - Execute in order. STOP on failure.
 - Show raw output, not summaries.
-- Do not attempt fixes.
+- Do not attempt fixes — report failures for instructions.

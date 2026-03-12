@@ -104,6 +104,7 @@ export async function publishPropertyPage(projectId: number): Promise<PublishRes
   await payload.update({
     collection: 'properties',
     id: propertyId,
+    draft: true,
     data: updateData,
   })
 

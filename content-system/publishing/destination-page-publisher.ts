@@ -125,6 +125,7 @@ export async function publishDestinationPage(projectId: number): Promise<Publish
   await payload.update({
     collection: 'destinations',
     id: destinationId,
+    draft: true,
     data: updateData,
   })
 

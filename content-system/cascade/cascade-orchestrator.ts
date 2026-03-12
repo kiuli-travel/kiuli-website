@@ -15,15 +15,17 @@ import { extractEntities } from './entity-extractor'
 import { resolveDestinations } from './destination-resolver'
 import { resolveProperties } from './property-resolver'
 import { manageRelationships } from './relationship-manager'
+import { linkStayProperties } from './stay-property-linker'
 
 /**
- * Run the 5-step Itinerary Cascade pipeline.
+ * Run the 6-step Itinerary Cascade pipeline.
  *
- * 1. Entity Extraction
- * 2. Destination Resolution
- * 3. Property Resolution
- * 4. Relationship Management
- * 5. ContentProject Generation
+ * 1.   Entity Extraction
+ * 2.   Destination Resolution
+ * 3.   Property Resolution
+ * 4.   Relationship Management
+ * 4.5  Stay Property Linking (back-patches stay blocks with resolved property IDs)
+ * 5.   ContentProject Generation
  */
 export async function runCascade(options: CascadeOptions): Promise<CascadeResult> {
   const { itineraryId, dryRun = false, jobId } = options
@@ -116,6 +118,23 @@ export async function runCascade(options: CascadeOptions): Promise<CascadeResult
     result.relationships = relActions
     await updateJobProgress(payload, jobId, 4, step4)
     if (step4.status === 'failed') throw new Error('Relationship management failed')
+
+    // --- Step 4.5: Stay Block Property Linking ---
+    // Back-patch stay blocks with resolved property IDs (cold-start fix)
+    const step4b = await runStep(4.5, 'Stay Property Linking', async () => {
+      const linkResult = await linkStayProperties(
+        payload,
+        itineraryId,
+        propResults,
+        dryRun,
+      )
+      return linkResult
+    })
+    result.steps.push(step4b)
+    // Non-fatal: if linking fails, cascade can still continue
+    if (step4b.status === 'failed') {
+      console.warn('[cascade] Stay property linking failed, continuing with remaining steps')
+    }
 
     // --- Step 5: ContentProject Generation ---
     const step5 = await runStep(5, 'ContentProject Generation', async () => {

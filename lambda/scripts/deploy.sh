@@ -211,14 +211,46 @@ ok "Package created: $(basename "$ZIP_PATH") ($ZIP_SIZE)"
 # Step 6: Deploy code
 # ---------------------------------------------------------------------------
 
-step 6 "Deploying code to AWS Lambda..."
-aws lambda update-function-code \
-  --function-name "$AWS_FUNCTION_NAME" \
-  --zip-file "fileb://$ZIP_PATH" \
-  --region "$REGION" \
-  --output text \
-  --query "CodeSize" > /dev/null || fail "update-function-code failed"
-ok "Code uploaded"
+# AWS Lambda direct upload limit is ~70MB. The scraper includes Puppeteer +
+# Chromium and exceeds this. For zips over 50MB, upload to S3 first, then
+# reference the S3 object in update-function-code. This is the standard AWS
+# pattern for large Lambda packages.
+
+S3_DEPLOY_BUCKET="kiuli-bucket"
+S3_DEPLOY_PREFIX="lambda-deploys"
+MAX_DIRECT_UPLOAD_BYTES=$((50 * 1024 * 1024))  # 50MB threshold
+
+ZIP_SIZE_BYTES=$(wc -c < "$ZIP_PATH" | tr -d ' ')
+
+if [ "$ZIP_SIZE_BYTES" -gt "$MAX_DIRECT_UPLOAD_BYTES" ]; then
+  # S3-based deployment for large packages
+  S3_KEY="${S3_DEPLOY_PREFIX}/${FUNCTION}-deploy.zip"
+  step 6 "Deploying code via S3 (zip is ${ZIP_SIZE}, exceeds direct upload limit)..."
+
+  aws s3 cp "$ZIP_PATH" "s3://${S3_DEPLOY_BUCKET}/${S3_KEY}" \
+    --region "$REGION" \
+    --quiet || fail "S3 upload failed for s3://${S3_DEPLOY_BUCKET}/${S3_KEY}"
+  ok "Uploaded to s3://${S3_DEPLOY_BUCKET}/${S3_KEY}"
+
+  aws lambda update-function-code \
+    --function-name "$AWS_FUNCTION_NAME" \
+    --s3-bucket "$S3_DEPLOY_BUCKET" \
+    --s3-key "$S3_KEY" \
+    --region "$REGION" \
+    --output text \
+    --query "CodeSize" > /dev/null || fail "update-function-code (via S3) failed"
+  ok "Code deployed from S3"
+else
+  # Direct upload for smaller packages
+  step 6 "Deploying code to AWS Lambda (direct upload, ${ZIP_SIZE})..."
+  aws lambda update-function-code \
+    --function-name "$AWS_FUNCTION_NAME" \
+    --zip-file "fileb://$ZIP_PATH" \
+    --region "$REGION" \
+    --output text \
+    --query "CodeSize" > /dev/null || fail "update-function-code failed"
+  ok "Code uploaded"
+fi
 
 # ---------------------------------------------------------------------------
 # Step 7: Wait for code update to complete

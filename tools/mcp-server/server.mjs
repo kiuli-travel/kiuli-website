@@ -773,7 +773,7 @@ srv.tool(
   "Get deployed status for Kiuli Lambda functions from AWS. Returns State, LastModified, CodeSize, and the git hash stamped in Description by deploy.sh. syncStatus shows CURRENT/BEHIND/NO_HASH_STAMPED for each function. This is the authoritative check — source code in git means nothing until this shows CURRENT.",
   {
     function: z
-      .enum(["all", "scraper", "orchestrator", "image-processor", "labeler", "finalizer"])
+      .enum(["all", "scraper", "orchestrator", "image-processor", "labeler", "finalizer", "video-processor"])
       .default("all")
       .describe("Which function to check. Default: all"),
   },
@@ -784,6 +784,7 @@ srv.tool(
       "image-processor": "kiuli-v6-image-processor",
       labeler:           "kiuli-v6-labeler",
       finalizer:         "kiuli-v6-finalizer",
+      "video-processor": "kiuli-v6-video-processor",
     };
 
     const targets = fn === "all"
@@ -848,7 +849,7 @@ srv.tool(
   "Tail recent CloudWatch logs for a Kiuli Lambda function. Use after a test scrape to confirm new code executed. Filter by keyword to find specific log lines.",
   {
     function: z
-      .enum(["scraper", "orchestrator", "image-processor", "labeler", "finalizer"])
+      .enum(["scraper", "orchestrator", "image-processor", "labeler", "finalizer", "video-processor"])
       .describe("Which Lambda function's logs to retrieve"),
     since: z
       .string()
@@ -866,6 +867,7 @@ srv.tool(
       "image-processor": "kiuli-v6-image-processor",
       labeler:           "kiuli-v6-labeler",
       finalizer:         "kiuli-v6-finalizer",
+      "video-processor": "kiuli-v6-video-processor",
     };
 
     const name = FUNCTION_MAP[fn];

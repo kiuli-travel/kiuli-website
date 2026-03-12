@@ -74,23 +74,19 @@ export default async function ArticlesPage() {
 
   const posts = result.docs || []
 
-  // Extract data for cards
-  const articleCards = posts
-    .map((post) => {
-      const heroImage = getHeroImage(post)
-      if (!heroImage) return null
-
-      return {
-        slug: post.slug,
-        title: post.title,
-        heroImageUrl: heroImage.imgixUrl,
-        heroImageAlt: heroImage.alt,
-        excerpt: post.excerpt || undefined,
-        authorName: getAuthorName(post),
-        publishedDate: post.publishedAt || post.createdAt,
-      }
-    })
-    .filter((card): card is NonNullable<typeof card> => card !== null)
+  // Extract data for cards — show all published articles, with or without hero images
+  const articleCards = posts.map((post) => {
+    const heroImage = getHeroImage(post)
+    return {
+      slug: post.slug,
+      title: post.title,
+      heroImageUrl: heroImage?.imgixUrl,
+      heroImageAlt: heroImage?.alt,
+      excerpt: post.excerpt || undefined,
+      authorName: getAuthorName(post),
+      publishedDate: post.publishedAt || post.createdAt,
+    }
+  })
 
   // Build breadcrumb items
   const breadcrumbItems = [

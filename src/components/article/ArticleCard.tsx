@@ -4,8 +4,8 @@ import Link from 'next/link'
 interface ArticleCardProps {
   title: string
   slug: string
-  heroImageUrl: string
-  heroImageAlt: string
+  heroImageUrl?: string
+  heroImageAlt?: string
   excerpt?: string
   authorName: string
   publishedDate: string
@@ -32,13 +32,17 @@ export default function ArticleCard({
       className="group block overflow-hidden rounded-[2px] bg-white shadow-none transition-shadow duration-200 ease-in-out hover:shadow-md"
     >
       <div className="relative aspect-[3/2] overflow-hidden">
-        <Image
-          src={heroImageUrl}
-          alt={heroImageAlt}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="h-full w-full object-cover transition-transform duration-[400ms] ease-in-out group-hover:scale-[1.03]"
-        />
+        {heroImageUrl ? (
+          <Image
+            src={heroImageUrl}
+            alt={heroImageAlt || title}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="h-full w-full object-cover transition-transform duration-[400ms] ease-in-out group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-[#486A6A] to-[#2d4444]" />
+        )}
       </div>
       <div className="px-5 pb-5 pt-4">
         <h3 className="mb-1.5 line-clamp-2 text-lg font-semibold leading-snug text-[#404040]">

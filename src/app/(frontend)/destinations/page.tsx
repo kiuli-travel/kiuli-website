@@ -57,21 +57,25 @@ function DestinationListCard({
 }: {
   name: string
   slug: string
-  imageUrl: string
-  imageAlt: string
+  imageUrl?: string
+  imageAlt?: string
 }) {
   return (
     <Link
       href={`/destinations/${slug}`}
       className="group relative block aspect-[4/3] overflow-hidden rounded-[2px]"
     >
-      <Image
-        src={imageUrl}
-        alt={imageAlt}
-        fill
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        className="object-cover transition-transform duration-[400ms] ease-in-out group-hover:scale-[1.03]"
-      />
+      {imageUrl ? (
+        <Image
+          src={imageUrl}
+          alt={imageAlt || name}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-[400ms] ease-in-out group-hover:scale-[1.03]"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#486A6A] to-[#2d4444]" />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
       <div className="absolute inset-x-0 bottom-0 p-5">
         <h3 className="text-xl font-semibold text-white drop-shadow-sm">{name}</h3>
@@ -103,20 +107,16 @@ export default async function DestinationsPage() {
 
   const countries = result.docs || []
 
-  // Extract data for cards
-  const destinationCards = countries
-    .map((destination) => {
-      const heroImage = getHeroImage(destination)
-      if (!heroImage) return null
-
-      return {
-        slug: destination.slug,
-        name: destination.name,
-        imageUrl: heroImage.imgixUrl,
-        imageAlt: heroImage.alt,
-      }
-    })
-    .filter((card): card is NonNullable<typeof card> => card !== null)
+  // Extract data for cards — show all countries, with or without hero images
+  const destinationCards = countries.map((destination) => {
+    const heroImage = getHeroImage(destination)
+    return {
+      slug: destination.slug,
+      name: destination.name,
+      imageUrl: heroImage?.imgixUrl,
+      imageAlt: heroImage?.alt,
+    }
+  })
 
   // Build breadcrumb items
   const breadcrumbItems = [

@@ -32,6 +32,11 @@ export async function checkHardGates(options: HardGatesOptions): Promise<HardGat
     for (const [fieldName, fieldValue] of fieldsToCheck(options)) {
       let match: RegExpExecArray | null
       while ((match = regex.exec(fieldValue)) !== null) {
+        // Skip matches inside proper nouns (capitalized adjacent words)
+        if (isInsideProperNoun(fieldValue, match.index, match[0].length)) {
+          continue
+        }
+
         const start = Math.max(0, match.index - 25)
         const end = Math.min(fieldValue.length, match.index + match[0].length + 25)
         const context = fieldValue.slice(start, end)
@@ -162,6 +167,30 @@ export async function checkHardGates(options: HardGatesOptions): Promise<HardGat
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Check if a matched phrase sits inside a proper noun sequence.
+ * A proper noun context means the matched word itself starts with uppercase,
+ * AND the preceding or following word also starts with uppercase.
+ * Examples: "Paradise Crossing", "Lake Victoria", "Mount Kilimanjaro"
+ */
+function isInsideProperNoun(text: string, matchStart: number, matchLength: number): boolean {
+  const matched = text.slice(matchStart, matchStart + matchLength)
+  // The matched phrase itself must start with an uppercase letter
+  if (!/^[A-Z]/.test(matched)) return false
+
+  // Check the word immediately before the match
+  const before = text.slice(Math.max(0, matchStart - 30), matchStart).trimEnd()
+  const prevWord = before.split(/\s+/).pop() || ''
+  if (/^[A-Z][a-z]/.test(prevWord)) return true
+
+  // Check the word immediately after the match
+  const after = text.slice(matchStart + matchLength, matchStart + matchLength + 30).trimStart()
+  const nextWord = after.split(/\s+/)[0] || ''
+  if (/^[A-Z][a-z]/.test(nextWord)) return true
+
+  return false
 }
 
 function* fieldsToCheck(options: HardGatesOptions): Generator<[string, string]> {

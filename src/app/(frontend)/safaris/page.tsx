@@ -114,6 +114,9 @@ export default async function SafarisPage() {
     overrideAccess: true,
     depth: 1,
     sort: '-createdAt',
+    where: {
+      _status: { equals: 'published' },
+    },
   })
 
   const itineraries = result.docs || []

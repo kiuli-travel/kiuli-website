@@ -15,7 +15,7 @@
 # What this script does:
 #   1. Verifies AWS credentials are valid
 #   2. Syncs shared modules to all Lambda directories
-#   3. Installs dependencies (npm ci --platform=linux --arch=x64)
+#   3. Installs dependencies (npm ci with linux-x64 target)
 #   4. Packages the function into a zip
 #   5. Deploys to AWS Lambda
 #   6. Waits for the update to complete (aws lambda wait)
@@ -177,17 +177,19 @@ ok "Shared modules in sync"
 # Step 4: Install dependencies
 # ---------------------------------------------------------------------------
 
-step 4 "Installing dependencies (npm ci --force for linux-x64 native modules)..."
+step 4 "Installing dependencies for linux-x64 Lambda runtime..."
 cd "$FUNC_DIR"
-# npm 11 dropped --platform/--arch CLI flags. Native modules like Sharp ship
-# platform-specific optional dependencies with os/cpu restrictions in their
-# package.json. The linux-x64 packages are listed as direct dependencies
-# (not optional) so npm will install them, but EBADPLATFORM blocks install
-# on macOS without --force. This is safe: we explicitly want linux-x64
-# binaries for Lambda regardless of host OS.
-npm ci --silent --force \
+# npm 11 dropped --platform/--arch CLI flags but the config settings still
+# work as environment variables. Setting npm_config_os=linux and
+# npm_config_cpu=x64 makes npm resolve platform-specific packages (Sharp,
+# etc.) as if running on linux-x64. This means:
+#   - @img/sharp-linux-x64 installs naturally (no EBADPLATFORM)
+#   - @img/sharp-darwin-arm64 is skipped (wrong platform)
+#   - The zip contains only linux-x64 native binaries
+# This applies harmlessly to functions without native modules.
+npm_config_os=linux npm_config_cpu=x64 npm ci --silent \
   2>&1 || fail "npm ci failed in $FUNC_DIR"
-ok "Dependencies installed (linux-x64 via --force)"
+ok "Dependencies installed (linux-x64 target)"
 
 # ---------------------------------------------------------------------------
 # Step 5: Package

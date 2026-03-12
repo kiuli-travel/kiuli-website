@@ -70,7 +70,8 @@ export async function publishDestinationPage(projectId: number): Promise<Publish
   const baselineUpdatedAt = destination.updatedAt as string
 
   // Build update payload: convert each section text → Lexical
-  const updateData: Record<string, unknown> = {}
+  // Set _status to published so the destination is visible on the frontend
+  const updateData: Record<string, unknown> = { _status: 'published' }
 
   for (const [sectionKey, text] of Object.entries(sections)) {
     const field = SECTION_TO_FIELD[sectionKey]

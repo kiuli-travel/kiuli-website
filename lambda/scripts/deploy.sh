@@ -179,17 +179,32 @@ ok "Shared modules in sync"
 
 step 4 "Installing dependencies for linux-x64 Lambda runtime..."
 cd "$FUNC_DIR"
-# npm 11 dropped --platform/--arch CLI flags but the config settings still
-# work as environment variables. Setting npm_config_os=linux and
-# npm_config_cpu=x64 makes npm resolve platform-specific packages (Sharp,
-# etc.) as if running on linux-x64. This means:
-#   - @img/sharp-linux-x64 installs naturally (no EBADPLATFORM)
-#   - @img/sharp-darwin-arm64 is skipped (wrong platform)
-#   - The zip contains only linux-x64 native binaries
-# This applies harmlessly to functions without native modules.
-npm_config_os=linux npm_config_cpu=x64 npm ci --silent \
+# Two mechanisms work together to get linux-x64 native binaries on macOS:
+#
+# 1. npm_config_os=linux npm_config_cpu=x64 — controls resolution so npm
+#    picks linux-x64 optional deps (e.g. @img/sharp-linux-x64) and skips
+#    darwin-arm64 ones.
+#
+# 2. --force — bypasses EBADPLATFORM checks. Required because the
+#    image-processor lists @img/sharp-linux-x64 and @img/sharp-libvips-linux-x64
+#    as direct (not optional) dependencies. Without --force, npm refuses to
+#    install packages whose os/cpu fields don't match the host.
+#
+# Together: resolution targets linux-x64, --force allows the install to proceed.
+# Functions without native modules are unaffected (no os/cpu fields to check).
+npm_config_os=linux npm_config_cpu=x64 npm ci --silent --force \
   2>&1 || fail "npm ci failed in $FUNC_DIR"
-ok "Dependencies installed (linux-x64 target)"
+
+# Remove any macOS/Windows native binaries that --force may have pulled in
+# as transitive deps. Only linux-x64 binaries should ship to Lambda.
+rm -rf "$FUNC_DIR/node_modules/@img/sharp-darwin-"* \
+       "$FUNC_DIR/node_modules/@img/sharp-libvips-darwin-"* \
+       "$FUNC_DIR/node_modules/@img/sharp-win32-"* \
+       "$FUNC_DIR/node_modules/@img/sharp-libvips-win32-"* \
+       "$FUNC_DIR/node_modules/@img/sharp-linuxmusl-"* \
+       "$FUNC_DIR/node_modules/@img/sharp-libvips-linuxmusl-"* \
+       2>/dev/null || true
+ok "Dependencies installed (linux-x64 target, non-linux binaries removed)"
 
 # ---------------------------------------------------------------------------
 # Step 5: Package

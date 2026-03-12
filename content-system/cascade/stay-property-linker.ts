@@ -99,7 +99,6 @@ export async function linkStayProperties(
     await payload.update({
       collection: 'itineraries',
       id: itineraryId,
-      draft: true,
       data: { days } as Record<string, unknown>,
     })
     console.log(

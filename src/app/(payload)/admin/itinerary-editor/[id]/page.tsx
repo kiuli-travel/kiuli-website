@@ -181,7 +181,7 @@ function extractSegment(seg: Doc): SegmentEditState {
     .filter((img): img is Doc => img !== null && typeof img === "object")
     .map((img) => ({
       id: String(img.id || ""),
-      url: str(img.url),
+      url: str(img.imgixUrl) || str(img.url),
       alt: str(img.alt) || str(img.filename) || "",
     }))
 
@@ -324,6 +324,9 @@ export default function ItineraryEditorPage() {
   // ── Image modal ──
   const [imageModalOpen, setImageModalOpen] = useState(false)
 
+  // ── iTrvl source ──
+  const [itrvlUrl, setItrvlUrl] = useState<string | null>(null)
+
   // ── Status ──
   const [status, setStatus] = useState<"draft" | "published">("draft")
   const [publishBlockers, setPublishBlockers] = useState<Blocker[]>([])
@@ -400,6 +403,9 @@ export default function ItineraryEditorPage() {
         setIsVideoLocked(bool(doc.heroVideoLocked))
         setIsVideoReviewed(bool(doc.heroVideoReviewed))
         setShowHeroVideo(bool(doc.showHeroVideo))
+
+        const source = (doc.source || {}) as Doc
+        setItrvlUrl(str(source.itrvlUrl) || null)
 
         const rawDays = Array.isArray(doc.days) ? doc.days : []
         setDays(
@@ -856,12 +862,13 @@ export default function ItineraryEditorPage() {
           totalItems={totalItems}
           canPublish={canPublish}
           lastAutoSaved={lastAutoSaved}
-          onNavigateToItineraries={() => router.push("/admin/collections/itineraries")}
+          onNavigateToItineraries={() => router.push("/admin/itinerary-editor")}
           onEnhanceAll={handleEnhanceAll}
           onRescrape={() => router.push("/admin/scrape")}
           onSave={handleSave}
           onPublish={handlePublish}
           isEnhancingAll={isEnhancingAll}
+          itrvlUrl={itrvlUrl}
         />
       }
       sidebar={

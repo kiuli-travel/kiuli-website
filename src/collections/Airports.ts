@@ -4,6 +4,7 @@ import { authenticated } from '../access/authenticated'
 export const Airports: CollectionConfig = {
   slug: 'airports',
   admin: {
+    hidden: true,
     useAsTitle: 'name',
     group: 'Knowledge Base',
     defaultColumns: ['name', 'iataCode', 'type', 'country', 'observationCount', 'updatedAt'],

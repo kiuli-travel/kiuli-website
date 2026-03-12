@@ -15,6 +15,7 @@ interface ItineraryEditorHeaderProps {
   onSave: () => Promise<void>
   onPublish: () => void
   isEnhancingAll?: boolean
+  itrvlUrl?: string | null
   className?: string
 }
 
@@ -31,6 +32,7 @@ export default function ItineraryEditorHeader({
   onSave,
   onPublish,
   isEnhancingAll = false,
+  itrvlUrl = null,
   className = "",
 }: ItineraryEditorHeaderProps) {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle")
@@ -102,6 +104,20 @@ export default function ItineraryEditorHeader({
           >
             {itineraryTitle}
           </span>
+
+          {/* iTrvl source link */}
+          {itrvlUrl && (
+            <a
+              href={itrvlUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-2 text-[10px] font-normal transition-colors hover:underline"
+              style={{ color: "#888" }}
+              title="View original on iTrvl"
+            >
+              iTrvl &#8599;
+            </a>
+          )}
 
           {/* Auto-saved indicator */}
           {showAutoSaved && lastAutoSaved && (

@@ -11,6 +11,7 @@ export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
     update: authenticated,
   },
   admin: {
+    hidden: true,
     defaultColumns: ['itineraryId', 'status', 'currentPhase', 'createdAt'],
     useAsTitle: 'itineraryId',
     description:

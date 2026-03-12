@@ -4,6 +4,7 @@ import { authenticated } from '../../access/authenticated'
 export const ContentJobs: CollectionConfig = {
   slug: 'content-jobs',
   admin: {
+    hidden: true,
     useAsTitle: 'jobType',
     group: 'Content Engine',
     defaultColumns: ['jobType', 'status', 'createdAt', 'completedAt'],

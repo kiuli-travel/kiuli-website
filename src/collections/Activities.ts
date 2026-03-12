@@ -4,6 +4,7 @@ import { authenticated } from '../access/authenticated'
 export const Activities: CollectionConfig = {
   slug: 'activities',
   admin: {
+    hidden: true,
     useAsTitle: 'name',
     group: 'Knowledge Base',
     defaultColumns: ['name', 'type', 'observationCount', 'updatedAt'],

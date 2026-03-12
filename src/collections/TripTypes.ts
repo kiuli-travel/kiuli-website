@@ -4,6 +4,7 @@ import { authenticated } from '../access/authenticated'
 export const TripTypes: CollectionConfig = {
   slug: 'trip-types',
   admin: {
+    hidden: true,
     useAsTitle: 'name',
     group: 'Content',
     description: 'Safari categories for filtering and recommendations',

@@ -4,6 +4,7 @@ import { authenticated } from '../access/authenticated'
 export const EditorialDirectives: CollectionConfig = {
   slug: 'editorial-directives',
   admin: {
+    hidden: true,
     useAsTitle: 'text',
     group: 'Content Engine',
     defaultColumns: ['text', 'active', 'filterCount30d', 'reviewAfter'],

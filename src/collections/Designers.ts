@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 export const Designers: CollectionConfig = {
   slug: 'designers',
   admin: {
+    hidden: true,
     useAsTitle: 'name',
     defaultColumns: ['name', 'email', 'active', 'totalAssigned', 'lastAssignedAt'],
     group: 'System',

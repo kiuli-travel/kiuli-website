@@ -4,6 +4,7 @@ import { authenticated } from '../access/authenticated'
 export const ItineraryPatterns: CollectionConfig = {
   slug: 'itinerary-patterns',
   admin: {
+    hidden: true,
     useAsTitle: 'sourceItinerary',
     group: 'Knowledge Base',
     defaultColumns: ['sourceItinerary', 'totalNights', 'priceTier', 'paxType', 'updatedAt'],

@@ -4,6 +4,7 @@ import { authenticated } from '../../access/authenticated'
 export const ContentProjects: CollectionConfig = {
   slug: 'content-projects',
   admin: {
+    hidden: true,
     useAsTitle: 'title',
     group: 'Content Engine',
     defaultColumns: ['title', 'contentType', 'stage', 'processingStatus', 'updatedAt'],

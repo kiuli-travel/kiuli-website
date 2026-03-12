@@ -4,6 +4,7 @@ import { authenticated } from '../../access/authenticated'
 export const Notifications: CollectionConfig = {
   slug: 'notifications',
   admin: {
+    hidden: true,
     useAsTitle: 'message',
     defaultColumns: ['type', 'message', 'job', 'read', 'createdAt'],
     description: 'Pipeline notifications and alerts',

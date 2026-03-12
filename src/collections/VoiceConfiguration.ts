@@ -13,6 +13,7 @@ const hasApiKeyAuth = (req: { headers: Headers }): boolean => {
 export const VoiceConfiguration: CollectionConfig = {
   slug: 'voice-configuration',
   admin: {
+    hidden: true,
     useAsTitle: 'name',
     group: 'Settings',
     description: 'Kiuli Voice settings for AI content enhancement',

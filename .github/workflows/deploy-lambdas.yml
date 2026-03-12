@@ -1,0 +1,176 @@
+name: Deploy Lambda Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lambda/handler.js'
+      - 'lambda/orchestrator/**'
+      - 'lambda/image-processor/**'
+      - 'lambda/labeler/**'
+      - 'lambda/finalizer/**'
+      - 'lambda/video-processor/**'
+      - 'lambda/shared/**'
+      - 'lambda/sync-shared.sh'
+      - 'lambda/scripts/deploy.sh'
+
+  workflow_dispatch:
+    inputs:
+      function:
+        description: 'Lambda function to deploy (or "all")'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - scraper
+          - orchestrator
+          - image-processor
+          - labeler
+          - finalizer
+          - video-processor
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      scraper: ${{ steps.changed.outputs.scraper }}
+      orchestrator: ${{ steps.changed.outputs.orchestrator }}
+      image_processor: ${{ steps.changed.outputs.image_processor }}
+      labeler: ${{ steps.changed.outputs.labeler }}
+      finalizer: ${{ steps.changed.outputs.finalizer }}
+      video_processor: ${{ steps.changed.outputs.video_processor }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed Lambda functions
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          DEPLOY_SCRAPER=false
+          DEPLOY_ORCHESTRATOR=false
+          DEPLOY_IMAGE_PROCESSOR=false
+          DEPLOY_LABELER=false
+          DEPLOY_FINALIZER=false
+          DEPLOY_VIDEO_PROCESSOR=false
+
+          # shared/ changes affect all downstream Lambdas
+          if echo "$CHANGED" | grep -qE '^lambda/shared/|^lambda/sync-shared\.sh'; then
+            DEPLOY_ORCHESTRATOR=true
+            DEPLOY_IMAGE_PROCESSOR=true
+            DEPLOY_LABELER=true
+            DEPLOY_FINALIZER=true
+            DEPLOY_VIDEO_PROCESSOR=true
+          fi
+
+          if echo "$CHANGED" | grep -qE '^lambda/handler\.js'; then
+            DEPLOY_SCRAPER=true
+          fi
+          if echo "$CHANGED" | grep -qE '^lambda/orchestrator/'; then
+            DEPLOY_ORCHESTRATOR=true
+          fi
+          if echo "$CHANGED" | grep -qE '^lambda/image-processor/'; then
+            DEPLOY_IMAGE_PROCESSOR=true
+          fi
+          if echo "$CHANGED" | grep -qE '^lambda/labeler/'; then
+            DEPLOY_LABELER=true
+          fi
+          if echo "$CHANGED" | grep -qE '^lambda/finalizer/'; then
+            DEPLOY_FINALIZER=true
+          fi
+          if echo "$CHANGED" | grep -qE '^lambda/video-processor/'; then
+            DEPLOY_VIDEO_PROCESSOR=true
+          fi
+
+          # deploy.sh changes: redeploy everything
+          if echo "$CHANGED" | grep -qE '^lambda/scripts/deploy\.sh'; then
+            DEPLOY_SCRAPER=true
+            DEPLOY_ORCHESTRATOR=true
+            DEPLOY_IMAGE_PROCESSOR=true
+            DEPLOY_LABELER=true
+            DEPLOY_FINALIZER=true
+            DEPLOY_VIDEO_PROCESSOR=true
+          fi
+
+          echo "scraper=$DEPLOY_SCRAPER" >> $GITHUB_OUTPUT
+          echo "orchestrator=$DEPLOY_ORCHESTRATOR" >> $GITHUB_OUTPUT
+          echo "image_processor=$DEPLOY_IMAGE_PROCESSOR" >> $GITHUB_OUTPUT
+          echo "labeler=$DEPLOY_LABELER" >> $GITHUB_OUTPUT
+          echo "finalizer=$DEPLOY_FINALIZER" >> $GITHUB_OUTPUT
+          echo "video_processor=$DEPLOY_VIDEO_PROCESSOR" >> $GITHUB_OUTPUT
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: |
+      always() &&
+      (needs.detect-changes.result == 'success' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
+
+      - name: Make scripts executable
+        run: |
+          chmod +x lambda/scripts/deploy.sh
+          chmod +x lambda/sync-shared.sh
+
+      - name: Deploy scraper
+        if: |
+          (github.event_name == 'push' && needs.detect-changes.outputs.scraper == 'true') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.function == 'all' || inputs.function == 'scraper'))
+        run: cd lambda/scripts && ./deploy.sh scraper
+
+      - name: Deploy orchestrator
+        if: |
+          (github.event_name == 'push' && needs.detect-changes.outputs.orchestrator == 'true') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.function == 'all' || inputs.function == 'orchestrator'))
+        run: cd lambda/scripts && ./deploy.sh orchestrator
+
+      - name: Deploy image-processor
+        if: |
+          (github.event_name == 'push' && needs.detect-changes.outputs.image_processor == 'true') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.function == 'all' || inputs.function == 'image-processor'))
+        run: cd lambda/scripts && ./deploy.sh image-processor
+
+      - name: Deploy labeler
+        if: |
+          (github.event_name == 'push' && needs.detect-changes.outputs.labeler == 'true') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.function == 'all' || inputs.function == 'labeler'))
+        run: cd lambda/scripts && ./deploy.sh labeler
+
+      - name: Deploy finalizer
+        if: |
+          (github.event_name == 'push' && needs.detect-changes.outputs.finalizer == 'true') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.function == 'all' || inputs.function == 'finalizer'))
+        run: cd lambda/scripts && ./deploy.sh finalizer
+
+      - name: Deploy video-processor
+        if: |
+          (github.event_name == 'push' && needs.detect-changes.outputs.video_processor == 'true') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.function == 'all' || inputs.function == 'video-processor'))
+        run: cd lambda/scripts && ./deploy.sh video-processor
+
+      - name: Verify all deployments
+        run: |
+          chmod +x lambda/scripts/verify.sh
+          cd lambda/scripts && ./verify.sh

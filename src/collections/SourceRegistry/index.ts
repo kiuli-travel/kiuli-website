@@ -4,6 +4,7 @@ import { authenticated } from '../../access/authenticated'
 export const SourceRegistry: CollectionConfig = {
   slug: 'source-registry',
   admin: {
+    hidden: true,
     useAsTitle: 'name',
     group: 'Content Engine',
     defaultColumns: ['name', 'category', 'active', 'lastCheckedAt'],

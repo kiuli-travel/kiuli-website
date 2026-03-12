@@ -295,7 +295,6 @@ exports.handler = async (event) => {
       allImagesProcessed: totalProcessed >= totalImages,
       noFailedImages: failedImages === 0,
       heroImageSelected: !!heroImageId,
-      contentEnhanced: false,  // Enhancement is manual step
       schemaGenerated: !!schema,
       schemaValid: schemaValidation.status !== 'fail',
       metaFieldsFilled: !!(itinerary.metaTitle && itinerary.metaDescription)
@@ -322,13 +321,6 @@ exports.handler = async (event) => {
       publishBlockers.push({
         reason: 'No hero image selected',
         severity: 'error'
-      });
-    }
-
-    if (!publishChecklist.contentEnhanced) {
-      publishBlockers.push({
-        reason: 'Content not yet enhanced (use Enhance buttons)',
-        severity: 'warning'
       });
     }
 

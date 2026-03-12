@@ -4,6 +4,7 @@ import { authenticated } from '../access/authenticated'
 export const ServiceItems: CollectionConfig = {
   slug: 'service-items',
   admin: {
+    hidden: true,
     useAsTitle: 'name',
     group: 'Knowledge Base',
     defaultColumns: ['name', 'category', 'serviceDirection', 'serviceLevel', 'observationCount', 'updatedAt'],

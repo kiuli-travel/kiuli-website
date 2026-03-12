@@ -8,6 +8,7 @@ export const ImageStatuses: CollectionConfig = {
     plural: 'Image Statuses',
   },
   admin: {
+    hidden: true,
     group: 'Pipeline',
     useAsTitle: 'sourceS3Key',
     defaultColumns: ['sourceS3Key', 'status', 'job', 'propertyName'],

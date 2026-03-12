@@ -10,6 +10,7 @@
 #   ./deploy.sh labeler
 #   ./deploy.sh finalizer
 #   ./deploy.sh scraper
+#   ./deploy.sh video-processor
 #
 # What this script does:
 #   1. Verifies AWS credentials are valid
@@ -49,34 +50,37 @@ PROJECT_ROOT="$(cd "$LAMBDA_DIR/.." && pwd)"
 # AWS function names for each logical name
 get_aws_name() {
   case "$1" in
-    scraper)         echo "kiuli-scraper" ;;
-    orchestrator)    echo "kiuli-v6-orchestrator" ;;
-    image-processor) echo "kiuli-v6-image-processor" ;;
-    labeler)         echo "kiuli-v6-labeler" ;;
-    finalizer)       echo "kiuli-v6-finalizer" ;;
-    *)               echo "" ;;
+    scraper)          echo "kiuli-scraper" ;;
+    orchestrator)     echo "kiuli-v6-orchestrator" ;;
+    image-processor)  echo "kiuli-v6-image-processor" ;;
+    labeler)          echo "kiuli-v6-labeler" ;;
+    finalizer)        echo "kiuli-v6-finalizer" ;;
+    video-processor)  echo "kiuli-v6-video-processor" ;;
+    *)                echo "" ;;
   esac
 }
 
 # Source directory for each function
 get_func_dir() {
   case "$1" in
-    scraper)         echo "$LAMBDA_DIR" ;;           # scraper lives at lambda root
-    orchestrator)    echo "$LAMBDA_DIR/orchestrator" ;;
-    image-processor) echo "$LAMBDA_DIR/image-processor" ;;
-    labeler)         echo "$LAMBDA_DIR/labeler" ;;
-    finalizer)       echo "$LAMBDA_DIR/finalizer" ;;
+    scraper)          echo "$LAMBDA_DIR" ;;           # scraper lives at lambda root
+    orchestrator)     echo "$LAMBDA_DIR/orchestrator" ;;
+    image-processor)  echo "$LAMBDA_DIR/image-processor" ;;
+    labeler)          echo "$LAMBDA_DIR/labeler" ;;
+    finalizer)        echo "$LAMBDA_DIR/finalizer" ;;
+    video-processor)  echo "$LAMBDA_DIR/video-processor" ;;
   esac
 }
 
 # Files to include in the zip for each function
 get_func_files() {
   case "$1" in
-    scraper)         echo "handler.js node_modules/" ;;
-    orchestrator)    echo "handler.js transform.js shared/ node_modules/" ;;
-    image-processor) echo "handler.js processImage.js shared/ node_modules/" ;;
-    labeler)         echo "handler.js labelImage.js shared/ node_modules/" ;;
-    finalizer)       echo "handler.js generateSchema.js selectHero.js schemaValidator.js shared/ node_modules/" ;;
+    scraper)          echo "handler.js node_modules/" ;;
+    orchestrator)     echo "handler.js transform.js shared/ node_modules/" ;;
+    image-processor)  echo "handler.js processImage.js shared/ node_modules/" ;;
+    labeler)          echo "handler.js labelImage.js shared/ node_modules/" ;;
+    finalizer)        echo "handler.js generateSchema.js selectHero.js schemaValidator.js shared/ node_modules/" ;;
+    video-processor)  echo "handler.js shared/ node_modules/" ;;
   esac
 }
 
@@ -105,13 +109,13 @@ TOTAL_STEPS=9
 
 if [ -z "$FUNCTION" ]; then
   echo "Usage: ./deploy.sh <function>"
-  echo "Available: scraper, orchestrator, image-processor, labeler, finalizer"
+  echo "Available: scraper, orchestrator, image-processor, labeler, finalizer, video-processor"
   exit 1
 fi
 
 AWS_FUNCTION_NAME=$(get_aws_name "$FUNCTION")
 if [ -z "$AWS_FUNCTION_NAME" ]; then
-  fail "Unknown function '$FUNCTION'. Available: scraper, orchestrator, image-processor, labeler, finalizer"
+  fail "Unknown function '$FUNCTION'. Available: scraper, orchestrator, image-processor, labeler, finalizer, video-processor"
 fi
 
 FUNC_DIR=$(get_func_dir "$FUNCTION")

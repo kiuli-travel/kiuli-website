@@ -30,6 +30,7 @@ declare -A FUNCTIONS=(
   ["image-processor"]="kiuli-v6-image-processor"
   ["labeler"]="kiuli-v6-labeler"
   ["finalizer"]="kiuli-v6-finalizer"
+  ["video-processor"]="kiuli-v6-video-processor"
 )
 
 # Current HEAD
@@ -49,7 +50,7 @@ echo "  ------------------------------------------------------------------------
 TARGET="${1:-all}"
 ALL_CURRENT=true
 
-for KEY in scraper orchestrator image-processor labeler finalizer; do
+for KEY in scraper orchestrator image-processor labeler finalizer video-processor; do
   # Skip if targeting a specific function
   if [ "$TARGET" != "all" ] && [ "$TARGET" != "$KEY" ]; then
     continue

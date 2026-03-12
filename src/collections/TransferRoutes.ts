@@ -4,6 +4,7 @@ import { authenticated } from '../access/authenticated'
 export const TransferRoutes: CollectionConfig = {
   slug: 'transfer-routes',
   admin: {
+    hidden: true,
     useAsTitle: 'slug',
     group: 'Knowledge Base',
     defaultColumns: ['from', 'to', 'mode', 'observationCount', 'updatedAt'],

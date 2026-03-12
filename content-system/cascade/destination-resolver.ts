@@ -72,15 +72,37 @@ export async function resolveDestinations(
         payloadId: found.id,
         collection: 'destinations',
       })
-    } else {
+    } else if (dryRun) {
       results.push({
         entityName: country.name,
         entityType: 'country',
         action: 'skipped',
         payloadId: null,
         collection: 'destinations',
-        note: 'Country not found in destinations — expected to exist',
+        note: 'Would create country (dry run)',
       })
+    } else {
+      // Auto-create country record
+      const created = await createCountry(payload, country.name)
+      if (created) {
+        countryIdMap.set(country.normalized, created.id)
+        results.push({
+          entityName: country.name,
+          entityType: 'country',
+          action: 'created',
+          payloadId: created.id,
+          collection: 'destinations',
+        })
+      } else {
+        results.push({
+          entityName: country.name,
+          entityType: 'country',
+          action: 'skipped',
+          payloadId: null,
+          collection: 'destinations',
+          note: 'Failed to create country',
+        })
+      }
     }
   }
 
@@ -237,6 +259,41 @@ async function queryDestination(
     draft: true,
   })
   return (result.docs[0] as unknown as DestinationDoc) ?? null
+}
+
+async function createCountry(
+  payload: Payload,
+  name: string,
+): Promise<DestinationDoc | null> {
+  const slug = slugify(name)
+
+  try {
+    const created = await payload.create({
+      collection: 'destinations',
+      draft: true,
+      data: {
+        name,
+        slug,
+        type: 'country',
+      },
+    })
+    return created as unknown as DestinationDoc
+  } catch (err: unknown) {
+    // Slug uniqueness conflict — query by slug and treat as found
+    if (err instanceof Error && err.message?.includes('unique')) {
+      const existing = await payload.find({
+        collection: 'destinations',
+        where: { slug: { equals: slug } },
+        limit: 1,
+        depth: 0,
+      })
+      if (existing.docs[0]) {
+        return existing.docs[0] as unknown as DestinationDoc
+      }
+    }
+    console.error(`[cascade] Failed to create country "${name}":`, err)
+    return null
+  }
 }
 
 async function createDestination(

@@ -106,7 +106,7 @@ M8 (Wetu) → M9 (ResConnect) → M10 (Flights) → M11 (WebMCP) → M12 (Speech
 
 ### M2 Phase 2: Scraper Fixes — Required Before Production Run
 
-**Status: NOT STARTED**
+**Status: COMPLETE — verified 2026-03-12**
 
 **Goal:** Fix the known gaps in the scraper before scraping 75–100 production itineraries. Each gap would pollute the knowledge base at scale if left unfixed.
 

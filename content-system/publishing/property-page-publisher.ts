@@ -59,7 +59,7 @@ export async function publishPropertyPage(projectId: number): Promise<PublishRes
   // Build update — set _status to published so property is visible on frontend
   const updateData: Record<string, unknown> = {
     _status: 'published',
-    descriptionEnhanced: textToLexical(sections.overview),
+    description_enhanced: textToLexical(sections.overview),
   }
 
   if (project.metaTitle) updateData.metaTitle = project.metaTitle

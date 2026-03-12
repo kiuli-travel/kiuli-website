@@ -120,6 +120,7 @@ export async function draftDestinationPage(projectId: number): Promise<void> {
         answerCapsule: meta.answerCapsule,
         processingStatus: 'completed',
         processingError: null,
+        stage: 'draft',
       },
     })
 

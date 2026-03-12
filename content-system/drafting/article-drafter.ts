@@ -181,6 +181,7 @@ REQUIREMENTS:
         answerCapsule: output.answerCapsule,
         processingStatus: 'completed',
         processingError: null,
+        stage: 'draft',
       },
     })
 

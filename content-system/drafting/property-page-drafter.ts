@@ -201,6 +201,7 @@ Generate a JSON object with NOTHING else:
         answerCapsule: String(meta.answerCapsule || ''),
         processingStatus: 'completed',
         processingError: null,
+        stage: 'draft',
       },
     })
 

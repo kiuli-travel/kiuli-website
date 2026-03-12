@@ -105,6 +105,7 @@ Return ONLY the enhanced description, no explanations.`
         body: lexicalBody,
         processingStatus: 'completed',
         processingError: null,
+        stage: 'draft',
       },
     })
 

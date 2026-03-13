@@ -5,6 +5,7 @@ export const Notifications: CollectionConfig = {
   slug: 'notifications',
   admin: {
     hidden: true,
+    group: 'Pipeline',
     useAsTitle: 'message',
     defaultColumns: ['type', 'message', 'job', 'read', 'createdAt'],
     description: 'Pipeline notifications and alerts',

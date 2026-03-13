@@ -8,6 +8,7 @@ export const Sessions: CollectionConfig = {
   },
   admin: {
     hidden: true,
+    group: 'System',
     useAsTitle: 'sessionId',
     defaultColumns: ['sessionId', 'trafficSource', 'landingPage', 'status', 'createdAt'],
     listSearchableFields: ['sessionId', 'gclid'],

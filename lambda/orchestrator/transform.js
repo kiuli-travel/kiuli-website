@@ -8,16 +8,11 @@
 // Canonical country destination IDs in Payload DB (type='country')
 // Update this map if countries are added to the destinations collection
 const COUNTRY_CODE_TO_ID = {
-  KE: 2,   // Kenya
-  TZ: 3,   // Tanzania
-  UG: 4,   // Uganda
-  RW: 5,   // Rwanda
-  BW: 6,   // Botswana
-  ZA: 7,   // South Africa
-  ZM: 8,   // Zambia
-  ZW: 9,   // Zimbabwe
-  NA: 10,  // Namibia
-  MZ: 11,  // Mozambique
+  KE: 63,  // Kenya
+  TZ: 82,  // Tanzania
+  RW: 67,  // Rwanda
+  ZA: 74,  // South Africa
+  MZ: 75,  // Mozambique
 };
 
 /**
@@ -265,7 +260,7 @@ async function resolveLocationToDestination(locationString, countryId, headers, 
   // Step 2: Direct Destinations name match
   try {
     const destRes = await fetch(
-      `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(locationString)}&where[type][equals]=destination&limit=1`,
+      `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(locationString)}&where[type][equals]=destination&limit=1&draft=true`,
       { headers }
     );
     if (destRes.ok) {
@@ -303,7 +298,7 @@ async function resolveLocationToDestination(locationString, countryId, headers, 
     const errText = await createRes.text();
     if (createRes.status === 400 && errText.includes('unique')) {
       const retryRes = await fetch(
-        `${PAYLOAD_API_URL}/api/destinations?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+        `${PAYLOAD_API_URL}/api/destinations?where[slug][equals]=${encodeURIComponent(slug)}&limit=1&draft=true`,
         { headers }
       );
       if (retryRes.ok) {
@@ -348,7 +343,7 @@ async function linkDestinations(countries) {
   for (const { country } of countries) {
     if (!country) continue;
 
-    const url = `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(country)}&limit=1`;
+    const url = `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(country)}&limit=1&draft=true`;
     console.log(`[linkDestinations] Querying: ${country}`);
 
     try {
@@ -451,10 +446,10 @@ async function linkProperties(segments, destinationIds, destinationCache) {
         }
       }
 
-      // 2. Query Properties by slug
+      // 2. Query Properties by slug (include drafts — orchestrator creates properties as draft)
       if (!propertyId) {
         const slugRes = await fetch(
-          `${PAYLOAD_API_URL}/api/properties?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+          `${PAYLOAD_API_URL}/api/properties?where[slug][equals]=${encodeURIComponent(slug)}&limit=1&draft=true`,
           { headers }
         );
         if (slugRes.ok) {
@@ -538,7 +533,7 @@ async function linkProperties(segments, destinationIds, destinationCache) {
           const errText = await createRes.text();
           if (createRes.status === 400 && errText.includes('unique')) {
             const retryRes = await fetch(
-              `${PAYLOAD_API_URL}/api/properties?where[slug][equals]=${encodeURIComponent(slug)}&limit=1`,
+              `${PAYLOAD_API_URL}/api/properties?where[slug][equals]=${encodeURIComponent(slug)}&limit=1&draft=true`,
               { headers }
             );
             if (retryRes.ok) {
@@ -559,7 +554,7 @@ async function linkProperties(segments, destinationIds, destinationCache) {
       if (propertyId && !createdThisRun.has(propertyId)) {
         try {
           const existingRes = await fetch(
-            `${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=0`,
+            `${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=0&draft=true`,
             { headers }
           );
           if (existingRes.ok) {
@@ -614,7 +609,7 @@ async function linkProperties(segments, destinationIds, destinationCache) {
       // Resolve destination ID for this property (for regionIds) if not already resolved
       if (propertyId && !resolvedDestinationId) {
         try {
-          const propRes = await fetch(`${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=0`, { headers });
+          const propRes = await fetch(`${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=0&draft=true`, { headers });
           if (propRes.ok) {
             const prop = await propRes.json();
             resolvedDestinationId = typeof prop.destination === 'object'
@@ -680,7 +675,7 @@ async function linkTransferRoutes(segments, destinationCache, propertyMap, airpo
     const propertyId = propertyMap.get(endpointName);
     if (propertyId) {
       try {
-        const res = await fetch(`${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=1`, { headers });
+        const res = await fetch(`${PAYLOAD_API_URL}/api/properties/${propertyId}?depth=1&draft=true`, { headers });
         if (res.ok) {
           const prop = await res.json();
           const destId = typeof prop.destination === 'object' ? prop.destination?.id : prop.destination;
@@ -1240,7 +1235,7 @@ async function linkAirports(segments, headers, PAYLOAD_API_URL) {
             }
           }
           if (!airportId) {
-            console.error(`[linkAirports] FAILED: ${airportName}: ${createRes.status}`);
+            console.error(`[linkAirports] FAILED: ${airportName}: ${createRes.status} — ${errText.slice(0, 200)}`);
           }
         }
       } catch (err) {
@@ -1396,7 +1391,7 @@ async function lookupDestinationByCountry(countryName, cache, headers, PAYLOAD_A
 
   try {
     const res = await fetch(
-      `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(countryName)}&limit=1`,
+      `${PAYLOAD_API_URL}/api/destinations?where[name][equals]=${encodeURIComponent(countryName)}&limit=1&draft=true`,
       { headers }
     );
     if (!res.ok) {

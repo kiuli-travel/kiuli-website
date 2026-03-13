@@ -27,6 +27,10 @@ export const plugins: Plugin[] = [
   redirectsPlugin({
     collections: ['pages', 'posts'],
     overrides: {
+      admin: {
+        hidden: true,
+        group: 'System',
+      },
       // Field override to add description to the 'from' field
       // Type assertion required because Payload's field types don't preserve
       // the exact type when spreading and modifying admin properties
@@ -60,7 +64,17 @@ export const plugins: Plugin[] = [
     fields: {
       payment: false,
     },
+    formSubmissionOverrides: {
+      admin: {
+        hidden: true,
+        group: 'System',
+      },
+    },
     formOverrides: {
+      admin: {
+        hidden: true,
+        group: 'System',
+      },
       fields: ({ defaultFields }) => {
         return defaultFields.map((field) => {
           if ('name' in field && field.name === 'confirmationMessage') {
@@ -89,6 +103,10 @@ export const plugins: Plugin[] = [
     // (search_rels references uncommitted posts within the same transaction)
     skipSync: ({ req }) => Boolean(req.context?.skipSearchSync),
     searchOverrides: {
+      admin: {
+        hidden: true,
+        group: 'System',
+      },
       fields: ({ defaultFields }) => {
         return [...defaultFields, ...searchFields]
       },

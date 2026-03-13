@@ -98,7 +98,7 @@ const BeforeDashboard: React.FC = () => {
         setJobs((data.docs || []).map((j: any) => ({
           id: j.id,
           status: j.status || 'unknown',
-          itineraryTitle: j.itineraryTitle || j.url || 'Untitled',
+          itineraryTitle: j.itineraryId || j.itrvlUrl || 'Untitled',
           createdAt: j.createdAt,
         })))
       }
@@ -106,10 +106,11 @@ const BeforeDashboard: React.FC = () => {
       // Parse content
       if (contentRes.status === 'fulfilled' && contentRes.value?.ok) {
         const data = await contentRes.value.json()
-        if (data.stages) {
+        const stages = data.stageCounts || data.stages
+        if (stages) {
           const byStage: Record<string, number> = {}
           let total = 0
-          for (const [stage, count] of Object.entries(data.stages)) {
+          for (const [stage, count] of Object.entries(stages)) {
             byStage[stage] = count as number
             total += count as number
           }

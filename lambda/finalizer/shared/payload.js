@@ -131,9 +131,6 @@ async function getById(collection, id, options = {}) {
   if (options.depth !== undefined) {
     params.set('depth', options.depth.toString());
   }
-  if (options.draft) {
-    params.set('draft', 'true');
-  }
   const queryString = params.toString();
   const url = `${PAYLOAD_API_URL}/api/${collection}/${id}${queryString ? '?' + queryString : ''}`;
 
@@ -208,10 +205,8 @@ async function failJob(jobId, error, phase) {
  */
 async function getItinerary(id, options = {}) {
   // Default to depth=0 to mitigate 413 Payload Too Large errors
-  // Always read draft version: cascade Step 4.5 writes property links as draft,
-  // and we need those before the finalizer overwrites the days array.
   const depth = options.depth !== undefined ? options.depth : 0;
-  return getById('itineraries', id, { depth, draft: true });
+  return getById('itineraries', id, { depth });
 }
 
 async function createItinerary(data) {

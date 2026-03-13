@@ -225,13 +225,17 @@ export function ResearchTab({ project, projectId, onDataChanged }: ResearchTabPr
 
   const handleRunResearch = useCallback(async () => {
     setRunning(true)
-    const result = await triggerResearch(projectId)
-    setRunning(false)
-    if ('error' in result) {
-      alert(result.error)
-    } else {
-      // Refresh project data to show new research
-      if (onDataChanged) onDataChanged()
+    try {
+      const result = await triggerResearch(projectId)
+      if ('error' in result) {
+        alert(result.error)
+      } else {
+        onDataChanged?.()
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Research compilation failed')
+    } finally {
+      setRunning(false)
     }
   }, [projectId, onDataChanged])
 
@@ -389,20 +393,28 @@ interface DraftTabProps {
   project: WorkspaceProject
   projectId: number
   onFocusSection?: (sectionName: string) => void
+  onDataChanged?: () => void
 }
 
-export function DraftTab({ project, projectId, onFocusSection }: DraftTabProps) {
+export function DraftTab({ project, projectId, onFocusSection, onDataChanged }: DraftTabProps) {
   const [generating, setGenerating] = useState(false)
   const compound = isCompoundType(project.contentType)
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true)
-    const result = await triggerDraft(projectId)
-    setGenerating(false)
-    if ('error' in result) {
-      alert(result.error)
+    try {
+      const result = await triggerDraft(projectId)
+      if ('error' in result) {
+        alert(result.error)
+      } else {
+        onDataChanged?.()
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Draft generation failed')
+    } finally {
+      setGenerating(false)
     }
-  }, [projectId])
+  }, [projectId, onDataChanged])
 
   // Compound type — sections view
   if (compound && project.sections) {
@@ -1219,12 +1231,17 @@ export function ConsistencyTab({ project, projectId, onDataChanged }: Consistenc
 
   const handleRunCheck = useCallback(async () => {
     setRunning(true)
-    const res = await triggerConsistencyCheck(projectId)
-    setRunning(false)
-    if ('error' in res) {
-      alert(res.error)
-    } else if (onDataChanged) {
-      onDataChanged()
+    try {
+      const res = await triggerConsistencyCheck(projectId)
+      if ('error' in res) {
+        alert(res.error)
+      } else {
+        onDataChanged?.()
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Consistency check failed')
+    } finally {
+      setRunning(false)
     }
   }, [projectId, onDataChanged])
 
@@ -1414,12 +1431,17 @@ export function QualityGatesTab({ project, projectId, onDataChanged }: QualityGa
 
   const handleRunGates = useCallback(async () => {
     setRunning(true)
-    const res = await triggerQualityGates(projectId)
-    setRunning(false)
-    if ('error' in res) {
-      alert(res.error)
-    } else if (onDataChanged) {
-      onDataChanged()
+    try {
+      const res = await triggerQualityGates(projectId)
+      if ('error' in res) {
+        alert(res.error)
+      } else {
+        onDataChanged?.()
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Quality gates check failed')
+    } finally {
+      setRunning(false)
     }
   }, [projectId, onDataChanged])
 

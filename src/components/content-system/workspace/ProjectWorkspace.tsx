@@ -118,6 +118,7 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
             project={currentProject}
             projectId={projectId}
             onFocusSection={handleFocusSection}
+            onDataChanged={refreshProject}
           />
         )
       case 'FAQ':
@@ -156,6 +157,7 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
             project={currentProject}
             projectId={projectId}
             onFocusSection={handleFocusSection}
+            onDataChanged={refreshProject}
           />
         )
       default:

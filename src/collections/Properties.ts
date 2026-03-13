@@ -5,7 +5,7 @@ import { updateLastModified } from './Itineraries/hooks/updateLastModified'
 export const Properties: CollectionConfig = {
   slug: 'properties',
   admin: {
-    hidden: true,
+    hidden: false,
     useAsTitle: 'name',
     group: 'Content',
     defaultColumns: ['name', 'type', 'destination', 'priceTier', 'updatedAt'],

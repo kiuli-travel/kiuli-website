@@ -3,10 +3,10 @@ import type { CollectionConfig } from 'payload'
 export const Designers: CollectionConfig = {
   slug: 'designers',
   admin: {
-    hidden: true,
+    hidden: false,
     useAsTitle: 'name',
     defaultColumns: ['name', 'email', 'active', 'totalAssigned', 'lastAssignedAt'],
-    group: 'System',
+    group: 'People',
   },
   access: {
     read: ({ req }) => !!req.user,

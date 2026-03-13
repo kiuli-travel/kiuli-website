@@ -8,6 +8,7 @@ export const Inquiries: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'email',
+    group: 'People',
     defaultColumns: ['firstName', 'lastName', 'email', 'budgetRange', 'status', 'createdAt'],
     listSearchableFields: ['firstName', 'lastName', 'email'],
   },

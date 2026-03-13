@@ -4,24 +4,118 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fix: Tailwind's .table utility sets display:block, which breaks Payload's
-   collection list tables. Restore the correct value.
-   See: https://github.com/payloadcms/payload/issues/11679 */
+/* ======================================================================
+   KIULI ADMIN THEME
+   Brand: Kiuli Teal #486A6A, Clay #DA7A5A, Charcoal #404040,
+          Ivory #F5F3EB, Gray #DADADA
+   Fonts: General Sans (headlines), Satoshi (body), Waterfall (accent)
+   ====================================================================== */
+
+/* --- Font faces --- */
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Variable.woff2') format('woff2');
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-VariableItalic.woff2') format('woff2');
+  font-weight: 200 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* --- Payload CSS variable overrides --- */
+:root {
+  /* Surface colors */
+  --theme-elevation-0: #F5F3EB;        /* Kiuli Ivory — page background */
+  --theme-elevation-50: #FFFFFF;        /* Card backgrounds */
+  --theme-elevation-100: #F9F8F5;       /* Subtle elevated surfaces */
+  --theme-elevation-150: #EDEAE3;       /* Hover states */
+  --theme-elevation-200: #E5E2DB;       /* Borders, dividers */
+  --theme-elevation-250: #DADADA;       /* Kiuli Gray */
+
+  /* Text colors */
+  --theme-elevation-800: #404040;       /* Kiuli Charcoal — primary text */
+  --theme-elevation-900: #2d2d2d;       /* Headings */
+  --theme-elevation-1000: #1a1a1a;      /* High-contrast text */
+
+  /* Fonts */
+  --font-body: 'Satoshi', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+/* --- Login page branding --- */
+.login {
+  background-color: #F5F3EB !important;
+}
+
+.login .form-submit .btn {
+  background-color: #486A6A !important;
+  border-color: #486A6A !important;
+}
+
+.login .form-submit .btn:hover {
+  background-color: #3d5a5a !important;
+  border-color: #3d5a5a !important;
+}
+
+/* --- Sidebar nav refinements --- */
+.nav {
+  font-family: 'Satoshi', system-ui, sans-serif;
+}
+
+/* Group labels in sidebar */
+.nav-group__label {
+  font-family: 'General Sans', system-ui, sans-serif;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: #888;
+}
+
+/* Active nav item */
+.nav-group .nav__link.active {
+  background-color: rgba(72, 106, 106, 0.08);
+  color: #486A6A;
+}
+
+/* --- Dashboard heading --- */
+.dashboard__label {
+  font-family: 'General Sans', system-ui, sans-serif;
+}
+
+/* --- Fix: Tailwind .table utility conflict --- */
 .table {
   display: table;
 }
 
-/* Reset Payload's default button styling inside Kiuli custom views.
-   Without @tailwind base (preflight), <button> inherits Payload's grey
-   background and border. We wrap our custom views in .kiuli-view and use
-   :where() for zero specificity so any Tailwind utility class (bg-kiuli-clay,
-   bg-kiuli-teal, bg-red-600, etc.) still overrides this reset naturally. */
+/* --- Kiuli custom view resets --- */
 :where(.kiuli-view) button {
   background-color: transparent;
   border: 0;
 }
 
-/* Same reset for select elements which may inherit Payload admin styles */
 :where(.kiuli-view) select {
   background-color: white;
 }

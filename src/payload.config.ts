@@ -32,6 +32,7 @@ import { ContentProjects } from './collections/ContentProjects'
 import { ContentJobs } from './collections/ContentJobs'
 import { SourceRegistry } from './collections/SourceRegistry'
 import { EditorialDirectives } from './collections/EditorialDirectives'
+import { ItineraryTargets } from './collections/ItineraryTargets'
 import { Footer } from './Footer/config'
 import { Header } from './Header/config'
 import { PropertyNameMappings } from './globals/PropertyNameMappings'
@@ -47,7 +48,18 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {
+    meta: {
+      titleSuffix: ' — Kiuli',
+      icons: [{ url: '/logos/mark/kiuli-mark-clay.svg' }],
+      openGraph: {
+        images: [{ url: '/logos/full/kiuli-full-black.svg' }],
+      },
+    },
     components: {
+      graphics: {
+        Logo: '@/components/admin/KiuliLogo#KiuliLogo',
+        Icon: '@/components/admin/KiuliIcon#KiuliIcon',
+      },
       beforeLogin: ['@/components/BeforeLogin'],
       beforeDashboard: ['@/components/BeforeDashboard'],
       afterNavLinks: [
@@ -93,7 +105,7 @@ export default buildConfig({
     },
     push: false, // Disable schema push - use migrations only
   }),
-  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, Activities, TransferRoutes, ItineraryPatterns, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives, Airports, ServiceItems],
+  collections: [Pages, Posts, Media, Categories, Users, Itineraries, ItineraryJobs, ImageStatuses, Notifications, VoiceConfiguration, Destinations, TripTypes, Inquiries, Sessions, Designers, Authors, Properties, Activities, TransferRoutes, ItineraryPatterns, ContentProjects, ContentJobs, SourceRegistry, EditorialDirectives, Airports, ServiceItems, ItineraryTargets],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer, PropertyNameMappings, ContentSystemSettings, LocationMappings, BrandVoice],
   plugins: [

@@ -59,6 +59,8 @@ import * as migration_20260223_074555 from './20260223_074555';
 import * as migration_20260223_181943 from './20260223_181943';
 import * as migration_20260224_125620 from './20260224_125620';
 import * as migration_20260227_155241 from './20260227_155241';
+import * as migration_20260313_create_itinerary_targets from './20260313_create_itinerary_targets';
+import * as migration_20260313_seed_itinerary_targets from './20260313_seed_itinerary_targets';
 
 export const migrations = [
   {
@@ -365,5 +367,15 @@ export const migrations = [
     up: migration_20260227_155241.up,
     down: migration_20260227_155241.down,
     name: '20260227_155241'
+  },
+  {
+    up: migration_20260313_create_itinerary_targets.up,
+    down: migration_20260313_create_itinerary_targets.down,
+    name: '20260313_create_itinerary_targets',
+  },
+  {
+    up: migration_20260313_seed_itinerary_targets.up,
+    down: migration_20260313_seed_itinerary_targets.down,
+    name: '20260313_seed_itinerary_targets',
   },
 ];

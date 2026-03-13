@@ -5,7 +5,8 @@ import { calculateChecklist, resolveFields, triggerCascade, updateLastModified, 
 export const Itineraries: CollectionConfig<'itineraries'> = {
   slug: 'itineraries',
   admin: {
-    hidden: true,
+    hidden: false,
+    group: 'Itineraries',
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'overview.nights', '_status', 'updatedAt'],
     description:

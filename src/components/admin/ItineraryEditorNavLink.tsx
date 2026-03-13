@@ -17,7 +17,7 @@ export const ItineraryEditorNavLink: React.FC = () => {
           backgroundColor: 'transparent',
           color: '#486A6A',
           border: '1px solid #DADADA',
-          borderRadius: '4px',
+          borderRadius: '6px',
           fontSize: '0.8125rem',
           fontWeight: 500,
           textDecoration: 'none',
@@ -34,7 +34,7 @@ export const ItineraryEditorNavLink: React.FC = () => {
         }}
       >
         <span style={{ fontSize: '0.875rem' }}>{'\u270E'}</span>
-        <span>Editorial Editor</span>
+        <span>Itinerary Editor</span>
       </Link>
     </div>
   )

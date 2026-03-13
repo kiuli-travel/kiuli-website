@@ -72,7 +72,6 @@ const BeforeDashboard: React.FC = () => {
         fetch('/api/itinerary-jobs?limit=5&sort=-createdAt&depth=0', { credentials: 'include' }),
         fetch('/api/content/dashboard', {
           credentials: 'include',
-          headers: { Authorization: `Bearer ${window.__PAYLOAD_CONFIG__?.secret || ''}` },
         }).catch(() => null),
         fetch('/api/itineraries?limit=0&depth=0&draft=true', { credentials: 'include' }),
       ])

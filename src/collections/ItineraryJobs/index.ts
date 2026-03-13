@@ -4,6 +4,7 @@ import { beforeDelete } from './hooks/beforeDelete'
 
 export const ItineraryJobs: CollectionConfig<'itinerary-jobs'> = {
   slug: 'itinerary-jobs',
+  labels: { singular: 'Import Job', plural: 'Import Jobs' },
   access: {
     create: authenticated,
     delete: authenticated,

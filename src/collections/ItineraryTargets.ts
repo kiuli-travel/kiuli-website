@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 export const ItineraryTargets: CollectionConfig = {
   slug: 'itinerary-targets',
+  labels: { singular: 'Itinerary Target', plural: 'Itinerary Targets' },
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['number', 'name', 'priority', 'set', 'status', 'countries'],

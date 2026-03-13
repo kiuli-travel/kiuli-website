@@ -4,6 +4,7 @@ import { calculateChecklist, resolveFields, triggerCascade, updateLastModified, 
 
 export const Itineraries: CollectionConfig<'itineraries'> = {
   slug: 'itineraries',
+  labels: { singular: 'Safari Itinerary', plural: 'Safari Itineraries' },
   admin: {
     hidden: false,
     group: 'Itineraries',

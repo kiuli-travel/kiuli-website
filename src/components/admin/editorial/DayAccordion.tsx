@@ -36,13 +36,19 @@ interface DayAccordionProps {
 const SEGMENT_TYPE_COLORS: Record<SegmentType, string> = {
   transfer: "#486A6A",
   stay: "#DA7A5A",
-  activity: "#D97706",
+  activity: "#7C6BBF",
 }
 
-const SEGMENT_TYPE_LABELS: Record<SegmentType, string> = {
-  transfer: "Transfer",
-  stay: "Stay",
-  activity: "Activity",
+const SEGMENT_TYPE_LABELS: Record<SegmentType, { label: string; icon: string }> = {
+  transfer: { label: "Transfer", icon: "\u2708" },
+  stay: { label: "Stay", icon: "\uD83C\uDFE8" },
+  activity: { label: "Activity", icon: "\u26A1" },
+}
+
+const SEGMENT_TYPE_BG: Record<SegmentType, string> = {
+  transfer: "#F7FAFA",
+  stay: "#FFFBF9",
+  activity: "#FAFAFF",
 }
 
 function getProgressBadge(reviewed: number, total: number) {
@@ -159,53 +165,43 @@ function CheckIcon({ checked }: { checked: boolean }) {
 function SegmentPlaceholderCard({ segment }: { segment: SegmentSummary }) {
   const [reviewed, setReviewed] = useState(segment.isReviewed)
   const borderColor = SEGMENT_TYPE_COLORS[segment.type]
-
-  const statusLabel = segment.isReviewed
-    ? "Reviewed"
-    : segment.hasEnhancedContent
-      ? "Enhanced"
-      : "Pending"
-
-  const statusStyle = segment.isReviewed
-    ? { bg: "#DCFCE7", text: "#16A34A" }
-    : segment.hasEnhancedContent
-      ? { bg: "#FEF3C7", text: "#D97706" }
-      : { bg: "#FEE2E2", text: "#DC2626" }
+  const bgColor = SEGMENT_TYPE_BG[segment.type]
+  const typeInfo = SEGMENT_TYPE_LABELS[segment.type]
 
   return (
     <div
       style={{
-        border: "1px solid #DADADA",
+        border: "1px solid #E8E6E0",
         borderRadius: 6,
         borderLeft: `4px solid ${borderColor}`,
         overflow: "hidden",
+        background: reviewed ? "#FAFFFE" : bgColor,
       }}
     >
       {/* Header row */}
       <div
         style={{
-          height: 36,
+          height: 34,
           display: "flex",
           alignItems: "center",
-          padding: "0 12px",
+          padding: "0 10px",
           gap: 8,
-          background: "white",
         }}
       >
         {/* Type badge */}
         <span
           style={{
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: 600,
             textTransform: "uppercase",
             color: borderColor,
             background: `${borderColor}14`,
-            padding: "2px 8px",
-            borderRadius: 4,
-            letterSpacing: "0.02em",
+            padding: "2px 6px",
+            borderRadius: 3,
+            letterSpacing: "0.04em",
           }}
         >
-          {SEGMENT_TYPE_LABELS[segment.type]}
+          {typeInfo.icon} {typeInfo.label}
         </span>
         {/* Name */}
         <span
@@ -221,39 +217,36 @@ function SegmentPlaceholderCard({ segment }: { segment: SegmentSummary }) {
         >
           {segment.name}
         </span>
-        {/* Status label */}
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 500,
-            color: statusStyle.text,
-            background: statusStyle.bg,
-            padding: "2px 8px",
-            borderRadius: 999,
-          }}
-        >
-          {statusLabel}
-        </span>
+        {/* Status — only show when reviewed or enhanced */}
+        {segment.isReviewed ? (
+          <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+            <rect width="14" height="14" rx="3" fill="#16A34A" />
+            <path d="M3.5 7L6 9.5L10.5 4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : segment.hasEnhancedContent ? (
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 500,
+              color: "#D97706",
+              background: "#FEF3C7",
+              padding: "1px 6px",
+              borderRadius: 3,
+            }}
+          >
+            ENHANCED
+          </span>
+        ) : null}
       </div>
-      {/* Content placeholder */}
-      <div
-        style={{
-          height: 36,
-          background: "#F5F3EB",
-          margin: "0 10px",
-          borderRadius: 4,
-        }}
-      />
       {/* Footer row */}
       <div
         style={{
-          height: 28,
+          height: 26,
           display: "flex",
           alignItems: "center",
           padding: "0 10px",
           gap: 6,
-          borderTop: "1px solid #DADADA",
-          marginTop: 6,
+          borderTop: "1px solid #E8E6E0",
           cursor: "pointer",
         }}
         onClick={() => setReviewed(!reviewed)}
@@ -615,10 +608,10 @@ export default function DayAccordion({
           {/* SEGMENT CARDS */}
           <div
             style={{
-              padding: "6px 10px 0",
+              padding: "4px 8px 0",
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 4,
             }}
           >
             {children || segments.map((segment) => (

@@ -25,22 +25,22 @@ function getState(isReviewed: boolean, enhancedValue: string): UnitState {
 
 const stateStyles = {
   unreviewed: {
-    border: "#DC2626",
-    headerBg: "rgba(254,226,226,0.4)",
-    bodyBg: "#FFFAFA",
-    label: "UNREVIEWED",
-    labelColor: "#DC2626",
+    border: "#DADADA",
+    headerBg: "#FAFAF8",
+    bodyBg: "#FFFFFF",
+    label: "",
+    labelColor: "transparent",
   },
   enhanced: {
     border: "#D97706",
-    headerBg: "rgba(254,243,199,0.4)",
+    headerBg: "rgba(254,243,199,0.25)",
     bodyBg: "#FFFEF5",
     label: "ENHANCED",
     labelColor: "#D97706",
   },
   reviewed: {
     border: "#16A34A",
-    headerBg: "rgba(220,252,231,0.4)",
+    headerBg: "rgba(220,252,231,0.25)",
     bodyBg: "#FAFFFE",
     label: "REVIEWED",
     labelColor: "#16A34A",
@@ -189,11 +189,11 @@ export default function EditorialUnit({
             onFocus={() => setShowTooltip(true)}
             onBlur={() => setShowTooltip(false)}
             aria-label={hasEnhancedContent ? "Re-enhance with AI" : "Enhance with AI"}
-            className="flex items-center justify-center text-white transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed bg-kiuli-clay"
+            className="flex items-center justify-center text-white transition-all cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed bg-kiuli-clay hover:scale-105"
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 4,
+              width: 30,
+              height: 30,
+              borderRadius: 6,
               fontSize: 14,
               ...(isEnhancing ? { background: "#c4937f" } : {}),
             }}

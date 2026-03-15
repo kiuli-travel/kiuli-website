@@ -43,40 +43,60 @@ interface SegmentCardProps {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const BADGE_STYLES: Record<SegmentType, { bg: string; text: string; label: string }> = {
-  transfer: { bg: "#E8EFEF", text: "#486A6A", label: "\u2708 TRANSFER" },
-  stay: { bg: "#FDEEE9", text: "#DA7A5A", label: "\uD83C\uDFE0 STAY" },
-  activity: { bg: "#EFF6FF", text: "#2563EB", label: "\u26A1 ACTIVITY" },
-}
-
-const STATE_COLORS = {
-  unreviewed: { border: "#DC2626", bg: "#FFFAFA", label: "UNREVIEWED", labelColor: "#DC2626" },
-  enhanced: { border: "#D97706", bg: "#FFFEF5", label: "ENHANCED", labelColor: "#D97706" },
-  reviewed: { border: "#16A34A", bg: "#FAFFFE", label: "REVIEWED", labelColor: "#16A34A" },
+// A1: Each segment type gets its own distinct visual identity
+const TYPE_STYLES: Record<SegmentType, {
+  accent: string        // Left border + badge text
+  badgeBg: string       // Badge background
+  cardBg: string        // Card body background tint
+  headerBg: string      // Header background
+  icon: string          // Type icon
+  label: string         // Type label
+}> = {
+  transfer: {
+    accent: "#486A6A",
+    badgeBg: "#E8EFEF",
+    cardBg: "#F7FAFA",
+    headerBg: "#EDF3F3",
+    icon: "\u2708",
+    label: "TRANSFER",
+  },
+  stay: {
+    accent: "#DA7A5A",
+    badgeBg: "#FDEEE9",
+    cardBg: "#FFFBF9",
+    headerBg: "#FDF3EF",
+    icon: "\uD83C\uDFE8",
+    label: "STAY",
+  },
+  activity: {
+    accent: "#7C6BBF",
+    badgeBg: "#F0EDFB",
+    cardBg: "#FAFAFF",
+    headerBg: "#F3F1FC",
+    icon: "\u26A1",
+    label: "ACTIVITY",
+  },
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getCardState(
-  isReviewed: boolean,
+function hasEnhancedContent(
   descriptionEnhanced: string,
   titleEnhanced?: string,
   inclusionsEnhanced?: string,
-): "unreviewed" | "enhanced" | "reviewed" {
-  if (isReviewed) return "reviewed"
-  const hasEnhanced =
+): boolean {
+  return (
     descriptionEnhanced.trim().length > 0 ||
     (titleEnhanced?.trim().length ?? 0) > 0 ||
     (inclusionsEnhanced?.trim().length ?? 0) > 0
-  if (hasEnhanced) return "enhanced"
-  return "unreviewed"
+  )
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <div style={{ padding: "8px 12px 4px", fontSize: 10, color: "#888", fontWeight: 400 }}>
+    <div style={{ padding: "6px 12px 3px", fontSize: 10, color: "#888", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em" }}>
       {children}
     </div>
   )
@@ -94,29 +114,36 @@ function EnhanceButton({
       type="button"
       onClick={onClick}
       disabled={isEnhancing}
-      className="bg-kiuli-clay"
       style={{
-        width: 24,
-        height: 24,
-        borderRadius: 4,
+        width: 30,
+        height: 30,
+        borderRadius: 6,
         border: "none",
+        background: "#DA7A5A",
         cursor: isEnhancing ? "wait" : "pointer",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 12,
+        fontSize: 14,
         flexShrink: 0,
         opacity: isEnhancing ? 0.6 : 1,
-        transition: "opacity 150ms",
+        transition: "opacity 150ms, transform 150ms",
+        color: "white",
       }}
       aria-label="Enhance with AI"
+      onMouseEnter={(e) => {
+        if (!isEnhancing) (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)"
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"
+      }}
     >
       {isEnhancing ? (
         <span
           style={{
             display: "inline-block",
-            width: 12,
-            height: 12,
+            width: 14,
+            height: 14,
             border: "2px solid rgba(255,255,255,0.3)",
             borderTopColor: "#fff",
             borderRadius: "50%",
@@ -124,9 +151,9 @@ function EnhanceButton({
           }}
         />
       ) : (
-        <span role="img" aria-hidden="true">
-          ✨
-        </span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z" fill="white" />
+        </svg>
       )}
     </button>
   )
@@ -148,23 +175,24 @@ function EditorialField({
   variant?: "textarea" | "input"
 }) {
   const isTextarea = variant === "textarea"
-  const minH = isTextarea ? 56 : 30
+  const minH = isTextarea ? 48 : 28
 
   return (
     <div
-      className="flex w-full border-y border-kiuli-gray"
+      className="flex w-full"
+      style={{ borderTop: "1px solid #E8E6E0", borderBottom: "1px solid #E8E6E0" }}
     >
       {/* Left — iTrvl original (read-only) */}
       <div
-        className="bg-kiuli-ivory"
         style={{
           width: "45%",
-          padding: "6px 10px",
+          padding: "5px 10px",
           fontSize: 12,
-          color: "#666",
+          color: "#888",
           minHeight: minH,
-          lineHeight: 1.5,
+          lineHeight: 1.45,
           flexShrink: 0,
+          background: "rgba(0,0,0,0.02)",
         }}
       >
         {isTextarea ? (
@@ -172,7 +200,7 @@ function EditorialField({
         ) : (
           <div
             style={{
-              height: 30,
+              height: 28,
               display: "flex",
               alignItems: "center",
               overflow: "hidden",
@@ -187,10 +215,11 @@ function EditorialField({
 
       {/* Center — enhance button */}
       <div
-        className="border-x border-kiuli-gray"
         style={{
-          width: 36,
-          background: "#F0EEEA",
+          width: 40,
+          borderLeft: "1px solid #E8E6E0",
+          borderRight: "1px solid #E8E6E0",
+          background: "#F5F3EB",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -212,19 +241,19 @@ function EditorialField({
           <textarea
             value={enhancedValue}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Enhanced copy..."
-            className="text-kiuli-charcoal"
+            placeholder="Click \u2728 to enhance, or type directly..."
             style={{
               width: "100%",
               height: "100%",
               minHeight: minH,
-              padding: "6px 10px",
+              padding: "5px 10px",
               fontSize: 12,
+              color: "#404040",
               border: "none",
               outline: "none",
               resize: "vertical",
               fontFamily: "inherit",
-              lineHeight: 1.5,
+              lineHeight: 1.45,
               background: "transparent",
             }}
           />
@@ -233,13 +262,13 @@ function EditorialField({
             type="text"
             value={enhancedValue}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Enhanced copy..."
-            className="text-kiuli-charcoal"
+            placeholder="Click \u2728 to enhance, or type directly..."
             style={{
               width: "100%",
-              height: 30,
-              padding: "6px 10px",
+              height: 28,
+              padding: "5px 10px",
               fontSize: 12,
+              color: "#404040",
               border: "none",
               outline: "none",
               fontFamily: "inherit",
@@ -248,6 +277,110 @@ function EditorialField({
           />
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── Collapsed Row ───────────────────────────────────────────────────────────
+
+function CollapsedRow({
+  type,
+  segmentName,
+  isReviewed,
+  hasEnhanced,
+  onToggle,
+}: {
+  type: SegmentType
+  segmentName: string
+  isReviewed: boolean
+  hasEnhanced: boolean
+  onToggle: () => void
+}) {
+  const typeStyle = TYPE_STYLES[type]
+
+  return (
+    <div
+      onClick={onToggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        height: 36,
+        padding: "0 10px",
+        gap: 8,
+        cursor: "pointer",
+        borderRadius: 6,
+        border: "1px solid #E8E6E0",
+        borderLeft: `4px solid ${typeStyle.accent}`,
+        background: isReviewed ? "#FAFFFE" : typeStyle.cardBg,
+        transition: "background 150ms, box-shadow 150ms",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)"
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "none"
+      }}
+    >
+      {/* Expand chevron */}
+      <svg width={12} height={12} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+        <path d="M6 4L10 8L6 12" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+
+      {/* Type badge — compact */}
+      <span
+        style={{
+          fontSize: 9,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          color: typeStyle.accent,
+          background: typeStyle.badgeBg,
+          padding: "2px 6px",
+          borderRadius: 3,
+          letterSpacing: "0.04em",
+          flexShrink: 0,
+        }}
+      >
+        {typeStyle.icon} {typeStyle.label}
+      </span>
+
+      {/* Name */}
+      <span
+        style={{
+          flex: 1,
+          fontSize: 12,
+          fontWeight: 500,
+          color: "#404040",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {segmentName}
+      </span>
+
+      {/* Status indicators */}
+      {isReviewed ? (
+        <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+            <rect width="14" height="14" rx="3" fill="#16A34A" />
+            <path d="M3.5 7L6 9.5L10.5 4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      ) : hasEnhanced ? (
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 500,
+            color: "#D97706",
+            background: "#FEF3C7",
+            padding: "1px 6px",
+            borderRadius: 3,
+            flexShrink: 0,
+          }}
+        >
+          ENHANCED
+        </span>
+      ) : null}
     </div>
   )
 }
@@ -281,61 +414,95 @@ export default function SegmentCard({
   onReviewedChange,
   className,
 }: SegmentCardProps) {
-  const state = getCardState(isReviewed, descriptionEnhanced, titleEnhanced, inclusionsEnhanced)
-  const stateStyle = STATE_COLORS[state]
-  const badge = BADGE_STYLES[type]
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const typeStyle = TYPE_STYLES[type]
+  const enhanced = hasEnhancedContent(descriptionEnhanced, titleEnhanced, inclusionsEnhanced)
+
+  // A2: Collapsed view — single compact row
+  if (isCollapsed) {
+    return (
+      <CollapsedRow
+        type={type}
+        segmentName={segmentName}
+        isReviewed={isReviewed}
+        hasEnhanced={enhanced}
+        onToggle={() => setIsCollapsed(false)}
+      />
+    )
+  }
 
   return (
     <div
-      className={`border border-kiuli-gray ${className ?? ""}`}
+      className={className ?? ""}
       style={{
         borderRadius: 6,
-        borderLeft: `4px solid ${stateStyle.border}`,
+        border: "1px solid #E8E6E0",
+        borderLeft: `4px solid ${typeStyle.accent}`,
         overflow: "hidden",
-        background: "#FFFFFF",
-        transition: "border-color 200ms",
+        background: typeStyle.cardBg,
+        transition: "border-color 200ms, box-shadow 200ms",
       }}
     >
       {/* ── Header ── */}
       <div
         style={{
-          height: 36,
+          height: 34,
           display: "flex",
           alignItems: "center",
-          padding: "0 12px",
+          padding: "0 10px",
           gap: 8,
-          background: stateStyle.bg,
-          transition: "background-color 200ms",
+          background: typeStyle.headerBg,
         }}
       >
+        {/* Collapse chevron */}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(true)}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+          aria-label="Collapse segment"
+        >
+          <svg width={12} height={12} viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
         {/* Type badge */}
         <span
           style={{
             display: "inline-flex",
             alignItems: "center",
-            height: 20,
-            padding: "0 8px",
-            borderRadius: 999,
-            background: badge.bg,
-            color: badge.text,
-            fontSize: 10,
-            fontWeight: 500,
-            letterSpacing: "0.06em",
+            height: 18,
+            padding: "0 7px",
+            borderRadius: 3,
+            background: typeStyle.badgeBg,
+            color: typeStyle.accent,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
             textTransform: "uppercase",
             whiteSpace: "nowrap",
             flexShrink: 0,
           }}
         >
-          {badge.label}
+          {typeStyle.icon} {typeStyle.label}
         </span>
 
         {/* Segment name */}
         <span
-          className="text-kiuli-charcoal"
           style={{
             flex: 1,
-            fontSize: 13,
-            fontWeight: 500,
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#404040",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -344,19 +511,30 @@ export default function SegmentCard({
           {segmentName}
         </span>
 
-        {/* Status label */}
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 500,
-            textTransform: "uppercase",
-            color: stateStyle.labelColor,
-            letterSpacing: "0.04em",
-            flexShrink: 0,
-          }}
-        >
-          {stateStyle.label}
-        </span>
+        {/* A5: Status — only show when reviewed or enhanced, no UNREVIEWED label */}
+        {isReviewed ? (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+              <rect width="14" height="14" rx="3" fill="#16A34A" />
+              <path d="M3.5 7L6 9.5L10.5 4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontSize: 10, fontWeight: 500, color: "#16A34A" }}>REVIEWED</span>
+          </span>
+        ) : enhanced ? (
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 500,
+              color: "#D97706",
+              background: "#FEF3C7",
+              padding: "2px 7px",
+              borderRadius: 3,
+              flexShrink: 0,
+            }}
+          >
+            ENHANCED
+          </span>
+        ) : null}
       </div>
 
       {/* ── Body ── */}
@@ -421,10 +599,14 @@ export default function SegmentCard({
 
       {/* ── Footer ── */}
       <div
-        className="flex items-center border-t border-kiuli-gray"
         style={{
-          height: 28,
-          padding: "4px 10px",
+          display: "flex",
+          alignItems: "center",
+          height: 30,
+          padding: "0 10px",
+          borderTop: "1px solid #E8E6E0",
+          background: isReviewed ? "#F0FFF4" : "transparent",
+          transition: "background 200ms",
         }}
       >
         <label
@@ -433,19 +615,19 @@ export default function SegmentCard({
             alignItems: "center",
             gap: 6,
             cursor: "pointer",
-            fontSize: 12,
-            color: isReviewed ? "#16A34A" : "#404040",
+            fontSize: 11,
+            color: isReviewed ? "#16A34A" : "#666",
             fontWeight: isReviewed ? 500 : 400,
-            transition: "color 200ms, font-weight 200ms",
+            transition: "color 200ms",
           }}
         >
           <input
             type="checkbox"
             checked={isReviewed}
             onChange={(e) => onReviewedChange(e.target.checked)}
-            style={{ width: 13, height: 13, accentColor: "#486A6A" }}
+            style={{ width: 14, height: 14, accentColor: "#486A6A" }}
           />
-          Reviewed
+          Mark as reviewed
         </label>
       </div>
 

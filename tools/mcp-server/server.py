@@ -571,9 +571,11 @@ _DEPLOY_JOBS_DIR.mkdir(exist_ok=True)
 def _run_vercel(args: list[str], timeout: int = 30) -> dict:
     """Run a vercel CLI command and return structured result."""
     try:
+        env = {**os.environ, "FORCE_COLOR": "0", "NO_COLOR": "1", "CI": "1"}
         r = subprocess.run(
             ["vercel"] + args,
-            cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=timeout
+            cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=timeout,
+            env=env, stdin=subprocess.DEVNULL,
         )
         return {
             "ok": r.returncode == 0,

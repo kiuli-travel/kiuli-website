@@ -39,15 +39,21 @@ export function ItineraryHero({ title, heroImage, heroVideo, showHeroVideo }: It
             className="absolute inset-0"
           />
         ) : heroImage?.imgixUrl ? (
-          // Image background
-          <Image
-            src={heroImage.imgixUrl}
-            alt={heroImage.alt || title}
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-          />
+          // Image background with blur-up loading
+          <>
+            <div className="absolute inset-0 bg-kiuli-charcoal/40" aria-hidden="true" />
+            <Image
+              src={heroImage.imgixUrl}
+              alt={heroImage.alt || title}
+              fill
+              className="object-cover"
+              priority
+              sizes="100vw"
+              placeholder="blur"
+              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI4MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzQ4NkE2QSIvPjwvc3ZnPg=="
+            />
+          </>
+
         ) : (
           // Fallback gradient when no hero media
           <div className="absolute inset-0 bg-gradient-to-br from-kiuli-teal to-kiuli-charcoal" />

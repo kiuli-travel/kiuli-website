@@ -373,17 +373,29 @@ def search_files(pattern: str, is_regex: bool = False, max_results: int = 100):
 
 @mcp.tool()
 def git_status():
-    """Show git status: branch, changes, unpushed commits."""
+    """Show git status: branch, HEAD hash, changes, unpushed commits, remote tracking info."""
     try:
         branch = _run_git(["rev-parse", "--abbrev-ref", "HEAD"])
+        head_full = _run_git(["rev-parse", "HEAD"])
+        head_short = _run_git(["rev-parse", "--short", "HEAD"])
         status = _run_git(["status", "--porcelain"])
         unpushed = _run_git(["log", "@{u}..", "--oneline"])
-        last = _run_git(["log", "-1", "--format=%H %s"])
+        last = _run_git(["log", "-1", "--format=%H %s %ai"])
+        # Check if remote is reachable and what it has
+        remote_head = _run_git(["ls-remote", "--heads", "origin", "main"])
+        local_head = head_full["stdout"] if head_full["ok"] else ""
+        remote_hash = ""
+        if remote_head["ok"] and remote_head["stdout"]:
+            remote_hash = remote_head["stdout"].split()[0] if remote_head["stdout"] else ""
         return {
             "branch": branch["stdout"] if branch["ok"] else "unknown",
+            "head": head_short["stdout"] if head_short["ok"] else "unknown",
+            "headFull": local_head,
             "changes": [l for l in status["stdout"].splitlines() if l] if status["ok"] else [],
             "unpushed": [l for l in unpushed["stdout"].splitlines() if l] if unpushed["ok"] else [],
             "last_commit": last["stdout"] if last["ok"] else None,
+            "remoteHead": remote_hash,
+            "localMatchesRemote": local_head == remote_hash if (local_head and remote_hash) else None,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -501,19 +513,278 @@ def db_exec(sql: str, confirm: str = ""):
 
 
 # ---------------------------------------------------------------------------
-# Tools — Vercel
+# Tools — Vercel (CI/CD)
 # ---------------------------------------------------------------------------
+
+import json as _json
+import tempfile as _tempfile
+import signal as _signal
+
+# Track background deploy processes by job ID
+_DEPLOY_JOBS_DIR = Path(_tempfile.gettempdir()) / "kiuli-mcp-deploys"
+_DEPLOY_JOBS_DIR.mkdir(exist_ok=True)
+
+
+def _run_vercel(args: list[str], timeout: int = 30) -> dict:
+    """Run a vercel CLI command and return structured result."""
+    try:
+        r = subprocess.run(
+            ["vercel"] + args,
+            cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=timeout
+        )
+        return {
+            "ok": r.returncode == 0,
+            "stdout": r.stdout.strip(),
+            "stderr": r.stderr.strip(),
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "stdout": "", "stderr": f"Command timed out after {timeout}s"}
+    except Exception as e:
+        return {"ok": False, "stdout": "", "stderr": str(e)}
+
+
+@mcp.tool()
+def vercel_list(limit: int = 10, prod_only: bool = True):
+    """List recent Vercel deployments. Shows URL, state, commit, branch, age. Use this to find deployment URLs for vercel_inspect or vercel_logs."""
+    try:
+        args = ["ls"]
+        if prod_only:
+            args.append("--prod")
+        args.extend(["--limit", str(min(limit, 50))])
+        r = _run_vercel(args, timeout=30)
+        if not r["ok"]:
+            return {"error": r["stderr"]}
+        return {
+            "success": True,
+            "output": r["stdout"],
+            "hint": "Use a deployment URL from this list with vercel_inspect to see build details, or vercel_logs for runtime logs.",
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def vercel_inspect(url: str):
+    """Get full details for a Vercel deployment: build state, commit, duration, routes, build log tail. Pass a deployment URL from vercel_list."""
+    try:
+        r = _run_vercel(["inspect", url], timeout=30)
+        if not r["ok"]:
+            return {"error": r["stderr"]}
+        return {
+            "success": True,
+            "deployment": url,
+            "output": r["stdout"],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def vercel_logs(url: str = "", follow: bool = False, filter: str = ""):
+    """Fetch runtime logs for a Vercel deployment. Pass a deployment URL from vercel_list. If url is empty, fetches logs for the latest production deployment automatically."""
+    try:
+        # If no URL given, get latest prod deployment URL first
+        if not url:
+            ls_result = _run_vercel(["ls", "--prod", "--limit", "1"], timeout=20)
+            if not ls_result["ok"]:
+                return {"error": f"Could not list deployments: {ls_result['stderr']}"}
+            # Parse the URL from the ls output (second line after header typically contains the URL)
+            lines = ls_result["stdout"].split("\n")
+            url_found = None
+            for line in lines:
+                match = re.search(r"(https://[^\s]+\.vercel\.app)", line)
+                if match:
+                    url_found = match.group(1)
+                    break
+            if not url_found:
+                return {
+                    "error": "Could not extract deployment URL from vercel ls output",
+                    "raw_output": ls_result["stdout"],
+                    "hint": "Run vercel_list first and pass a specific URL.",
+                }
+            url = url_found
+
+        cmd_args = ["logs", url]
+        r = _run_vercel(cmd_args, timeout=30)
+        output = (r["stdout"] + "\n" + r["stderr"]).strip()
+
+        if filter:
+            filtered_lines = [l for l in output.split("\n") if filter.lower() in l.lower()]
+            output = "\n".join(filtered_lines) if filtered_lines else f"(no lines matching '{filter}')"
+
+        return {
+            "deployment": url,
+            "lineCount": len(output.split("\n")) if output else 0,
+            "output": output or "(no logs)",
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def vercel_deploy(confirm: str = ""):
+    """Deploy Kiuli website to Vercel production from local code. Runs as a background process because deploys take 2-5 minutes. Returns a job_id — use vercel_deploy_status to check progress. Requires confirm='DEPLOY'."""
+    try:
+        if confirm != "DEPLOY":
+            return {"deployed": False, "error": f"confirm must be exactly 'DEPLOY'. Got: {confirm}"}
+
+        # Create a unique job ID and output file
+        import time
+        job_id = f"deploy-{int(time.time())}"
+        output_file = _DEPLOY_JOBS_DIR / f"{job_id}.log"
+        pid_file = _DEPLOY_JOBS_DIR / f"{job_id}.pid"
+        status_file = _DEPLOY_JOBS_DIR / f"{job_id}.status"
+
+        # Write initial status
+        status_file.write_text("RUNNING")
+
+        # Launch vercel --prod --yes as a background process
+        # Redirect all output to the log file
+        with open(output_file, "w") as f:
+            process = subprocess.Popen(
+                ["vercel", "--prod", "--yes"],
+                cwd=PROJECT_ROOT,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+            )
+
+        pid_file.write_text(str(process.pid))
+
+        # Start a monitor thread that waits for completion and writes status
+        import threading
+        def _monitor():
+            returncode = process.wait()
+            if returncode == 0:
+                status_file.write_text("SUCCESS")
+            else:
+                status_file.write_text(f"FAILED (exit code {returncode})")
+
+        t = threading.Thread(target=_monitor, daemon=True)
+        t.start()
+
+        return {
+            "started": True,
+            "job_id": job_id,
+            "pid": process.pid,
+            "hint": f"Deploy is running in background. Use vercel_deploy_status(job_id='{job_id}') to check progress.",
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def vercel_deploy_status(job_id: str = ""):
+    """Check the status of a background Vercel deployment. If no job_id, lists all recent deploy jobs."""
+    try:
+        if not job_id:
+            # List all deploy jobs
+            jobs = []
+            for status_file in sorted(_DEPLOY_JOBS_DIR.glob("*.status"), reverse=True):
+                jid = status_file.stem
+                status = status_file.read_text().strip()
+                log_file = _DEPLOY_JOBS_DIR / f"{jid}.log"
+                log_size = log_file.stat().st_size if log_file.exists() else 0
+                jobs.append({"job_id": jid, "status": status, "log_bytes": log_size})
+            return {"jobs": jobs[:10]} if jobs else {"jobs": [], "hint": "No deploy jobs found. Use vercel_deploy to start one."}
+
+        status_file = _DEPLOY_JOBS_DIR / f"{job_id}.status"
+        log_file = _DEPLOY_JOBS_DIR / f"{job_id}.log"
+        pid_file = _DEPLOY_JOBS_DIR / f"{job_id}.pid"
+
+        if not status_file.exists():
+            return {"error": f"Unknown job_id: {job_id}"}
+
+        status = status_file.read_text().strip()
+        log_content = log_file.read_text() if log_file.exists() else ""
+        log_lines = log_content.strip().split("\n") if log_content.strip() else []
+
+        # Extract deployment URL from output if successful
+        url = None
+        if status == "SUCCESS":
+            for line in log_lines:
+                match = re.search(r"Production:\s+(https://[^\s]+)", line)
+                if match:
+                    url = match.group(1)
+                    break
+
+        # Return last 50 lines of log to keep response size manageable
+        tail = "\n".join(log_lines[-50:])
+
+        return {
+            "job_id": job_id,
+            "status": status,
+            "url": url,
+            "log_lines": len(log_lines),
+            "log_tail": tail,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def vercel_git():
+    """Check Vercel Git integration status: which repo is connected, which branch auto-deploys. Critical for diagnosing CI/CD issues."""
+    try:
+        r = _run_vercel(["git", "ls"], timeout=20)
+        if not r["ok"]:
+            # Try alternative: vercel project ls might give info
+            return {
+                "error": r["stderr"],
+                "hint": "If this fails, the Vercel CLI may not support 'git ls'. Check vercel_project for integration info.",
+            }
+        return {
+            "success": True,
+            "output": r["stdout"],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def vercel_project():
+    """Get Vercel project settings: framework, build command, output directory, git integration, domains."""
+    try:
+        r = _run_vercel(["project", "ls"], timeout=20)
+        project_list = r["stdout"] if r["ok"] else "(failed to list)"
+
+        # Also try to get linked project info from .vercel/project.json
+        project_json = PROJECT_ROOT / ".vercel" / "project.json"
+        local_config = None
+        if project_json.exists():
+            local_config = _json.loads(project_json.read_text())
+
+        return {
+            "success": True,
+            "projects": project_list,
+            "linkedProject": local_config,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def vercel_rollback(url: str, confirm: str = ""):
+    """Rollback Vercel production to a previous deployment. Pass a deployment URL from vercel_list. Requires confirm='ROLLBACK'."""
+    try:
+        if confirm != "ROLLBACK":
+            return {"rolled_back": False, "error": f"confirm must be exactly 'ROLLBACK'. Got: {confirm}"}
+        r = _run_vercel(["rollback", url, "--yes"], timeout=60)
+        return {
+            "rolled_back": r["ok"],
+            "url": url,
+            "output": (r["stdout"] + "\n" + r["stderr"]).strip(),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 
 @mcp.tool()
 def vercel_env_list():
     """List Vercel environment variable names (not values) for the project."""
     try:
-        r = subprocess.run(
-            ["vercel", "env", "ls"],
-            cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=30
-        )
-        return {"success": r.returncode == 0,
-                "output": (r.stdout + "\n" + r.stderr).strip()}
+        r = _run_vercel(["env", "ls"], timeout=30)
+        return {"success": r["ok"],
+                "output": (r["stdout"] + "\n" + r["stderr"]).strip()}
     except Exception as e:
         return {"error": str(e)}
 
@@ -759,51 +1030,8 @@ def pipeline_status(execution_arn: str = ""):
         return {"error": str(e)}
 
 
-# ---------------------------------------------------------------------------
-# Tools — Vercel Deployment
-# ---------------------------------------------------------------------------
 
-@mcp.tool()
-def vercel_deploy(confirm: str = ""):
-    """Deploy Kiuli website to Vercel production. Requires confirm='DEPLOY'."""
-    try:
-        if confirm != "DEPLOY":
-            return {"deployed": False, "error": f"confirm must be exactly 'DEPLOY'. Got: {confirm}"}
-        r = subprocess.run(
-            ["vercel", "--prod", "--yes"],
-            cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=600,
-        )
-        output = (r.stdout + "\n" + r.stderr).strip()
-        url_match = re.search(r"Production:\s+(https://[^\s]+)", output)
-        return {
-            "deployed": r.returncode == 0,
-            "url": url_match.group(1) if url_match else None,
-            "output": output,
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@mcp.tool()
-def vercel_logs(since: str = "1h", filter: str = ""):
-    """Fetch recent Vercel production logs."""
-    try:
-        cmd = f"vercel logs production --since {since} 2>&1"
-        if filter:
-            import shlex
-            cmd += f" | grep -i {shlex.quote(filter)} || true"
-        r = subprocess.run(cmd, shell=True, cwd=PROJECT_ROOT,
-                           capture_output=True, text=True, timeout=30)
-        output = r.stdout.strip()
-        lines = output.split("\n") if output else []
-        return {
-            "since": since,
-            "filter": filter or None,
-            "lineCount": len(lines),
-            "output": output or "(no logs in this time window)",
-        }
-    except Exception as e:
-        return {"error": str(e)}
+# (Vercel deployment tools are now in the "Tools — Vercel (CI/CD)" section above)
 
 
 # ---------------------------------------------------------------------------

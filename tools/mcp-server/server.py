@@ -587,13 +587,12 @@ def _run_vercel(args: list[str], timeout: int = 30) -> dict:
 
 
 @mcp.tool()
-def vercel_list(limit: int = 10, prod_only: bool = True):
+def vercel_list(prod_only: bool = True):
     """List recent Vercel deployments. Shows URL, state, commit, branch, age. Use this to find deployment URLs for vercel_inspect or vercel_logs."""
     try:
         args = ["ls"]
         if prod_only:
             args.append("--prod")
-        args.extend(["--limit", str(min(limit, 50))])
         r = _run_vercel(args, timeout=30)
         if not r["ok"]:
             return {"error": r["stderr"]}
@@ -628,7 +627,7 @@ def vercel_logs(url: str = "", follow: bool = False, filter: str = ""):
     try:
         # If no URL given, get latest prod deployment URL first
         if not url:
-            ls_result = _run_vercel(["ls", "--prod", "--limit", "1"], timeout=20)
+            ls_result = _run_vercel(["ls", "--prod"], timeout=20)
             if not ls_result["ok"]:
                 return {"error": f"Could not list deployments: {ls_result['stderr']}"}
             # Parse the URL from the ls output (second line after header typically contains the URL)
@@ -766,18 +765,45 @@ def vercel_deploy_status(job_id: str = ""):
 
 @mcp.tool()
 def vercel_git():
-    """Check Vercel Git integration status: which repo is connected, which branch auto-deploys. Critical for diagnosing CI/CD issues."""
+    """Check Vercel Git integration status by inspecting the latest deployment. Shows git source, commit, branch, and whether auto-deploy is working."""
     try:
-        r = _run_vercel(["git", "ls"], timeout=20)
-        if not r["ok"]:
-            # Try alternative: vercel project ls might give info
-            return {
-                "error": r["stderr"],
-                "hint": "If this fails, the Vercel CLI may not support 'git ls'. Check vercel_project for integration info.",
-            }
+        # Get latest deployment details — vercel inspect shows git info
+        ls_result = _run_vercel(["ls", "--prod"], timeout=20)
+        if not ls_result["ok"]:
+            return {"error": f"Could not list deployments: {ls_result['stderr']}"}
+
+        # Extract first deployment URL
+        url_found = None
+        for line in ls_result["stdout"].split("\n"):
+            match = re.search(r"(https://[^\s]+\.vercel\.app)", line)
+            if match:
+                url_found = match.group(1)
+                break
+
+        if not url_found:
+            return {"error": "No deployments found", "raw": ls_result["stdout"]}
+
+        # Inspect it for git info
+        inspect_result = _run_vercel(["inspect", url_found], timeout=30)
+
+        # Also read .vercel/project.json for linked project
+        project_json = PROJECT_ROOT / ".vercel" / "project.json"
+        local_config = None
+        if project_json.exists():
+            local_config = _json.loads(project_json.read_text())
+
+        # Check local git state
+        head = _run_git(["rev-parse", "--short", "HEAD"])
+        remote = _run_git(["ls-remote", "--heads", "origin", "main"])
+
         return {
             "success": True,
-            "output": r["stdout"],
+            "latestDeployment": url_found,
+            "inspectOutput": inspect_result["stdout"] if inspect_result["ok"] else inspect_result["stderr"],
+            "linkedProject": local_config,
+            "localHead": head["stdout"] if head["ok"] else None,
+            "remoteHead": remote["stdout"].split()[0][:7] if remote["ok"] and remote["stdout"] else None,
+            "deploymentList": ls_result["stdout"],
         }
     except Exception as e:
         return {"error": str(e)}

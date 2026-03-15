@@ -99,7 +99,7 @@ export function TripOverview({
             {/* Price Section */}
             {investmentLevel?.fromPrice && (
               <div className="mt-8">
-                <span className="label-caps text-kiuli-charcoal/60">Total</span>
+                <span className="label-caps text-kiuli-charcoal/60">From</span>
                 <p className="mt-1 font-heading text-3xl font-semibold text-kiuli-teal md:text-4xl">
                   {formatPrice(investmentLevel.fromPrice, investmentLevel.currency)}
                 </p>

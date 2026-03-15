@@ -32,7 +32,13 @@ export const generateMeta = async (args: {
   const ogImage = getImageURL(doc?.meta?.image)
 
   // Build SEO-optimized title with Kiuli branding
-  const title = doc?.meta?.title ? `${doc.meta.title} | Kiuli` : 'Kiuli | Luxury African Safaris'
+  // Avoid duplicating "Kiuli" if already present in the meta title
+  const rawTitle = doc?.meta?.title
+  const title = rawTitle
+    ? rawTitle.toLowerCase().includes('kiuli')
+      ? rawTitle
+      : `${rawTitle} | Kiuli`
+    : 'Kiuli | Luxury African Safaris'
 
   // Generate description with fallback
   const description =

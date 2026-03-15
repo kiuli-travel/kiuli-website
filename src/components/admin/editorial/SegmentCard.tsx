@@ -241,7 +241,7 @@ function EditorialField({
           <textarea
             value={enhancedValue}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Click \u2728 to enhance, or type directly..."
+            placeholder="Enhanced copy — click sparkle or type here..."
             style={{
               width: "100%",
               height: "100%",
@@ -262,7 +262,7 @@ function EditorialField({
             type="text"
             value={enhancedValue}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Click \u2728 to enhance, or type directly..."
+            placeholder="Enhanced copy — click sparkle or type here..."
             style={{
               width: "100%",
               height: 28,

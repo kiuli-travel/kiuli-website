@@ -107,19 +107,7 @@ export function TripOverview({
             )}
           </div>
 
-          {/* Right Column - Map Placeholder */}
-          <div className="flex-1 lg:flex-[2]">
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-kiuli-gray">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="mx-auto h-8 w-8 text-kiuli-teal/40" strokeWidth={1.5} />
-                  <span className="mt-2 block text-sm text-kiuli-charcoal/40">
-                    Map coming soon
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Map removed — will be replaced with interactive map in M10 */}
         </div>
       </div>
     </section>

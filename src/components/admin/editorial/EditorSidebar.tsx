@@ -129,7 +129,7 @@ export function QuickNav({ sections, onNavigate, expandedDays = false }: QuickNa
                         />
                         <span
                           className="flex-1 text-left"
-                          style={{ fontSize: "11px", fontWeight: 400, color: "#666" }}
+                          style={{ fontSize: "11px", fontWeight: 400, color: "#666", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                         >
                           {sub.label}
                         </span>

@@ -422,6 +422,49 @@ def git_commit_push(files: list[str], message: str, push: bool = True):
         return {"error": str(e)}
 
 
+@mcp.tool()
+def git_push():
+    """Push all committed changes to remote. Use after git_commit_push(push=False) or when commits were made externally."""
+    try:
+        r = _run_git(["push"])
+        if not r["ok"]:
+            return {"pushed": False, "error": r["stderr"]}
+        return {"pushed": True, "output": r["stdout"]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def git_log(count: int = 10):
+    """Show recent git log: hash, date, message."""
+    try:
+        r = _run_git(["log", f"-{min(count, 50)}", "--format=%h %ai %s"])
+        if not r["ok"]:
+            return {"error": r["stderr"]}
+        return {
+            "commits": [l for l in r["stdout"].splitlines() if l],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def git_diff(staged: bool = False, file: str = ""):
+    """Show git diff. staged=True for staged changes. file to limit to one file."""
+    try:
+        args = ["diff"]
+        if staged:
+            args.append("--staged")
+        if file:
+            args.extend(["--", file])
+        r = _run_git(args)
+        if not r["ok"]:
+            return {"error": r["stderr"]}
+        return {"diff": r["stdout"] or "(no changes)"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Tools — Build & Payload
 # ---------------------------------------------------------------------------

@@ -14,8 +14,13 @@ export async function searchLibrary(options: LibrarySearchOptions): Promise<Libr
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const conditions: any[] = []
 
-  // Only include labeled images
-  conditions.push({ labelingStatus: { equals: 'complete' } })
+  // Include labeled images AND recently generated images (labeling may still be pending)
+  conditions.push({
+    or: [
+      { labelingStatus: { equals: 'complete' } },
+      { generatedAt: { exists: true } },
+    ],
+  })
 
   // Only images, not videos
   conditions.push({ mediaType: { not_equals: 'video' } })

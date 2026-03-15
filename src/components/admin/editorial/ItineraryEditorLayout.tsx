@@ -45,10 +45,10 @@ export default function ItineraryEditorLayout({
         {/* MAIN COLUMN */}
         <main
           className="flex-1 overflow-y-auto"
-          style={{ padding: "24px", paddingTop: "24px" }}
+          style={{ padding: "16px", paddingTop: "16px" }}
         >
           <div className="mx-auto" style={{ maxWidth: 860 }}>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               {mainContent}
             </div>
           </div>

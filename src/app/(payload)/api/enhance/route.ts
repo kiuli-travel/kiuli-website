@@ -3,7 +3,7 @@ import { getPayload } from 'payload';
 import config from '@payload-config';
 import { enhanceContent, extractTextFromRichText } from '@/services/enhancer';
 
-export const maxDuration = 60; // Allow up to 60s for AI enhancement
+export const maxDuration = 300; // Allow up to 5min for enhance-all
 
 // Helper to convert plain text to Payload RichText format
 function toRichText(text: string): object {
@@ -291,9 +291,139 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { itineraryId, fieldPath, voiceConfig } = body;
+    const { itineraryId, fieldPath, voiceConfig, target } = body;
 
-    // Validate required fields
+    // ── Handle "Enhance All" ──────────────────────────────────────────────
+    if (target === 'all' && itineraryId) {
+      const payload = await getPayload({ config });
+      const itinerary = await payload.findByID({
+        collection: 'itineraries',
+        id: itineraryId,
+        depth: 2,
+        overrideAccess: true,
+      }) as unknown as Record<string, unknown>;
+
+      if (!itinerary) {
+        return NextResponse.json(
+          { success: false, error: `Itinerary ${itineraryId} not found` },
+          { status: 404 }
+        );
+      }
+
+      // Build list of all enhanceable fields
+      const fields: Array<{ path: string; voiceKey: string }> = [];
+
+      // Root-level text fields
+      if (itinerary.titleItrvl) fields.push({ path: 'title', voiceKey: 'itinerary-title' });
+      if (itinerary.metaTitleItrvl) fields.push({ path: 'metaTitle', voiceKey: 'meta-title' });
+      if (itinerary.metaDescriptionItrvl) fields.push({ path: 'metaDescription', voiceKey: 'meta-description' });
+
+      // Overview summary
+      const overview = itinerary.overview as Record<string, unknown> | undefined;
+      if (overview?.summaryItrvl || overview?.summary) {
+        fields.push({ path: 'overview.summary', voiceKey: 'overview-summary' });
+      }
+
+      // Why Kiuli
+      if (itinerary.whyKiuliItrvl || itinerary.whyKiuli) {
+        fields.push({ path: 'whyKiuli', voiceKey: 'why-kiuli' });
+      }
+
+      // Investment includes
+      const investment = itinerary.investmentLevel as Record<string, unknown> | undefined;
+      if (investment?.includesItrvl || investment?.includes) {
+        fields.push({ path: 'investmentLevel.includes', voiceKey: 'investment-includes' });
+      }
+
+      // Day titles and segment descriptions
+      const days = itinerary.days as Array<Record<string, unknown>> | undefined;
+      if (days) {
+        for (let d = 0; d < days.length; d++) {
+          const day = days[d];
+          if (day.titleItrvl || day.title) {
+            fields.push({ path: `days.${d}.title`, voiceKey: 'day-title' });
+          }
+          const segments = day.segments as Array<Record<string, unknown>> | undefined;
+          if (segments) {
+            for (let s = 0; s < segments.length; s++) {
+              const seg = segments[s];
+              if (seg.descriptionItrvl || seg.description) {
+                fields.push({ path: `days.${d}.segments.${s}.description`, voiceKey: 'segment-description' });
+              }
+            }
+          }
+        }
+      }
+
+      // FAQ answers
+      const faqItems = itinerary.faqItems as Array<Record<string, unknown>> | undefined;
+      if (faqItems) {
+        for (let f = 0; f < faqItems.length; f++) {
+          if (faqItems[f].answerItrvl || faqItems[f].answer) {
+            fields.push({ path: `faqItems.${f}.answer`, voiceKey: 'faq-answer' });
+          }
+        }
+      }
+
+      if (fields.length === 0) {
+        return NextResponse.json({
+          success: true,
+          enhanced: 0,
+          message: 'No enhanceable fields found',
+        });
+      }
+
+      let enhanced = 0;
+      const errors: string[] = [];
+
+      for (const field of fields) {
+        try {
+          const { itrvlPath, enhancedPath, isRichText } = getFieldPaths(field.path);
+          let originalValue = getNestedValue(itinerary, itrvlPath);
+          if (!originalValue) {
+            const basePath = itrvlPath.replace(/Itrvl$/, '');
+            originalValue = getNestedValue(itinerary, basePath);
+          }
+          if (!originalValue) continue;
+
+          let textContent: string;
+          if (isRichText && typeof originalValue === 'object') {
+            textContent = extractTextFromRichText(originalValue);
+          } else {
+            textContent = String(originalValue);
+          }
+          if (!textContent.trim()) continue;
+
+          const context = buildContext(itinerary, field.path);
+          const result = await enhanceContent(textContent, field.voiceKey, context);
+          const enhancedValue = isRichText ? toRichText(result.enhanced) : result.enhanced;
+
+          const updateData: Record<string, unknown> = {};
+          updateData[enhancedPath] = enhancedValue;
+
+          await payload.update({
+            collection: 'itineraries',
+            id: itineraryId,
+            data: updateData,
+          });
+
+          enhanced++;
+        } catch (err) {
+          errors.push(`${field.path}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        enhanced,
+        total: fields.length,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    }
+
+    // ── Handle single field enhancement ───────────────────────────────────
+
+    // Validate required fields for single-field mode
     if (!itineraryId || !fieldPath || !voiceConfig) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields: itineraryId, fieldPath, voiceConfig' },

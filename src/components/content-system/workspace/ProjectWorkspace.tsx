@@ -23,6 +23,7 @@ import {
   advanceProjectStage,
   fetchProjectData,
 } from '@/app/(payload)/admin/content-engine/project/[id]/actions'
+import { AdminNavBar } from '@/components/admin/AdminNavBar'
 
 interface ProjectWorkspaceProps {
   project: WorkspaceProject
@@ -171,6 +172,9 @@ export function ProjectWorkspace({ project, projectId }: ProjectWorkspaceProps) 
 
   return (
     <div className="kiuli-view flex h-screen flex-col bg-white">
+      {/* Admin Navigation */}
+      <AdminNavBar />
+
       <WorkspaceHeader
         project={currentProject}
         projectId={projectId}

@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Loader2, Search, X, Camera, Sparkles, ChevronDown, ChevronRight, Copy, ArrowLeft, ZoomIn, ZoomOut, Maximize2, ExternalLink } from 'lucide-react'
+import { Loader2, Search, X, Camera, Sparkles, ChevronDown, ChevronRight, Copy, ZoomIn, ZoomOut, Maximize2, ExternalLink } from 'lucide-react'
 import { searchImages, generateImagePrompts } from './actions'
 import { generateImageViaApi } from './generate-client'
 import type { LibraryMatch, LibrarySearchResult, PhotographicPrompt, GeneratableImageType } from '../../../../../content-system/images/types'
+import { AdminNavBar } from '@/components/admin/AdminNavBar'
 
 // ── Kiuli brand ──────────────────────────────────────────────────────────────
 
@@ -119,16 +120,8 @@ export default function ImageLibraryPage() {
 
   return (
     <div className="kiuli-view flex h-screen flex-col bg-white">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-3 border-b border-kiuli-gray/60 bg-kiuli-ivory/30 px-4 py-2">
-        <Link href="/admin" className="flex items-center gap-1 text-xs text-kiuli-clay hover:underline">
-          <ArrowLeft className="h-3 w-3" /> Back to Admin
-        </Link>
-        <span className="text-kiuli-gray">|</span>
-        <span className="text-xs font-semibold text-kiuli-charcoal">Image Library</span>
-        <span className="text-kiuli-gray">|</span>
-        <span className="text-xs text-kiuli-charcoal/50">{total} images</span>
-      </div>
+      {/* Admin Navigation */}
+      <AdminNavBar />
 
       <div className="flex flex-1 overflow-hidden">
       {/* Left Sidebar — Filters */}

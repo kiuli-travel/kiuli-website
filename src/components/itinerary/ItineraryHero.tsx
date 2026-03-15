@@ -14,10 +14,11 @@ interface ItineraryHeroProps {
 
 // Extract video URL from Media object
 function getVideoUrl(media: Media): string | null {
-  // Prefer imgixUrl for S3-hosted media, otherwise use url
-  if (media.imgixUrl?.startsWith('http')) return media.imgixUrl
+  // For videos, prefer the direct S3 url — imgix is an image optimizer and cannot serve video
   if (media.url?.startsWith('http')) return media.url
   if (media.url) return media.url
+  // Fallback to imgixUrl only if url is not set (should not happen for videos)
+  if (media.imgixUrl?.startsWith('http')) return media.imgixUrl
   return null
 }
 

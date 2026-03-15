@@ -16,6 +16,7 @@ interface PipelineJob {
   id: string
   status: string
   itineraryTitle?: string
+  itineraryDbId?: number | null
   createdAt: string
 }
 
@@ -69,7 +70,7 @@ const BeforeDashboard: React.FC = () => {
     try {
       const [targetsRes, jobsRes, contentRes, itinerariesRes] = await Promise.allSettled([
         fetch('/api/itinerary-targets?limit=0&depth=0', { credentials: 'include' }),
-        fetch('/api/itinerary-jobs?limit=5&sort=-createdAt&depth=0', { credentials: 'include' }),
+        fetch('/api/itinerary-jobs?limit=5&sort=-createdAt&depth=1', { credentials: 'include' }),
         fetch('/api/content/dashboard', {
           credentials: 'include',
         }).catch(() => null),
@@ -92,13 +93,14 @@ const BeforeDashboard: React.FC = () => {
         setTargets({ total: docs.length, primary, secondary, byStatus, setA, setB })
       }
 
-      // Parse jobs
+      // Parse jobs — include itinerary link if available
       if (jobsRes.status === 'fulfilled' && jobsRes.value?.ok) {
         const data = await jobsRes.value.json()
         setJobs((data.docs || []).map((j: any) => ({
           id: j.id,
           status: j.status || 'unknown',
           itineraryTitle: j.itineraryId || j.itrvlUrl || 'Untitled',
+          itineraryDbId: typeof j.processedItinerary === 'object' ? j.processedItinerary?.id : (typeof j.processedItinerary === 'number' ? j.processedItinerary : null),
           createdAt: j.createdAt,
         })))
       }
@@ -420,12 +422,25 @@ const BeforeDashboard: React.FC = () => {
                       fontSize: '0.75rem',
                     }}
                   >
-                    <Link
-                      href={`/admin/collections/itinerary-jobs/${job.id}`}
-                      style={{ color: '#486A6A', textDecoration: 'none', fontWeight: 500 }}
-                    >
-                      {job.itineraryTitle}
-                    </Link>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Link
+                        href={job.itineraryDbId
+                          ? `/admin/collections/itineraries/${job.itineraryDbId}`
+                          : `/admin/collections/itinerary-jobs/${job.id}`}
+                        style={{ color: '#486A6A', textDecoration: 'none', fontWeight: 500 }}
+                      >
+                        {job.itineraryTitle}
+                      </Link>
+                      {job.itineraryDbId && (
+                        <Link
+                          href={`/admin/collections/itinerary-jobs/${job.id}`}
+                          style={{ color: '#888', textDecoration: 'none', fontSize: '0.625rem' }}
+                          title="View import job"
+                        >
+                          (job)
+                        </Link>
+                      )}
+                    </span>
                     <span style={{
                       padding: '0.125rem 0.5rem',
                       borderRadius: '10px',

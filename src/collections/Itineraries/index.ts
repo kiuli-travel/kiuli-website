@@ -30,15 +30,7 @@ export const Itineraries: CollectionConfig<'itineraries'> = {
   },
   fields: [
     // === ADMIN UI COMPONENTS ===
-    {
-      name: 'sideNavUI',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '@/collections/Itineraries/components/ItinerarySideNav#ItinerarySideNav',
-        },
-      },
-    },
+    // sideNavUI removed — was covering main sidebar (Issue 4)
     {
       name: 'enhanceAllUI',
       type: 'ui',

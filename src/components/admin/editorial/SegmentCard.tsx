@@ -423,8 +423,8 @@ export default function SegmentCard({
       <div
         className="flex items-center border-t border-kiuli-gray"
         style={{
-          height: 32,
-          padding: "6px 12px",
+          height: 28,
+          padding: "4px 10px",
         }}
       >
         <label

@@ -15,6 +15,7 @@ import {
 import { ProjectList } from './ProjectList'
 import { BatchActionBar } from './BatchActionBar'
 import { SystemHealthView } from './SystemHealthView'
+import { AdminNavBar } from '../admin/AdminNavBar'
 
 const stages: Stage[] = [
   'ideas',
@@ -244,6 +245,9 @@ export default function ContentEngineDashboard() {
 
   return (
     <div className="kiuli-view flex min-h-screen flex-col bg-white">
+      {/* Admin Navigation */}
+      <AdminNavBar />
+
       {/* Header */}
       <header className="flex flex-col gap-4 border-b border-kiuli-gray/60 px-6 pb-4 pt-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

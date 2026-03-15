@@ -238,22 +238,22 @@ function SegmentPlaceholderCard({ segment }: { segment: SegmentSummary }) {
       {/* Content placeholder */}
       <div
         style={{
-          height: 48,
+          height: 36,
           background: "#F5F3EB",
-          margin: "0 12px",
+          margin: "0 10px",
           borderRadius: 4,
         }}
       />
       {/* Footer row */}
       <div
         style={{
-          height: 32,
+          height: 28,
           display: "flex",
           alignItems: "center",
-          padding: "0 12px",
+          padding: "0 10px",
           gap: 6,
           borderTop: "1px solid #DADADA",
-          marginTop: 8,
+          marginTop: 6,
           cursor: "pointer",
         }}
         onClick={() => setReviewed(!reviewed)}
@@ -348,10 +348,10 @@ export default function DayAccordion({
         onMouseEnter={() => setIsHeaderHovered(true)}
         onMouseLeave={() => setIsHeaderHovered(false)}
         style={{
-          height: 44,
+          height: 40,
           display: "flex",
           alignItems: "center",
-          padding: "0 16px",
+          padding: "0 12px",
           cursor: "pointer",
           border: "1px solid #DADADA",
           borderRadius: isOpen ? "6px 6px 0 0" : 6,
@@ -615,10 +615,10 @@ export default function DayAccordion({
           {/* SEGMENT CARDS */}
           <div
             style={{
-              padding: "8px 12px 0",
+              padding: "6px 10px 0",
               display: "flex",
               flexDirection: "column",
-              gap: 8,
+              gap: 6,
             }}
           >
             {children || segments.map((segment) => (
@@ -630,8 +630,8 @@ export default function DayAccordion({
           <div
             style={{
               borderTop: "1px solid #DADADA",
-              margin: "12px 0 0",
-              padding: "12px 12px 16px",
+              margin: "8px 0 0",
+              padding: "8px 10px 12px",
               display: "flex",
               gap: 12,
               flexWrap: "wrap",

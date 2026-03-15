@@ -257,6 +257,70 @@ export async function advanceProjectStage(
       data: updateData,
     })
 
+    // Auto-trigger research compilation when entering research stage
+    if (nextStage === 'research' && isArticleType(project.contentType as string)) {
+      try {
+        await payload.update({
+          collection: 'content-projects',
+          id: projectId,
+          data: { processingStatus: 'processing', processingError: '' },
+        })
+
+        const destinations: string[] = parseJsonArray(project.destinations)
+
+        const compilation = await compileResearch({
+          projectId: String(projectId),
+          query: {
+            topic: (project.title as string) || '',
+            angle: (project.targetAngle as string) || '',
+            destinations,
+            contentType: (project.contentType as string) || '',
+          },
+        })
+
+        const synthesisRichText = markdownToLexical(compilation.synthesis)
+        const existingContentRichText = markdownToLexical(
+          compilation.existingSiteContent || '(No existing content found)',
+        )
+
+        const sourcesArray = compilation.sources.map((s) => ({
+          title: s.title,
+          url: s.url,
+          credibility: s.credibility,
+          notes: s.snippet || '',
+        }))
+
+        const uncertaintyArray = compilation.uncertaintyMap.map((u) => ({
+          claim: u.claim,
+          confidence: u.confidence,
+          notes: u.notes,
+        }))
+
+        await payload.update({
+          collection: 'content-projects',
+          id: projectId,
+          data: {
+            synthesis: synthesisRichText,
+            existingSiteContent: existingContentRichText,
+            sources: sourcesArray,
+            uncertaintyMap: uncertaintyArray,
+            processingStatus: 'completed',
+            processingError: '',
+          },
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`[advanceProjectStage] Research compilation failed for project ${projectId}:`, message)
+        try {
+          await payload.update({
+            collection: 'content-projects',
+            id: projectId,
+            data: { processingStatus: 'failed', processingError: `Research compilation failed: ${message}` },
+          })
+        } catch {}
+      }
+    }
+
     // Auto-trigger consistency check when entering review stage
     if (nextStage === 'review') {
       try {

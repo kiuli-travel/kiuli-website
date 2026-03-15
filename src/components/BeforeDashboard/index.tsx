@@ -99,7 +99,7 @@ const BeforeDashboard: React.FC = () => {
         setJobs((data.docs || []).map((j: any) => ({
           id: j.id,
           status: j.status || 'unknown',
-          itineraryTitle: j.itineraryId || j.itrvlUrl || 'Untitled',
+          itineraryTitle: j.itineraryTitle || (typeof j.processedItinerary === 'object' && j.processedItinerary?.title) || j.itineraryId?.replace(/^https?:\/\/[^/]+\//, '').slice(0, 40) || j.itrvlUrl?.replace(/^https?:\/\/[^/]+\//, '').slice(0, 40) || 'Untitled',
           itineraryDbId: typeof j.processedItinerary === 'object' ? j.processedItinerary?.id : (typeof j.processedItinerary === 'number' ? j.processedItinerary : null),
           createdAt: j.createdAt,
         })))
@@ -446,10 +446,10 @@ const BeforeDashboard: React.FC = () => {
                       borderRadius: '10px',
                       fontSize: '0.6875rem',
                       fontWeight: 500,
-                      backgroundColor: job.status === 'complete' ? '#E8F5E9' : job.status === 'failed' ? '#FDECEA' : '#FFF3E0',
-                      color: job.status === 'complete' ? '#2E7D32' : job.status === 'failed' ? '#C62828' : '#E65100',
+                      backgroundColor: (job.status === 'complete' || job.status === 'completed') ? '#E8F5E9' : job.status === 'failed' ? '#FDECEA' : '#FFF3E0',
+                      color: (job.status === 'complete' || job.status === 'completed') ? '#2E7D32' : job.status === 'failed' ? '#C62828' : '#E65100',
                     }}>
-                      {job.status}
+                      {job.status === 'complete' ? 'completed' : job.status}
                     </span>
                   </div>
                 ))}

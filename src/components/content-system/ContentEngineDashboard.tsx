@@ -329,7 +329,7 @@ export default function ContentEngineDashboard() {
                   isActive
                     ? 'font-semibold text-kiuli-teal'
                     : 'text-kiuli-charcoal/60 hover:text-kiuli-charcoal'
-                } ${stage === 'filtered' ? 'opacity-60' : ''}`}
+                } ${stage === 'filtered' ? 'opacity-70' : ''}`}
               >
                 {stageLabels[stage]}
                 <span

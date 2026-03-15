@@ -12,6 +12,7 @@ import { ItineraryHero } from '@/components/itinerary/ItineraryHero'
 import { TripOverview } from '@/components/itinerary/TripOverview'
 import { JourneyNarrative } from '@/components/itinerary/JourneyNarrative'
 import { InvestmentLevel } from '@/components/itinerary/InvestmentLevel'
+import { WhyKiuli } from '@/components/itinerary/WhyKiuli'
 import { FAQSection } from '@/components/itinerary/FAQSection'
 import { InquiryCTA } from '@/components/itinerary/InquiryCTA'
 import Breadcrumb from '@/components/Breadcrumb'
@@ -287,6 +288,9 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
   // Get resolved includes from hook, convert richText to plain text
   const includesText = extractTextFromRichText(itinerary.investmentLevel?.includes)
 
+  // Get resolved whyKiuli content from hook
+  const whyKiuliText = extractTextFromRichText(itinerary.whyKiuli)
+
   // Generate JSON-LD schemas for SEO and AI discoverability
   const travelServiceSchema = generateTravelServiceSchema(
     itinerary,
@@ -355,6 +359,8 @@ export default async function ItineraryPage({ params: paramsPromise }: Args) {
       )}
 
       <JourneyNarrative days={itinerary.days} />
+
+      {whyKiuliText && <WhyKiuli content={whyKiuliText} />}
 
       {hasInvestmentLevel && (
         <InvestmentLevel

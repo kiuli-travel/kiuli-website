@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Breadcrumb from '@/components/Breadcrumb'
 import { ContactMethods, CONTACT_PHONE, CONTACT_EMAIL } from '@/components/contact/ContactMethods'
+// CONTACT_PHONE used in generateOrganizationSchema, CONTACT_EMAIL in FAQ
 import InquiryForm from '@/components/inquiry-form/InquiryForm'
 import { FAQSection } from '@/components/itinerary/FAQSection'
 
@@ -17,8 +18,8 @@ const contactFaqs = [
       'We typically respond within 24 hours during business days. For urgent requests, call us directly.',
   },
   {
-    question: 'Can I call instead?',
-    answer: `Absolutely. Call us at ${CONTACT_PHONE} and speak directly with a safari specialist.`,
+    question: 'Can I reach you by email?',
+    answer: `Absolutely. Email us at ${CONTACT_EMAIL} and a safari specialist will respond within 24 hours.`,
   },
 ]
 
@@ -31,7 +32,7 @@ function generateOrganizationSchema() {
     url: 'https://kiuli.com',
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: CONTACT_PHONE.replace(/\s/g, ''),
+      ...(CONTACT_PHONE && { telephone: CONTACT_PHONE.replace(/\s/g, '') }),
       contactType: 'customer service',
       email: CONTACT_EMAIL,
       availableLanguage: 'English',

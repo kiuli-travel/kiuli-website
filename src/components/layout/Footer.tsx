@@ -94,12 +94,14 @@ export function Footer() {
               >
                 {CONTACT_EMAIL}
               </a>
-              <a
-                href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`}
-                className="block text-sm text-gray-400 transition-colors duration-200 hover:text-white"
-              >
-                {CONTACT_PHONE}
-              </a>
+              {CONTACT_PHONE && (
+                <a
+                  href={`tel:${CONTACT_PHONE.replace(/\s/g, '')}`}
+                  className="block text-sm text-gray-400 transition-colors duration-200 hover:text-white"
+                >
+                  {CONTACT_PHONE}
+                </a>
+              )}
               <div className="pt-2">
                 <a
                   href="https://linkedin.com/company/kiuli"

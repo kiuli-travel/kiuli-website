@@ -59,12 +59,12 @@ export function InvestmentLevel({
 
           {/* Alternative Contact */}
           <p className="text-sm text-kiuli-charcoal/60">
-            Or call{' '}
+            Or email{' '}
             <a
-              href="tel:+254700000000"
+              href="mailto:hello@kiuli.com"
               className="underline underline-offset-2 transition-colors hover:text-kiuli-charcoal"
             >
-              +254 700 000 000
+              hello@kiuli.com
             </a>
           </p>
         </div>

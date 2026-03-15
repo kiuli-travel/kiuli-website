@@ -93,6 +93,7 @@ export interface Config {
     'editorial-directives': EditorialDirective;
     airports: Airport;
     'service-items': ServiceItem;
+    'itinerary-targets': ItineraryTarget;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -136,6 +137,7 @@ export interface Config {
     'editorial-directives': EditorialDirectivesSelect<false> | EditorialDirectivesSelect<true>;
     airports: AirportsSelect<false> | AirportsSelect<true>;
     'service-items': ServiceItemsSelect<false> | ServiceItemsSelect<true>;
+    'itinerary-targets': ItineraryTargetsSelect<false> | ItineraryTargetsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -1666,9 +1668,9 @@ export interface Destination {
     [k: string]: unknown;
   } | null;
   /**
-   * Hero image for destination landing page (required)
+   * Hero image for destination landing page
    */
-  heroImage: number | Media;
+  heroImage?: (number | null) | Media;
   /**
    * SEO meta title (max 60 chars)
    */
@@ -2338,7 +2340,7 @@ export interface Property {
     /**
      * Which source provides live availability for this property
      */
-    source?: ('none' | 'resconnect' | 'direct') | null;
+    source?: ('none' | 'resconnect' | 'direct' | 'manual') | null;
     /**
      * When availability was last checked via the active source
      */
@@ -4753,6 +4755,92 @@ export interface EditorialDirective {
   createdAt: string;
 }
 /**
+ * Target itineraries for website launch — 80 planned safaris to build in iTrvl and scrape into Kiuli.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itinerary-targets".
+ */
+export interface ItineraryTarget {
+  id: number;
+  /**
+   * Briefing document number (1–80)
+   */
+  number: number;
+  /**
+   * Exact itinerary name from briefing — do not change (SEO/Google Ads targeting)
+   */
+  name: string;
+  /**
+   * Primary itineraries are Google Ads landing pages. Build these first.
+   */
+  priority: 'primary' | 'secondary';
+  /**
+   * Designer assignment set — one designer per set.
+   */
+  set: 'A' | 'B';
+  /**
+   * Duration guidance from briefing (e.g., "10–14 nights")
+   */
+  duration?: string | null;
+  /**
+   * Countries covered (e.g., "Tanzania, Kenya")
+   */
+  countries?: string | null;
+  /**
+   * Seasonality guidance from briefing (e.g., "June–October")
+   */
+  seasonality?: string | null;
+  /**
+   * Itinerary category for grouping and filtering.
+   */
+  category?:
+    | (
+        | 'migration'
+        | 'gorilla_primate'
+        | 'honeymoon'
+        | 'family'
+        | 'classic'
+        | 'multi_country'
+        | 'photography'
+        | 'specialist'
+        | 'beach'
+        | 'walking'
+        | 'conservation'
+      )
+    | null;
+  /**
+   * Experience description from briefing — what this safari delivers.
+   */
+  experienceDescription?: string | null;
+  /**
+   * Property guidance from briefing — what type of lodges to use.
+   */
+  propertyGuidance?: string | null;
+  /**
+   * Primary SEO keywords (primary itineraries only).
+   */
+  seoKeywords?: string | null;
+  status: 'not_started' | 'building' | 'ready_to_scrape' | 'scraped' | 'enhancing' | 'in_review' | 'published';
+  /**
+   * Which designer is building this in iTrvl.
+   */
+  assignedDesigner?: (number | null) | Designer;
+  /**
+   * iTrvl URL once the itinerary has been built.
+   */
+  itrvlUrl?: string | null;
+  /**
+   * Linked Kiuli itinerary once scraped.
+   */
+  linkedItinerary?: (number | null) | Itinerary;
+  /**
+   * Designer notes, issues, or flags.
+   */
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
@@ -5045,6 +5133,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'service-items';
         value: number | ServiceItem;
+      } | null)
+    | ({
+        relationTo: 'itinerary-targets';
+        value: number | ItineraryTarget;
       } | null)
     | ({
         relationTo: 'redirects';
@@ -6563,6 +6655,30 @@ export interface ServiceItemsSelect<T extends boolean = true> {
   isInclusionIndicator?: T;
   observationCount?: T;
   observedInItineraries?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "itinerary-targets_select".
+ */
+export interface ItineraryTargetsSelect<T extends boolean = true> {
+  number?: T;
+  name?: T;
+  priority?: T;
+  set?: T;
+  duration?: T;
+  countries?: T;
+  seasonality?: T;
+  category?: T;
+  experienceDescription?: T;
+  propertyGuidance?: T;
+  seoKeywords?: T;
+  status?: T;
+  assignedDesigner?: T;
+  itrvlUrl?: T;
+  linkedItinerary?: T;
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

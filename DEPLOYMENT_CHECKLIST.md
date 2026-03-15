@@ -18,38 +18,33 @@ Use this checklist for every deployment.
 
 - [ ] Test locally: `npm run dev`
 - [ ] Build passes: `npm run build`
-- [ ] Commit changes: `git add -A && git commit -m "..."`
+- [ ] Commit changes: `git add <files> && git commit -m "..."`
 - [ ] Push to origin: `git push origin main`
-- [ ] Wait for Vercel deployment (~2-3 minutes)
+- [ ] Vercel auto-deploys from GitHub push (~2-3 minutes)
+- [ ] Verify deployment: `vercel ls` (via MCP or CLI)
 - [ ] Verify kiuli.com loads correctly
 - [ ] Verify admin.kiuli.com loads correctly
 
 ### For Lambda Function Changes
 
 - [ ] Make changes in `lambda/[function-name]/`
-- [ ] Run `lambda/sync-shared.sh` if shared code changed
-- [ ] Create deploy package:
+- [ ] Deploy using canonical script:
   ```bash
-  cd lambda/[function-name]
-  zip -r deploy.zip . -x "*.git*"
+  lambda/scripts/deploy.sh [function-name]
   ```
-- [ ] Deploy to AWS:
+- [ ] Verify deployment:
   ```bash
-  aws lambda update-function-code \
-    --function-name kiuli-v6-[function-name] \
-    --zip-file fileb://deploy.zip \
-    --region eu-north-1
+  lambda/scripts/verify.sh
   ```
-- [ ] Verify function works (trigger a test job)
 - [ ] Check CloudWatch logs for errors
+
+See `lambda/DEPLOYMENT.md` (v2.0) for full reference including platform-specific builds, S3 upload for large functions, and git hash verification.
 
 ### For Payload Admin Component Changes
 
-- [ ] Make changes in `src/components/admin/`
-- [ ] Regenerate import map:
-  ```bash
-  npx payload generate:importmap
-  ```
+- [ ] Make changes in component files
+- [ ] Import map regenerates automatically during `next build` (via `withPayload` wrapper)
+- [ ] If adding a NEW component to `payload.config.ts`, run locally: `npx payload generate:importmap`
 - [ ] Commit the regenerated `src/app/(payload)/admin/importMap.js`
 - [ ] Push and deploy
 
@@ -60,7 +55,7 @@ Use this checklist for every deployment.
 ### Website (kiuli.com)
 
 1. Page loads without errors
-2. Correct fonts displaying (General Sans headings, Satoshi body)
+2. Correct fonts (General Sans headings, Satoshi body)
 3. Correct colors (Teal #486A6A, Clay #DA7A5A, Ivory #F5F3EB background)
 4. No Payload header/footer on frontend pages
 5. Images loading from imgix (check Network tab)
@@ -88,27 +83,24 @@ Use this checklist for every deployment.
 
 ### Vercel build fails
 
-1. Check Vercel dashboard for error details
+1. Check via MCP: `vercel_list` then `vercel_inspect(url)`
 2. Run `npm run build` locally to reproduce
 3. Fix TypeScript/ESLint errors
-4. Push fix
+4. Push fix — auto-deploy will retry
 
 ### Changes not visible in production
 
 1. Verify commit was pushed: `git log origin/main -1`
-2. Check Vercel dashboard for deployment status
-3. Clear browser cache / hard refresh (Cmd+Shift+R)
-4. Ensure you're on correct URL (not preview URL)
+2. Check deployment: `vercel_list` — is a new deployment present?
+3. Inspect deployment: `vercel_inspect(url)` — check commit hash
+4. Clear browser cache / hard refresh (Cmd+Shift+R)
 
 ### Lambda not working
 
-1. Check CloudWatch logs:
-   ```bash
-   aws logs tail /aws/lambda/kiuli-v6-[function-name] --since 1h --region eu-north-1
-   ```
-2. Verify environment variables in Lambda console
-3. Test with minimal input
-4. Redeploy if code changes weren't applied
+1. Check logs via MCP: `lambda_logs(function='orchestrator')`
+2. Or CLI: `aws logs tail /aws/lambda/kiuli-v6-[function-name] --since 1h --region eu-north-1`
+3. Verify Lambda matches HEAD: `lambda/scripts/verify.sh`
+4. Redeploy if needed: `lambda/scripts/deploy.sh [function-name]`
 
 ### New admin component not appearing
 
@@ -135,18 +127,15 @@ npm run dev
 # Production build test
 npm run build
 
-# Commit and deploy
-git add -A && git commit -m "message" && git push origin main
+# Commit and deploy (auto-deploys to Vercel)
+git add <files> && git commit -m "message" && git push origin main
 
-# Check Vercel deployment status
+# Check Vercel deployments (via CLI)
 vercel ls
 
 # Lambda deployment
-cd lambda/orchestrator && zip -r deploy.zip . && \
-aws lambda update-function-code \
-  --function-name kiuli-v6-orchestrator \
-  --zip-file fileb://deploy.zip \
-  --region eu-north-1
+lambda/scripts/deploy.sh orchestrator
+lambda/scripts/verify.sh
 
 # Check Lambda logs
 aws logs tail /aws/lambda/kiuli-v6-orchestrator --since 30m --region eu-north-1

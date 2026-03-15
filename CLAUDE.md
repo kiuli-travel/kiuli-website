@@ -239,7 +239,7 @@ When admin panel shows errors:
 
 ### Rule 9: Schema Evolution Before Production Scraping
 
-Do not scrape 100 itineraries until M2 Phase 2 is complete (activity noise filter, observationCount bug, toDestination, seasonalityData schema, ItineraryPatterns regions field). Every gap creates pollution at scale.
+M2 Phase 2 schema fixes are complete (verified 2026-03-12). Production scraping is unblocked. However, the image-processor Lambda has an open sharp module issue on linux-x64 — resolve before running production scrape batches.
 
 ### Rule 10: Knowledge Base Accumulation Is the Product
 
@@ -249,20 +249,22 @@ The scraper is not just a content pipeline — it is an intelligence accumulator
 
 ## 7. Lambda Deployment
 
-```bash
-# Deploy a specific Lambda
-cd lambda/<function-name>
-zip -r deploy.zip handler.js *.js shared/ node_modules/ -x "*.DS_Store"
-aws lambda update-function-code \
-  --function-name kiuli-v6-<function-name> \
-  --zip-file fileb://deploy.zip \
-  --region eu-north-1
+Use the canonical deploy script. See `lambda/DEPLOYMENT.md` (v2.0) for full reference.
 
-# Verify
-aws logs tail /aws/lambda/kiuli-v6-<function-name> --since 1h --region eu-north-1
+```bash
+# Deploy a specific Lambda (from project root)
+lambda/scripts/deploy.sh <function-name>
+
+# Deploy all Lambdas
+lambda/scripts/deploy.sh all
+
+# Verify all Lambdas match current HEAD
+lambda/scripts/verify.sh
 ```
 
-Lambda functions share a `shared/` directory synced via `lambda/sync-shared.sh`. Each Lambda also has a local copy.
+The deploy script handles: shared/ sync, platform-specific npm install (linux-x64 for Lambda), zip packaging, S3 upload for large functions (>50MB), git hash stamping in Lambda description, and post-deploy verification.
+
+Lambda functions: orchestrator, image-processor, labeler, video-processor, finalizer, scraper.
 
 ---
 
@@ -347,7 +349,8 @@ The launch roadmap (KIULI_LAUNCH_ROADMAP.md) defines milestones:
 |-----------|--------|
 | M1: Pipeline Validation | ✅ COMPLETE |
 | M2 Phase 1: Schema Evolution + Knowledge Base | ✅ COMPLETE |
-| M2 Phase 2: Scraper Fixes (activity filter, observationCount, toDestination, seasonalityData, regions) | Not started |
+| M2 Phase 2: Scraper Fixes | ✅ COMPLETE (verified 2026-03-12) |
+| M2.5: Admin UI Polish | ✅ COMPLETE (11 issues fixed, deployed 2026-03-15) |
 | M3: Frontend Development | Not started |
 | M4: Admin UI Overhaul | Not started |
 | M5: Integration Test Cycle | Not started |
@@ -359,8 +362,10 @@ The launch roadmap (KIULI_LAUNCH_ROADMAP.md) defines milestones:
 | M11: WebMCP plan_safari() | Post-launch |
 | M12: Speech Agent | Post-launch |
 
-M2 Phase 2 fixes are required before any production scraping. Everything downstream depends on a clean knowledge base.
+**Open blocker:** image-processor Lambda sharp module fails on linux-x64 despite correct ELF binaries in deploy zip. Must resolve before production scrape batches.
+
+**CI/CD:** MCP server provides 30 tools including full Vercel CI/CD (vercel_list, vercel_inspect, vercel_logs, vercel_deploy, vercel_rollback) and Lambda deployment (deploy_lambda, verify_lambdas, trigger_pipeline). Auto-deploy from GitHub main to Vercel is active.
 
 ---
 
-*Last updated: February 23, 2026*
+*Last updated: March 15, 2026*

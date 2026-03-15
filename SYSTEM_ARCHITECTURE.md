@@ -1,6 +1,6 @@
 # Kiuli System Architecture
 
-**Last verified:** 2026-01-26
+**Last verified:** 2026-03-15
 **Repository:** https://github.com/kiuli-travel/kiuli-website
 
 ---
@@ -19,10 +19,10 @@ Kiuli is a luxury African safari travel website built with Next.js and Payload C
 
 | Component | Technology | Version |
 |-----------|------------|---------|
-| Framework | Next.js | 15.4.x |
-| CMS | Payload CMS | 3.63.x |
+| Framework | Next.js | 15.4.10 |
+| CMS | Payload CMS | 3.76.0 |
 | Styling | Tailwind CSS | 3.4.x |
-| Database | Vercel Postgres | — |
+| Database | Neon Postgres | pgvector extension |
 | Image Storage | AWS S3 | eu-north-1 |
 | Image CDN | imgix | kiuli.imgix.net |
 | Hosting | Vercel | Auto-deploy from main |

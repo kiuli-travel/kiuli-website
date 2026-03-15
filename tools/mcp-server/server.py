@@ -569,39 +569,37 @@ _DEPLOY_JOBS_DIR.mkdir(exist_ok=True)
 
 
 def _run_vercel(args: list[str], timeout: int = 30) -> dict:
-    """Run a vercel CLI command and return structured result."""
+    """Run a vercel CLI command and return structured result.
+    Vercel CLI v48 sends most output to stderr, so we merge stdout+stderr
+    into a single 'output' field for reliability."""
     try:
         env = {**os.environ, "FORCE_COLOR": "0", "NO_COLOR": "1", "CI": "1"}
         r = subprocess.run(
             ["vercel"] + args,
-            cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=timeout,
-            env=env, stdin=subprocess.DEVNULL,
+            cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, timeout=timeout, env=env, stdin=subprocess.DEVNULL,
         )
         return {
             "ok": r.returncode == 0,
-            "stdout": r.stdout.strip(),
-            "stderr": r.stderr.strip(),
+            "output": r.stdout.strip(),
         }
     except subprocess.TimeoutExpired:
-        return {"ok": False, "stdout": "", "stderr": f"Command timed out after {timeout}s"}
+        return {"ok": False, "output": f"Command timed out after {timeout}s"}
     except Exception as e:
-        return {"ok": False, "stdout": "", "stderr": str(e)}
+        return {"ok": False, "output": str(e)}
 
 
 @mcp.tool()
-def vercel_list(prod_only: bool = True):
-    """List recent Vercel deployments. Shows URL, state, commit, branch, age. Use this to find deployment URLs for vercel_inspect or vercel_logs."""
+def vercel_list():
+    """List recent Vercel deployments. Shows URLs. Use vercel_inspect on a URL for full details (state, commit, branch)."""
     try:
-        args = ["ls"]
-        if prod_only:
-            args.append("--prod")
-        r = _run_vercel(args, timeout=30)
+        r = _run_vercel(["ls"], timeout=30)
         if not r["ok"]:
-            return {"error": r["stderr"]}
+            return {"error": r["output"]}
         return {
             "success": True,
-            "output": r["stdout"],
-            "hint": "Use a deployment URL from this list with vercel_inspect to see build details, or vercel_logs for runtime logs.",
+            "output": r["output"],
+            "hint": "Use a deployment URL with vercel_inspect for full details, or vercel_logs for runtime logs.",
         }
     except Exception as e:
         return {"error": str(e)}
@@ -613,11 +611,11 @@ def vercel_inspect(url: str):
     try:
         r = _run_vercel(["inspect", url], timeout=30)
         if not r["ok"]:
-            return {"error": r["stderr"]}
+            return {"error": r["output"]}
         return {
             "success": True,
             "deployment": url,
-            "output": r["stdout"],
+            "output": r["output"],
         }
     except Exception as e:
         return {"error": str(e)}
@@ -627,15 +625,13 @@ def vercel_inspect(url: str):
 def vercel_logs(url: str = "", follow: bool = False, filter: str = ""):
     """Fetch runtime logs for a Vercel deployment. Pass a deployment URL from vercel_list. If url is empty, fetches logs for the latest production deployment automatically."""
     try:
-        # If no URL given, get latest prod deployment URL first
+        # If no URL given, get latest deployment URL first
         if not url:
-            ls_result = _run_vercel(["ls", "--prod"], timeout=20)
+            ls_result = _run_vercel(["ls"], timeout=20)
             if not ls_result["ok"]:
-                return {"error": f"Could not list deployments: {ls_result['stderr']}"}
-            # Parse the URL from the ls output (second line after header typically contains the URL)
-            lines = ls_result["stdout"].split("\n")
+                return {"error": f"Could not list deployments: {ls_result['output']}"}
             url_found = None
-            for line in lines:
+            for line in ls_result["output"].split("\n"):
                 match = re.search(r"(https://[^\s]+\.vercel\.app)", line)
                 if match:
                     url_found = match.group(1)
@@ -643,14 +639,14 @@ def vercel_logs(url: str = "", follow: bool = False, filter: str = ""):
             if not url_found:
                 return {
                     "error": "Could not extract deployment URL from vercel ls output",
-                    "raw_output": ls_result["stdout"],
+                    "raw_output": ls_result["output"],
                     "hint": "Run vercel_list first and pass a specific URL.",
                 }
             url = url_found
 
         cmd_args = ["logs", url]
         r = _run_vercel(cmd_args, timeout=30)
-        output = (r["stdout"] + "\n" + r["stderr"]).strip()
+        output = r["output"]
 
         if filter:
             filtered_lines = [l for l in output.split("\n") if filter.lower() in l.lower()]
@@ -769,26 +765,25 @@ def vercel_deploy_status(job_id: str = ""):
 def vercel_git():
     """Check Vercel Git integration status by inspecting the latest deployment. Shows git source, commit, branch, and whether auto-deploy is working."""
     try:
-        # Get latest deployment details — vercel inspect shows git info
-        ls_result = _run_vercel(["ls", "--prod"], timeout=20)
+        # Get latest deployment URL
+        ls_result = _run_vercel(["ls"], timeout=20)
         if not ls_result["ok"]:
-            return {"error": f"Could not list deployments: {ls_result['stderr']}"}
+            return {"error": f"Could not list deployments: {ls_result['output']}"}
 
-        # Extract first deployment URL
         url_found = None
-        for line in ls_result["stdout"].split("\n"):
+        for line in ls_result["output"].split("\n"):
             match = re.search(r"(https://[^\s]+\.vercel\.app)", line)
             if match:
                 url_found = match.group(1)
                 break
 
         if not url_found:
-            return {"error": "No deployments found", "raw": ls_result["stdout"]}
+            return {"error": "No deployments found", "raw": ls_result["output"]}
 
-        # Inspect it for git info
+        # Inspect for git info
         inspect_result = _run_vercel(["inspect", url_found], timeout=30)
 
-        # Also read .vercel/project.json for linked project
+        # Read .vercel/project.json
         project_json = PROJECT_ROOT / ".vercel" / "project.json"
         local_config = None
         if project_json.exists():
@@ -801,11 +796,11 @@ def vercel_git():
         return {
             "success": True,
             "latestDeployment": url_found,
-            "inspectOutput": inspect_result["stdout"] if inspect_result["ok"] else inspect_result["stderr"],
+            "inspectOutput": inspect_result["output"],
             "linkedProject": local_config,
             "localHead": head["stdout"] if head["ok"] else None,
             "remoteHead": remote["stdout"].split()[0][:7] if remote["ok"] and remote["stdout"] else None,
-            "deploymentList": ls_result["stdout"],
+            "deploymentList": ls_result["output"],
         }
     except Exception as e:
         return {"error": str(e)}
@@ -816,9 +811,8 @@ def vercel_project():
     """Get Vercel project settings: framework, build command, output directory, git integration, domains."""
     try:
         r = _run_vercel(["project", "ls"], timeout=20)
-        project_list = r["stdout"] if r["ok"] else "(failed to list)"
+        project_list = r["output"] if r["ok"] else "(failed to list)"
 
-        # Also try to get linked project info from .vercel/project.json
         project_json = PROJECT_ROOT / ".vercel" / "project.json"
         local_config = None
         if project_json.exists():
@@ -843,7 +837,7 @@ def vercel_rollback(url: str, confirm: str = ""):
         return {
             "rolled_back": r["ok"],
             "url": url,
-            "output": (r["stdout"] + "\n" + r["stderr"]).strip(),
+            "output": r["output"],
         }
     except Exception as e:
         return {"error": str(e)}
@@ -854,8 +848,7 @@ def vercel_env_list():
     """List Vercel environment variable names (not values) for the project."""
     try:
         r = _run_vercel(["env", "ls"], timeout=30)
-        return {"success": r["ok"],
-                "output": (r["stdout"] + "\n" + r["stderr"]).strip()}
+        return {"success": r["ok"], "output": r["output"]}
     except Exception as e:
         return {"error": str(e)}
 

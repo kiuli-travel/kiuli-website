@@ -43,6 +43,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'raw.githubusercontent.com',
       },
+      // Unsplash for placeholder images
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
       ...[NEXT_PUBLIC_SERVER_URL /* 'https://example.com' */].map((item) => {
         const url = new URL(item)
 

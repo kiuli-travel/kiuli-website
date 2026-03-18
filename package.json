@@ -88,7 +88,12 @@
       "sharp",
       "esbuild",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "next": "15.4.11"
+    }
   },
-  "packageManager": "pnpm@10.20.0"
+  "overrides": {
+    "next": "15.4.11"
+  }
 }

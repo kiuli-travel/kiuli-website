@@ -9,10 +9,18 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
   const payload = await getPayload({ config: configPromise })
-  const headersList = await headers()
-  const { user } = await payload.auth({ headers: headersList })
-  if (!user) {
-    return Response.json({ error: 'Not authenticated' }, { status: 401 })
+
+  // Auth: Payload session or Bearer token
+  const authHeader = request.headers.get('Authorization')
+  const bearerOk =
+    authHeader?.startsWith('Bearer ') &&
+    authHeader.slice(7) === process.env.CONTENT_SYSTEM_SECRET
+  if (!bearerOk) {
+    const headersList = await headers()
+    const { user } = await payload.auth({ headers: headersList })
+    if (!user) {
+      return Response.json({ error: 'Not authenticated' }, { status: 401 })
+    }
   }
 
   let body: { prompt?: string; metadata?: Record<string, unknown> }

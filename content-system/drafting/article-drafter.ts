@@ -145,13 +145,16 @@ Return a JSON object with these fields and NOTHING else (no markdown fences, no 
 }
 
 REQUIREMENTS:
-- Body must be ${voice.contentType?.structuralNotes || '1,500-3,000 words'}.
-- FAQ section must have 8-10 questions with answers of 40-80 words each.
-- Answer capsule must directly answer the implied search query in 50-70 words.
+- Body must be 800-1,200 words. Be punchy. Cut ruthlessly. Every sentence must earn its place.
+- Do NOT include research statistics, F1-scores, technical jargon, or academic citations. Write for affluent travelers, not researchers.
+- Do NOT pad with filler. If a section doesn't add value for someone deciding whether to book a $40,000+ safari, cut it.
+- FAQ section must have 5-7 questions with answers of 30-50 words each. Direct, practical answers only.
+- Answer capsule must directly answer the implied search query in 40-60 words.
+- Do NOT include [IMAGE: ...] placeholders. Images will be added separately.
 - Include [LINK: destination-slug] placeholders where relevant itineraries or destinations should be linked.
-- Include [IMAGE: description] placeholders where images should appear.
 - Do not use any banned phrases from the voice guidelines.
-- Every claim must be supportable from the research provided.`
+- Every claim must be supportable from the research provided.
+- Tone: confident, understated luxury. Like a knowledgeable friend who happens to know Africa intimately. Not a brochure. Not a textbook.`
 
     // 10. Call model
     const temperature = voice.contentType?.temperature ?? 0.5

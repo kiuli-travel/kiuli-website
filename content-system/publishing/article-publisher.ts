@@ -26,9 +26,12 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
   const body = project.body
   if (!body) throw new Error('Cannot publish: body is empty')
 
+  // Strip [IMAGE: ...] placeholder text from body
+  const cleanedBody = stripImagePlaceholders(body)
+
   // Insert article images into body at specified positions
   const articleImages = parseArticleImages(project.articleImages)
-  const finalBody = articleImages.length > 0 ? insertImagesIntoBody(body, articleImages) : body
+  const finalBody = articleImages.length > 0 ? insertImagesIntoBody(cleanedBody, articleImages) : cleanedBody
 
   const metaTitle = project.metaTitle as string
   const metaDescription = project.metaDescription as string
@@ -207,6 +210,40 @@ function insertImagesIntoBody(
     root: {
       ...lexical.root,
       children,
+    },
+  }
+}
+
+/**
+ * Strip [IMAGE: ...] placeholder paragraphs from Lexical body.
+ * The drafter includes these as text markers for where images should go.
+ * If no articleImages are populated, they render as raw text — strip them.
+ */
+function stripImagePlaceholders(body: unknown): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lexical = body as any
+  if (!lexical?.root?.children || !Array.isArray(lexical.root.children)) {
+    return body
+  }
+
+  const filtered = lexical.root.children.filter((node: Record<string, unknown>) => {
+    if (node.type !== 'paragraph') return true
+    // Check if this paragraph's text content is an image placeholder
+    const children = node.children as Array<Record<string, unknown>> | undefined
+    if (!children || children.length === 0) return true
+    const text = children
+      .map((c: Record<string, unknown>) => (c.text as string) || '')
+      .join('')
+      .trim()
+    // Match [IMAGE: ...] pattern
+    return !text.match(/^\[IMAGE:\s*.*\]$/i)
+  })
+
+  return {
+    ...lexical,
+    root: {
+      ...lexical.root,
+      children: filtered,
     },
   }
 }

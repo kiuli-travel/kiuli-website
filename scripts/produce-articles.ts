@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+// @ts-nocheck — standalone script, not part of Next.js build
 
-import fetch from 'node-fetch'
+const fetch = globalThis.fetch
 
 /**
  * Content Engine Article Production Script
@@ -180,7 +181,7 @@ async function createProject(brief: ArticleBrief): Promise<number> {
     return 0 // Dummy ID for dry run
   }
 
-  const response = (await apiCall('POST', '/api/collections/content-projects', project)) as Record<string, unknown>
+  const response = (await apiCall('POST', '/api/content/projects', project)) as Record<string, unknown>
   const projectId = response.id as number
 
   if (!projectId) {
@@ -197,7 +198,7 @@ async function advanceStage(projectId: number, targetStage: string): Promise<voi
     return
   }
 
-  await apiCall('PATCH', `/api/collections/content-projects/${projectId}`, {
+  await apiCall('PATCH', `/api/content/projects?id=${projectId}`, {
     stage: targetStage,
   })
 
@@ -217,12 +218,15 @@ async function triggerResearch(projectId: number): Promise<void> {
   const maxAttempts = 120 // 10 minutes with 5s intervals
   while (attempts < maxAttempts) {
     await sleep(5000)
-    const project = (await apiCall('GET', `/api/collections/content-projects/${projectId}`)) as Record<string, unknown>
+    const project = (await apiCall('GET', `/api/content/projects?id=${projectId}`)) as Record<string, unknown>
     const status = project.processingStatus as string
 
-    if (status === 'completed') {
-      console.log('  ✓ Research completed')
-      return
+    if (status === 'completed' || status === 'idle') {
+      // Check if synthesis was populated (research done)
+      if (project.synthesis || status === 'completed') {
+        console.log('  ✓ Research completed')
+        return
+      }
     }
     if (status === 'failed') {
       throw new Error(`Research failed: ${project.processingError}`)
@@ -250,12 +254,15 @@ async function triggerDraft(projectId: number): Promise<void> {
   const maxAttempts = 120 // 10 minutes with 5s intervals
   while (attempts < maxAttempts) {
     await sleep(5000)
-    const project = (await apiCall('GET', `/api/collections/content-projects/${projectId}`)) as Record<string, unknown>
+    const project = (await apiCall('GET', `/api/content/projects?id=${projectId}`)) as Record<string, unknown>
     const status = project.processingStatus as string
 
-    if (status === 'completed') {
-      console.log('  ✓ Draft completed')
-      return
+    if (status === 'completed' || status === 'idle') {
+      // Check if body was populated (draft done)
+      if (project.body || status === 'completed') {
+        console.log('  ✓ Draft completed')
+        return
+      }
     }
     if (status === 'failed') {
       throw new Error(`Draft failed: ${project.processingError}`)

@@ -513,7 +513,7 @@ export default async function DestinationPage({ params: paramsPromise }: Args) {
 
       {/* Child Destinations (country pages only) */}
       {childDestinations.length > 0 && (
-        <ItineraryGrid heading={`Explore ${destination.name}`}>
+        <ItineraryGrid heading={`Destinations in ${destination.name}`}>
           {childDestinations.map((child) => {
             const childHeroImage = getHeroImage(child)
             const descText = extractDescriptionText(child.description)

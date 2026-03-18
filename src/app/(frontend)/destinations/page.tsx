@@ -80,7 +80,7 @@ function DestinationListCard({
       <div className="absolute inset-x-0 bottom-0 p-5">
         <h3 className="text-xl font-semibold text-white drop-shadow-sm">{name}</h3>
         <p className="mt-1 text-sm text-white/80 transition-colors group-hover:text-white">
-          Explore safaris in {name} →
+          Explore destinations in {name} →
         </p>
       </div>
     </Link>
@@ -121,7 +121,7 @@ export default async function DestinationsPage() {
   // Build breadcrumb items
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
-    { label: 'Destinations' },
+    { label: 'Where We Go' },
   ]
 
   // Generate schemas
@@ -140,11 +140,11 @@ export default async function DestinationsPage() {
         <div className="mx-auto max-w-6xl px-6 md:px-8">
           <Breadcrumb items={breadcrumbItems} />
           <h1 className="mt-6 text-3xl font-bold text-[#404040] md:text-4xl">
-            Safari Destinations
+            Where We Go
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-[#404040]/70">
-            Explore Africa&apos;s most extraordinary safari destinations. From the vast plains of the
-            Serengeti to the misty mountains of Rwanda, discover where your adventure awaits.
+            Five extraordinary countries, each with world-class destinations and handpicked
+            properties. Select a country to explore the destinations within it.
           </p>
         </div>
       </section>
@@ -180,16 +180,16 @@ export default async function DestinationsPage() {
 
 export function generateMetadata(): Metadata {
   return {
-    title: 'Safari Destinations | Kiuli',
+    title: 'Where We Go — Safari Countries | Kiuli',
     description:
-      'Explore Africa\'s most extraordinary safari destinations. From Kenya and Tanzania to Botswana and Rwanda, discover handpicked luxury safari experiences.',
+      'Five extraordinary African countries with world-class safari destinations and handpicked luxury properties. Kenya, Tanzania, Rwanda, South Africa, and Mozambique.',
     alternates: {
       canonical: 'https://kiuli.com/destinations',
     },
     openGraph: {
-      title: 'Safari Destinations | Kiuli',
+      title: 'Where We Go — Safari Countries | Kiuli',
       description:
-        'Explore Africa\'s most extraordinary safari destinations with Kiuli.',
+        'Five extraordinary African countries with world-class safari destinations.',
       url: 'https://kiuli.com/destinations',
     },
   }

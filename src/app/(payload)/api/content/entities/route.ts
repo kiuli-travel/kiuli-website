@@ -76,7 +76,7 @@ export async function GET(req: Request) {
               id: destRel,
               depth: 0,
             })
-            parentName = String((destRecord as Record<string, unknown>).name || 'Unknown')
+            parentName = String((destRecord as unknown as Record<string, unknown>).name || 'Unknown')
           } catch {
             // ignore
           }

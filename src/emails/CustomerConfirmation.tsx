@@ -41,7 +41,7 @@ export default function CustomerConfirmation({
           <Heading style={h1}>Thank you for your inquiry, {firstName}</Heading>
 
           <Text style={text}>
-            We have received your safari inquiry and Graham will be in touch
+            We have received your safari inquiry and will be in touch
             within 24 hours.
           </Text>
 

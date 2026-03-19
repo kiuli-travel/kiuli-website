@@ -23,7 +23,7 @@ const differentiators = [
   },
   {
     heading: 'Personal Service',
-    body: "You work directly with Graham from first inquiry to final day. No call centres, no handoffs — just someone who knows Africa intimately.",
+    body: "You work with a dedicated specialist from first inquiry to final day. No call centres, no handoffs — just people who know Africa intimately.",
   },
 ]
 

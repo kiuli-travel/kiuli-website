@@ -77,12 +77,8 @@ export default async function HomePage() {
     countryCounts[country.id] = childResult.totalDocs
   }
 
-  // Hero image: giraffe sunset (media 1333)
-  const heroMedia = await payload.findByID({
-    collection: 'media',
-    id: 1333,
-    depth: 0,
-  })
+  // Hero image: giraffe sunset (media 1333) — use direct URL to avoid encoding issues
+  const HERO_IMAGE_URL = 'https://kiuli.imgix.net/media/originals/41/44af81ff-fc8f-42d1-bed2-9004f40e7943_chem_chem_-_wildlife_10-upscale.jpeg?auto=format,compress&q=80'
 
   return (
     <main>
@@ -102,9 +98,9 @@ export default async function HomePage() {
 
       {/* ─── HERO ─── */}
       <section className="relative h-screen w-full overflow-hidden">
-        {heroMedia?.imgixUrl && (
+        {HERO_IMAGE_URL && (
           <Image
-            src={heroMedia.imgixUrl}
+            src={HERO_IMAGE_URL}
             alt="Giraffe silhouetted against golden African sunset"
             fill
             priority

@@ -43,7 +43,7 @@ export const generateMeta = async (args: {
   // Generate description with fallback
   const description =
     doc?.meta?.description ||
-    'Discover transformative African safari experiences with Kiuli. Handpicked luxury itineraries curated by expert travel designers.'
+    'Discover transformative African safari experiences with Kiuli. Handcrafted luxury itineraries designed from firsthand African experience.'
 
   return {
     description,

@@ -10,7 +10,7 @@ Kiuli is a **luxury African safari travel company**. The website at kiuli.com is
 
 The website is not a brochure. Every technical decision supports: **Attract → Qualify → Convert**.
 
-Travel designers Emily and Jody handle all post-qualification conversations. The AI builds content. The designers build relationships and close bookings.
+Graham Wallington (founder) handles all post-qualification conversations at launch. The AI builds content. Graham builds relationships and closes bookings. Additional travel designers will join post-launch — do not reference specific designer names until they are confirmed.
 
 ### The Agentic Vision
 

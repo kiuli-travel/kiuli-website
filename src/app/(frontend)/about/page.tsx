@@ -19,11 +19,11 @@ const differentiators = [
   },
   {
     heading: 'Firsthand Expertise',
-    body: "Our team has personally visited every lodge and park we recommend. We design your safari from real experience, not a database.",
+    body: "Graham has personally visited every lodge and park we recommend. Your safari is designed from real experience, not a database.",
   },
   {
-    heading: 'Dedicated Specialists',
-    body: "You work with one dedicated safari specialist from first inquiry to final day. No call centres, no handoffs.",
+    heading: 'Personal Service',
+    body: "You work directly with Graham from first inquiry to final day. No call centres, no handoffs — just someone who knows Africa intimately.",
   },
 ]
 
@@ -96,10 +96,11 @@ export default async function AboutPage() {
   // Build breadcrumb items
   const breadcrumbItems = [{ label: 'Home', href: '/' }, { label: 'About' }]
 
-  // Get founder for schema (first author, or use Graham Wallington as default)
+  // Get founder for schema and display
   const founder = authors.length > 0 ? authors[0] : null
   const founderName = founder?.name || 'Graham Wallington'
   const founderSlug = founder?.slug || 'graham-wallington'
+  const founderPhoto = founder ? getPhotoUrl(founder) : undefined
 
   // Generate schemas
   const organizationSchema = generateOrganizationSchema(founderName, founderSlug)
@@ -135,51 +136,83 @@ export default async function AboutPage() {
           <div className="mx-auto mt-4 h-px w-12 bg-[#486A6A]" />
           <div className="mt-8 space-y-6 text-base leading-relaxed text-[#404040]/80 md:text-lg">
             <p>
-              Kiuli was born from a simple belief: that Africa&apos;s most extraordinary wildlife
-              experiences should be accessible to discerning travellers who value transparency as
-              much as luxury.
+              Kiuli was born from a lifetime spent in the African bush. Not from a boardroom, not
+              from a travel agency training programme — from the land itself.
             </p>
             <p>
-              Too many safari companies hide behind vague pricing and impersonal service. We took a
+              Too many safari companies sell destinations they&apos;ve never lived in. We took a
               different approach. Every itinerary on Kiuli shows you what to expect before you ever
               speak to us — because we believe informed travellers make the best clients.
-            </p>
-            <p>
-              Our team has collectively spent decades living, working, and exploring across Africa.
-              We don&apos;t sell safaris from a catalogue. We design experiences based on firsthand
-              knowledge of every lodge, every park, and every route we recommend.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Team Section */}
-      <section className="bg-white py-12 md:py-16">
-        <div className="mx-auto max-w-6xl px-6 md:px-8">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-[#404040] md:text-3xl">Meet the Team</h2>
-            <div className="mx-auto mt-4 h-px w-12 bg-[#486A6A]" />
-          </div>
-
-          {authors.length > 0 ? (
-            <div className="mt-12 flex justify-center">
-              <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-                {authors.map((author) => (
-                  <TeamMemberCard
-                    key={author.id}
-                    name={author.name}
-                    slug={author.slug}
-                    role={author.role || undefined}
-                    photoUrl={getPhotoUrl(author)}
-                    photoAlt={author.name}
-                    shortBio={author.shortBio || undefined}
+      {/* Founder Section */}
+      <section className="bg-white py-16 md:py-24">
+        <div className="mx-auto max-w-[1100px] px-6 md:px-12">
+          <div className="flex flex-col gap-12 lg:flex-row lg:gap-20">
+            {/* Photo */}
+            <div className="flex-shrink-0 lg:w-[340px]">
+              {founderPhoto ? (
+                <div className="relative aspect-[3/4] overflow-hidden rounded-[2px]">
+                  <img
+                    src={founderPhoto}
+                    alt="Graham Wallington, Founder of Kiuli"
+                    className="h-full w-full object-cover"
                   />
-                ))}
+                </div>
+              ) : (
+                <div className="flex aspect-[3/4] items-center justify-center rounded-[2px] bg-[#F5F3EB]">
+                  <span className="text-6xl font-light text-[#486A6A]">GW</span>
+                </div>
+              )}
+            </div>
+
+            {/* Bio */}
+            <div className="flex-1">
+              <p
+                className="text-xs font-medium uppercase text-[#486A6A]/60"
+                style={{ letterSpacing: '0.2em' }}
+              >
+                Founder
+              </p>
+              <h2 className="mt-3 text-[32px] font-light text-[#404040] md:text-[38px]" style={{ letterSpacing: '0.11em' }}>
+                Graham Wallington
+              </h2>
+
+              <div className="mt-8 space-y-5 text-[15px] leading-relaxed text-[#404040]/80">
+                <p>
+                  Born and raised in Africa, Graham has spent his career building bridges between
+                  people and the continent&apos;s extraordinary wildlife. His journey began with
+                  AfriCam, the world&apos;s first live wildlife cameras, which brought the African
+                  bush into homes around the globe.
+                </p>
+                <p>
+                  He went on to found WildEarth, pioneering live-streamed safaris that let millions
+                  experience game drives in real time — long before live streaming became mainstream.
+                  These ventures weren&apos;t just technology plays. They were built on a deep conviction
+                  that connecting people to wild places changes how they think about conservation.
+                </p>
+                <p>
+                  That same conviction drives Kiuli. Every safari we design reflects decades of
+                  firsthand knowledge: which guides read landscapes with an almost supernatural
+                  instinct, which lodges deliver genuine care rather than performative luxury, and
+                  which routes reveal Africa at its most honest.
+                </p>
+                <p>
+                  Graham also founded Xeroth AI, which is developing radar and artificial intelligence
+                  systems to detect wire snares — one of the most devastating and indiscriminate forms
+                  of poaching threatening Africa&apos;s wildlife. The goal is straightforward: make
+                  snaring economically unviable by finding snares faster than poachers can set them.
+                </p>
+                <p>
+                  Kiuli is where all of this comes together. Technology, conservation, and the kind of
+                  intimate knowledge that only comes from a life lived on this continent.
+                </p>
               </div>
             </div>
-          ) : (
-            <p className="mt-8 text-center text-[#404040]/70">Team information coming soon.</p>
-          )}
+          </div>
         </div>
       </section>
 
@@ -213,7 +246,7 @@ export function generateMetadata(): Metadata {
   return {
     title: 'About Kiuli | Luxury African Safari Specialists',
     description:
-      'Meet the team behind Kiuli. We design luxury African safari experiences based on firsthand knowledge of every lodge, park, and route we recommend.',
+      'Founded by Graham Wallington, creator of AfriCam and WildEarth. Kiuli designs luxury African safaris from a lifetime of firsthand experience on the continent.',
     alternates: {
       canonical: 'https://kiuli.com/about',
     },

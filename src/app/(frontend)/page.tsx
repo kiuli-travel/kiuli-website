@@ -131,7 +131,7 @@ export default async function HomePage() {
             >
               Experience Travel
               <br />
-              <span style={{ fontFamily: 'var(--font-waterfall, serif)', fontWeight: 400, letterSpacing: '0.02em' }}>
+              <span style={{ fontFamily: "'Waterfall', cursive", fontWeight: 400, letterSpacing: '0.02em' }}>
                 Redefined.
               </span>
             </h1>

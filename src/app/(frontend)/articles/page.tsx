@@ -155,7 +155,7 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Safari Articles & Travel Guides | Kiuli',
     description:
-      'Expert safari advice, destination guides, and insider knowledge for planning your African adventure. Written by experienced travel designers.',
+      'Expert safari advice, destination guides, and insider knowledge for planning your African adventure. Written from firsthand experience.',
     alternates: {
       canonical: 'https://kiuli.com/articles',
     },

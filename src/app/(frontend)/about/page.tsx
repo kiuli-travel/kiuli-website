@@ -71,7 +71,10 @@ function getPhotoUrl(author: Author): string | undefined {
   if (!photo || typeof photo === 'number') return undefined
 
   const media = photo as Media
-  return media.imgixUrl || undefined
+  // Prefer imgix URL, fall back to Payload-served URL for directly uploaded images
+  if (media.imgixUrl) return media.imgixUrl
+  if (media.url) return media.url
+  return undefined
 }
 
 export default async function AboutPage() {

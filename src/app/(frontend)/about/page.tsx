@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { Author, Media } from '@/payload-types'
 import Image from 'next/image'
+import Link from 'next/link'
 
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
@@ -206,10 +207,12 @@ export default async function AboutPage() {
             <div className="flex-shrink-0 lg:w-[340px]">
               {founderPhoto ? (
                 <div className="relative aspect-[3/4] overflow-hidden rounded-[2px]">
-                  <img
+                  <Image
                     src={founderPhoto}
                     alt="Graham Wallington, Founder of Kiuli"
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 340px"
                   />
                 </div>
               ) : (
@@ -295,12 +298,12 @@ export default async function AboutPage() {
           <p className="mt-4 text-lg font-light text-white/70">
             Tell us about the safari you&apos;re imagining. We&apos;ll design something extraordinary.
           </p>
-          <a
+          <Link
             href="/contact"
             className="mt-8 inline-flex rounded-sm bg-[#DA7A5A] px-10 py-4 text-base font-medium text-white transition-colors hover:bg-[#C66A4A]"
           >
             Begin a Conversation
-          </a>
+          </Link>
         </div>
       </section>
     </main>

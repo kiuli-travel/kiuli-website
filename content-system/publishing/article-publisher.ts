@@ -2,6 +2,7 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 import { textToLexical } from './text-to-lexical'
 import type { PublishResult } from './types'
+import { searchLibrary } from '../images/library-search'
 
 const ARTICLE_TYPES = new Set(['itinerary_cluster', 'authority', 'designer_insight'])
 
@@ -68,8 +69,40 @@ export async function publishArticle(projectId: number): Promise<PublishResult> 
   const capsuleWords = answerCapsule ? answerCapsule.trim().split(/\s+/).filter((w: string) => w.length > 0).length : 0
   const validCapsule = capsuleWords >= 40 && capsuleWords <= 60 ? answerCapsule : undefined
 
-  // Hero image passthrough
-  const heroImageId = project.heroImage as number | null | undefined
+  // Hero image: use project's hero if set, otherwise search media library
+  let heroImageId = project.heroImage as number | null | undefined
+  if (!heroImageId) {
+    try {
+      // Parse destinations from project metadata for targeted search
+      const destinations = project.destinations
+        ? (typeof project.destinations === 'string'
+            ? JSON.parse(project.destinations as string)
+            : project.destinations) as string[]
+        : []
+      const country = destinations.length > 0 ? destinations[0] : undefined
+
+      const searchResult = await searchLibrary({
+        query: title,
+        country: country,
+        composition: 'landscape',
+        limit: 5,
+      })
+
+      if (searchResult.matches.length > 0) {
+        heroImageId = searchResult.matches[0].mediaId
+        // Also save back to the content project for future reference
+        await payload.update({
+          collection: 'content-projects',
+          id: projectId,
+          data: { heroImage: heroImageId },
+          overrideAccess: true,
+        })
+        console.log(`[article-publisher] Auto-assigned hero image ${heroImageId} for project ${projectId}`)
+      }
+    } catch (err) {
+      console.warn(`[article-publisher] Hero image search failed (continuing without): ${err}`)
+    }
+  }
 
   const postData: Record<string, unknown> = {
     title,

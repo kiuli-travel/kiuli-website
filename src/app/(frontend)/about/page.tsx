@@ -1,12 +1,11 @@
 import type { Metadata } from 'next'
 import type { Author, Media } from '@/payload-types'
+import Image from 'next/image'
 
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import Breadcrumb from '@/components/Breadcrumb'
-import TeamMemberCard from '@/components/about/TeamMemberCard'
-import { InquiryCTA } from '@/components/itinerary/InquiryCTA'
 
 export const revalidate = 600
 export const dynamic = 'force-static'
@@ -118,14 +117,27 @@ export default async function AboutPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
-      {/* Hero Section */}
-      <section className="bg-[#F5F3EB] py-12 md:py-16">
-        <div className="mx-auto max-w-6xl px-6 md:px-8">
-          <Breadcrumb items={breadcrumbItems} />
-          <h1 className="mt-6 text-3xl font-bold text-[#404040] md:text-4xl">About Kiuli</h1>
-          <p className="mt-4 max-w-2xl text-lg text-[#404040]/70">
-            Luxury African safaris, designed by people who know Africa
-          </p>
+      {/* Hero Section — full-bleed image */}
+      <section className="relative h-[50vh] w-full overflow-hidden md:h-[60vh]">
+        <Image
+          src="https://kiuli.imgix.net/media/originals/44/5ac8607a-c783-4bf0-adda-50cde4d51335__silverless_elewana_loisaba_lodo_springs_353-upscale.jpeg?auto=format,compress&q=80"
+          alt="Travelers overlooking vast African savanna at Loisaba Conservancy"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        <div className="absolute inset-0 flex items-end">
+          <div className="mx-auto w-full max-w-6xl px-6 pb-10 md:px-8 md:pb-14">
+            <Breadcrumb items={breadcrumbItems} />
+            <h1
+              className="mt-4 text-3xl font-light text-white md:text-[42px]"
+              style={{ letterSpacing: '0.11em' }}
+            >
+              About Kiuli
+            </h1>
+          </div>
         </div>
       </section>
 
@@ -144,6 +156,41 @@ export default async function AboutPage() {
               different approach. Every itinerary on Kiuli shows you what to expect before you ever
               speak to us — because we believe informed travellers make the best clients.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Image Strip */}
+      <section className="bg-white py-2">
+        <div className="mx-auto max-w-[1280px] px-6 md:px-12">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[2px]">
+              <Image
+                src="https://kiuli.imgix.net/media/originals/41/2cdcc21c-ef6e-46ea-a39b-ee52a59349ee_Usawa_10-23-7.jpg?auto=format,compress&q=80"
+                alt="Hot air balloon over the Serengeti at sunrise"
+                fill
+                className="object-cover"
+                sizes="33vw"
+              />
+            </div>
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[2px]">
+              <Image
+                src="https://kiuli.imgix.net/media/originals/43/ab5deaaa-5940-49b5-a194-afb1d732cc53_2.png?auto=format,compress&q=80"
+                alt="Mountain gorilla in Rwanda"
+                fill
+                className="object-cover"
+                sizes="33vw"
+              />
+            </div>
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[2px]">
+              <Image
+                src="https://kiuli.imgix.net/media/originals/44/8c8c5a65-272d-482d-b104-3db2fafb52d5_7.jpg?auto=format,compress&q=80"
+                alt="Sunset over the Masai Mara from Angama"
+                fill
+                className="object-cover"
+                sizes="33vw"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -236,8 +283,23 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* Inquiry CTA */}
-      <InquiryCTA />
+      {/* CTA */}
+      <section className="bg-[#486A6A] py-20 md:py-28">
+        <div className="mx-auto max-w-2xl px-6 text-center">
+          <h2 className="text-[36px] font-light text-white" style={{ letterSpacing: '0.11em' }}>
+            Ready to Begin?
+          </h2>
+          <p className="mt-4 text-lg font-light text-white/70">
+            Tell us about the safari you&apos;re imagining. We&apos;ll design something extraordinary.
+          </p>
+          <a
+            href="/contact"
+            className="mt-8 inline-flex rounded-sm bg-[#DA7A5A] px-10 py-4 text-base font-medium text-white transition-colors hover:bg-[#C66A4A]"
+          >
+            Begin a Conversation
+          </a>
+        </div>
+      </section>
     </main>
   )
 }

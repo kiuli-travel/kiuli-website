@@ -74,7 +74,11 @@ function getPhotoUrl(author: Author): string | undefined {
   const media = photo as Media
   // Prefer imgix URL, fall back to Payload-served URL for directly uploaded images
   if (media.imgixUrl) return media.imgixUrl
-  if (media.url) return media.url
+  if (media.url) {
+    // Payload returns relative paths like /api/media/file/... — make absolute for next/image
+    const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'https://kiuli.com'
+    return media.url.startsWith('http') ? media.url : `${baseUrl}${media.url}`
+  }
   return undefined
 }
 
